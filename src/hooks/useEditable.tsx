@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo, CSSProperties } from 'react';
 import type {
     CellInterface,
     ScrollCoords,
@@ -16,7 +16,7 @@ import {
     isArrowKey,
     castToString,
 } from '../components/Grid/helpers';
-import { useWhatHasUpdated } from './useWhatHasUpdated';
+// import { useWhatHasUpdated } from './useWhatHasUpdated';
 
 export interface UseEditableOptions {
     editorProps?: () => any;
@@ -276,7 +276,7 @@ export interface EditorProps {
  */
 const DefaultEditor: React.FC<EditorProps> = props => {
     const {
-        onChange,
+        onChange: onChangeProp,
         onSubmit,
         onCancel,
         position,
@@ -284,13 +284,16 @@ const DefaultEditor: React.FC<EditorProps> = props => {
         nextFocusableCell,
         value = '',
         autoFocus = true,
-        onKeyDown,
+        onKeyDown: onKeyDownProp,
         ...rest
     } = props;
     const borderWidth = 2;
     const padding = 10; /* 2 + 1 + 1 + 2 + 2 */
+
     const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
     const { x = 0, y = 0, width = 0, height = 0 } = position;
+
     const getWidth = useCallback(
         (text: string | number) => {
             const textWidth = autoSizerCanvas.measureText(text)?.width || 0;
@@ -298,21 +301,69 @@ const DefaultEditor: React.FC<EditorProps> = props => {
         },
         [width],
     );
+
+    const [inputWidth, setInputWidth] = useState(() => getWidth(value));
+
     useEffect(() => {
         setInputWidth(getWidth(value));
-    }, [value]);
-    const [inputWidth, setInputWidth] = useState(() => getWidth(value));
+    }, [getWidth, value]);
+
     useEffect(() => {
         if (!inputRef.current) return;
         if (autoFocus) inputRef.current.focus();
         /* Focus cursor at the end */
         inputRef.current.selectionStart = castToString(value)?.length ?? 0;
+        // TODO - remove eslint ignore after testing
+        // eslint-disable-next-line
     }, []);
+
     const inputHeight = height;
 
-    return (
-        <div
-            style={{
+    const onChange = useCallback(
+        (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+            onChangeProp?.(e.target.value, cell);
+        },
+        [cell, onChangeProp],
+    );
+
+    const onKeyDown = useCallback(
+        (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+            if (!inputRef.current) return;
+            const isShiftKey = e.nativeEvent.shiftKey;
+            const value = inputRef.current.value;
+
+            // Enter key
+            if (e.which === KeyCodes.Enter) {
+                onSubmit &&
+                    onSubmit(
+                        value,
+                        cell,
+                        nextFocusableCell?.(cell, isShiftKey ? Direction.Up : Direction.Down),
+                    );
+            }
+
+            if (e.which === KeyCodes.Escape) {
+                onCancel && onCancel(e);
+            }
+
+            if (e.which === KeyCodes.Tab) {
+                e.preventDefault();
+                onSubmit &&
+                    onSubmit(
+                        value,
+                        cell,
+                        nextFocusableCell?.(cell, isShiftKey ? Direction.Left : Direction.Right),
+                    );
+            }
+
+            onKeyDownProp?.(e);
+        },
+        [cell, nextFocusableCell, onCancel, onKeyDownProp, onSubmit],
+    );
+
+    const { containerStyle } = useMemo(
+        () => ({
+            containerStyle: {
                 top: y - borderWidth / 2,
                 left: x,
                 position: 'absolute',
@@ -322,76 +373,30 @@ const DefaultEditor: React.FC<EditorProps> = props => {
                 boxShadow: '0 2px 6px 2px rgba(60,64,67,.15)',
                 border: '2px #1a73e8 solid',
                 background: 'white',
-            }}>
+            } as CSSProperties,
+        }),
+        [inputHeight, inputWidth, x, y],
+    );
+
+    return (
+        <div style={containerStyle}>
             <textarea
                 rows={1}
                 cols={1}
                 ref={inputRef}
                 value={value}
-                style={{
-                    font: '12px Arial',
-                    lineHeight: 1.2,
-                    width: '100%',
-                    height: '100%',
-                    padding: '0 1px',
-                    margin: 0,
-                    boxSizing: 'border-box',
-                    borderWidth: 0,
-                    outline: 'none',
-                    resize: 'none',
-                    overflow: 'hidden',
-                    verticalAlign: 'top',
-                    background: 'transparent',
-                }}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-                    onChange?.(e.target.value, cell);
-                }}
-                onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-                    if (!inputRef.current) return;
-                    const isShiftKey = e.nativeEvent.shiftKey;
-                    const value = inputRef.current.value;
-
-                    // Enter key
-                    if (e.which === KeyCodes.Enter) {
-                        onSubmit &&
-                            onSubmit(
-                                value,
-                                cell,
-                                nextFocusableCell?.(
-                                    cell,
-                                    isShiftKey ? Direction.Up : Direction.Down,
-                                ),
-                            );
-                    }
-
-                    if (e.which === KeyCodes.Escape) {
-                        onCancel && onCancel(e);
-                    }
-
-                    if (e.which === KeyCodes.Tab) {
-                        e.preventDefault();
-                        onSubmit &&
-                            onSubmit(
-                                value,
-                                cell,
-                                nextFocusableCell?.(
-                                    cell,
-                                    isShiftKey ? Direction.Left : Direction.Right,
-                                ),
-                            );
-                    }
-
-                    onKeyDown?.(e);
-                }}
+                style={textAreaStyle}
+                onChange={onChange}
+                onKeyDown={onKeyDown}
                 {...rest}
             />
         </div>
     );
 };
 
-export const getDefaultEditor = (cell: CellInterface | null) => DefaultEditor;
-const defaultCanEdit = (cell: CellInterface) => true;
-const defaultIsHidden = (i: number) => false;
+export const getDefaultEditor = (_cell: CellInterface | null) => DefaultEditor;
+const defaultCanEdit = (_cell: CellInterface) => true;
+const defaultIsHidden = (_i: number) => false;
 
 /**
  * Hook to make grid editable
@@ -456,7 +461,7 @@ const useEditable = ({
 
     const focusGrid = useCallback(() => {
         requestAnimationFrame(() => gridRef.current && gridRef.current.focus());
-    }, []);
+    }, [gridRef]);
 
     /* Keep ref in sync */
     useEffect(() => {
@@ -468,7 +473,7 @@ const useEditable = ({
         getValueRef.current = getValue;
     }, [getValue]);
 
-    useWhatHasUpdated('useEditable', { isEditorShown, value, position, autoFocus, scrollPosition });
+    // useWhatHasUpdated('useEditable', { isEditorShown, value, position, autoFocus, scrollPosition });
 
     /**
      * Make a cell editable
@@ -533,6 +538,8 @@ const useEditable = ({
                 showEditor();
             }
         },
+        // TODO - remove eslint ignore after testing
+        // eslint-disable-next-line
         [frozenRows, frozenColumns, onBeforeEdit, canEdit, sticky],
     );
 
@@ -568,6 +575,8 @@ const useEditable = ({
             const { rowIndex, columnIndex } = coords;
             makeEditable({ rowIndex, columnIndex });
         },
+        // TODO - remove eslint ignore after testing
+        // eslint-disable-next-line
         [getValue, frozenRows, frozenColumns],
     );
 
@@ -637,6 +646,8 @@ const useEditable = ({
             /* Prevent the first keystroke */
             e.preventDefault();
         },
+        // TODO - remove eslint ignore after testing
+        // eslint-disable-next-line
         [getValue, selections, activeCell, onDelete],
     );
 
@@ -727,6 +738,8 @@ const useEditable = ({
             }
             return nextActiveCell;
         },
+        // TODO - remove eslint ignore after testing
+        // eslint-disable-next-line
         [selections, isHiddenRow, isHiddenColumn, selectionBottomBound, selectionTopBound],
     );
 
@@ -746,7 +759,7 @@ const useEditable = ({
             /* Keep the focus */
             focusGrid();
         },
-        [onSubmit],
+        [focusGrid, hideEditor, onSubmit],
     );
 
     /* When the input is blurred out */
@@ -757,11 +770,11 @@ const useEditable = ({
             /* Keep the focus back in the grid */
             focusGrid();
         },
-        [onCancel],
+        [focusGrid, hideEditor, onCancel],
     );
 
     const handleMouseDown = useCallback(
-        (e: React.MouseEvent<HTMLDivElement>) => {
+        (_e: React.MouseEvent<HTMLDivElement>) => {
             /* Persistent input, hides only during Enter key or during submit or cancel calls */
             if (!hideOnBlur) {
                 return;
@@ -795,27 +808,30 @@ const useEditable = ({
             setValue(newValue);
             onChange?.(newValue, activeCell);
         },
-        [value],
+        [onChange, value],
     );
 
     const handleScroll = useCallback((scrollPos: ScrollCoords) => {
-        console.log('hello');
         if (!currentActiveCellRef.current) return;
         setScrollPosition(scrollPos);
     }, []);
 
     /* Editor */
     const editingCell = currentActiveCellRef.current;
+
     const Editor = useMemo(() => {
         return editingCell ? getEditor(editingCell) || getDefaultEditor(editingCell) : null;
-    }, [editingCell]);
+    }, [editingCell, getEditor]);
 
-    const handleBlur = useCallback((e: React.FocusEvent) => {
-        if (currentActiveCellRef.current) {
-            /* Keep the focus */
-            focusGrid();
-        }
-    }, []);
+    const handleBlur = useCallback(
+        (_e: React.FocusEvent) => {
+            if (currentActiveCellRef.current) {
+                /* Keep the focus */
+                focusGrid();
+            }
+        },
+        [focusGrid],
+    );
 
     const finalCellPosition = useMemo(() => {
         /**
@@ -834,6 +850,8 @@ const useEditable = ({
          * its position to accomodate for scroll
          */
         return getCellPosition(position, scrollPosition);
+        // TODO - remove eslint ignore after testing
+        // eslint-disable-next-line
     }, [sticky, position, scrollPosition, frozenColumns, frozenRows]);
 
     /* Get offset of frozen rows and columns */
@@ -884,5 +902,21 @@ const useEditable = ({
         onScroll: handleScroll,
     };
 };
+
+const textAreaStyle = {
+    font: '12px Arial',
+    lineHeight: 1.2,
+    width: '100%',
+    height: '100%',
+    padding: '0 1px',
+    margin: 0,
+    boxSizing: 'border-box',
+    borderWidth: 0,
+    outline: 'none',
+    resize: 'none',
+    overflow: 'hidden',
+    verticalAlign: 'top',
+    background: 'transparent',
+} as CSSProperties;
 
 export default useEditable;
