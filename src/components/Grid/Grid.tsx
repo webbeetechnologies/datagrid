@@ -37,6 +37,8 @@ import {
     Align,
     clampIndex,
     canUseDOM,
+    getBoundedCells,
+    cellIdentifier,
 } from './helpers';
 import { CellRenderer as defaultItemRenderer } from './Cell';
 import { CellRenderer as defaultOverlayRenderer } from './CellOverlay';
@@ -127,6 +129,10 @@ export interface GridProps
      * Fill selection
      */
     fillSelection?: SelectionArea | null;
+    /**
+     * Array of merged cells
+     */
+    mergedCells?: AreaProps[];
     /**
      * Number of frozen rows
      */
@@ -309,6 +315,7 @@ export interface CellPosition extends Pick<ShapeConfig, 'x' | 'y'> {
 }
 export interface RendererProps extends CellInterface, CellPosition, Omit<ShapeConfig, 'scale'> {
     key: Key;
+    isMergedCell?: boolean;
     isOverlay?: boolean;
 }
 
@@ -386,12 +393,13 @@ export interface PosXYRequired {
 }
 
 export type GridRef = {
-    scrollTo: (scrollPosition: ScrollCoords) => void;
+    scrollTo: (scrollPosition: OptionalScrollCoords) => void;
     scrollBy: (pos: PosXY) => void;
     stage: Konva.Stage | null;
     container: HTMLDivElement | null;
     resetAfterIndices: (coords: OptionalCellInterface, shouldForceUpdate?: boolean) => void;
     getScrollPosition: () => ScrollCoords;
+    isMergedCell: (coords: CellInterface) => boolean;
     getCellBounds: (coords: CellInterface) => AreaProps;
     getCellCoordsFromOffset: (
         x: number,
@@ -417,6 +425,8 @@ export type GridRef = {
     getRowOffset: (index: number) => number;
     getColumnOffset: (index: number) => number;
 };
+
+export type MergedCellMap = Map<string, AreaProps>;
 
 export type StylingProps = AreaStyle[];
 
@@ -505,6 +515,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             itemRenderer = defaultItemRenderer,
             enableCellOverlay = false,
             overlayRenderer = defaultOverlayRenderer,
+            mergedCells = EMPTY_ARRAY as AreaProps[],
             snap = false,
             scrollThrottleTimeout = 80,
             onViewChange,
@@ -547,6 +558,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 container: containerRef.current,
                 resetAfterIndices,
                 getScrollPosition,
+                isMergedCell,
                 getCellBounds,
                 getCellCoordsFromOffset,
                 getCellOffsetFromCoords,
@@ -700,25 +712,70 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             [],
         );
 
+        /**
+         * Create a map of merged cells
+         * [rowIndex, columnindex] => [parentRowIndex, parentColumnIndex]
+         */
+        const mergedCellMap = useMemo((): MergedCellMap => {
+            const mergedCellMap = new Map();
+            for (let i = 0; i < mergedCells.length; i++) {
+                const bounds = mergedCells[i];
+                for (const cell of getBoundedCells(bounds)) {
+                    mergedCellMap.set(cell, bounds);
+                }
+            }
+            return mergedCellMap;
+        }, [mergedCells]);
+
+        /* Check if a cell is part of a merged cell */
+        const isMergedCell = useCallback(
+            ({ rowIndex, columnIndex }: CellInterface) => {
+                return mergedCellMap.has(cellIdentifier(rowIndex, columnIndex));
+            },
+            [mergedCellMap],
+        );
+
         /* Get top, left bounds of a cell */
-        const getCellBounds = useCallback(({ rowIndex, columnIndex }: CellInterface): AreaProps => {
-            return {
-                top: rowIndex,
-                left: columnIndex,
-                right: columnIndex,
-                bottom: rowIndex,
-            } as AreaProps;
-        }, []);
+        const getCellBounds = useCallback(
+            ({ rowIndex, columnIndex }: CellInterface, spanMerges: boolean = true): AreaProps => {
+                if (spanMerges) {
+                    const isMerged = isMergedCell({ rowIndex, columnIndex });
+                    if (isMerged)
+                        return mergedCellMap.get(
+                            cellIdentifier(rowIndex, columnIndex),
+                        ) as AreaProps;
+                }
+
+                return {
+                    top: rowIndex,
+                    left: columnIndex,
+                    right: columnIndex,
+                    bottom: rowIndex,
+                } as AreaProps;
+            },
+            [isMergedCell, mergedCellMap],
+        );
 
         /* Get top, left bounds of a cell */
         const getActualCellCoords = useCallback(
             ({ rowIndex, columnIndex }: CellInterface): CellInterface => {
+                const isMerged = isMergedCell({ rowIndex, columnIndex });
+                if (isMerged) {
+                    const cell = mergedCellMap.get(
+                        cellIdentifier(rowIndex, columnIndex),
+                    ) as AreaProps;
+                    return {
+                        rowIndex: cell?.top,
+                        columnIndex: cell?.left,
+                    };
+                }
+
                 return {
                     rowIndex,
                     columnIndex,
                 };
             },
-            [],
+            [isMergedCell, mergedCellMap],
         );
 
         const frozenColumnWidth = getColumnOffset(frozenColumns);
@@ -1590,6 +1647,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             }
         }
 
+        const mergedCellRenderMap = new Set();
+
         /* Draw all cells */
         const cells: React.ReactNode[] = [];
         /**
@@ -1622,13 +1681,23 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         continue;
                     }
 
+                    const isMerged = isMergedCell({ rowIndex, columnIndex });
                     const bounds = getCellBounds({ rowIndex, columnIndex });
                     const actualRowIndex = rowIndex;
                     const actualColumnIndex = columnIndex;
                     const actualBottom = Math.max(rowIndex, bounds.bottom);
                     const actualRight = Math.max(columnIndex, bounds.right);
-                    if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
+
+                    if (!isMerged && isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
                         continue;
+                    }
+
+                    if (isMerged) {
+                        const cellId = cellIdentifier(bounds.top, bounds.left);
+                        if (mergedCellRenderMap.has(cellId)) {
+                            continue;
+                        }
+                        mergedCellRenderMap.add(cellId);
                     }
 
                     const y = getRowOffset(actualRowIndex);
@@ -1646,6 +1715,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             height,
                             rowIndex: actualRowIndex,
                             columnIndex: actualColumnIndex,
+                            isMergedCell: isMerged,
                             key: itemKey({
                                 rowIndex: actualRowIndex,
                                 columnIndex: actualColumnIndex,
@@ -1662,6 +1732,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                                 height,
                                 rowIndex: actualRowIndex,
                                 columnIndex: actualColumnIndex,
+                                isMergedCell: isMerged,
                                 key: itemKey({
                                     rowIndex: actualRowIndex,
                                     columnIndex: actualColumnIndex,
@@ -1683,6 +1754,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             if (
                 rowIndex < frozenRows ||
                 columnIndex < frozenColumns ||
+                isMergedCell({ rowIndex, columnIndex }) ||
                 isHiddenCell?.(rowIndex, columnIndex)
             ) {
                 continue;
@@ -1730,13 +1802,23 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     continue;
                 }
 
+                const isMerged = isMergedCell({ rowIndex, columnIndex });
                 const bounds = getCellBounds({ rowIndex, columnIndex });
                 const actualRowIndex = rowIndex;
                 const actualColumnIndex = columnIndex;
                 const actualBottom = Math.max(rowIndex, bounds.bottom);
                 const actualRight = Math.max(columnIndex, bounds.right);
-                if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
+
+                if (!isMerged && isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
                     continue;
+                }
+
+                if (isMerged) {
+                    const cellId = cellIdentifier(bounds.top, bounds.left);
+                    if (mergedCellRenderMap.has(cellId)) {
+                        continue;
+                    }
+                    mergedCellRenderMap.add(cellId);
                 }
 
                 const y = getRowOffset(actualRowIndex);
@@ -1754,6 +1836,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         height,
                         rowIndex: actualRowIndex,
                         columnIndex: actualColumnIndex,
+                        isMergedCell: isMerged,
                         key: itemKey({
                             rowIndex: actualRowIndex,
                             columnIndex: actualColumnIndex,
@@ -1770,6 +1853,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             height,
                             rowIndex: actualRowIndex,
                             columnIndex: actualColumnIndex,
+                            isMergedCell: isMerged,
                             key: itemKey({
                                 rowIndex: actualRowIndex,
                                 columnIndex: actualColumnIndex,
@@ -1912,14 +1996,23 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 columnIndex < Math.min(columnStopIndex, frozenColumns);
                 columnIndex++
             ) {
+                const isMerged = isMergedCell({ rowIndex, columnIndex });
                 const bounds = getCellBounds({ rowIndex, columnIndex });
                 const actualRowIndex = rowIndex;
                 const actualColumnIndex = columnIndex;
                 const actualBottom = Math.max(rowIndex, bounds.bottom);
                 const actualRight = Math.max(columnIndex, bounds.right);
 
-                if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
+                if (!isMerged && isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
                     continue;
+                }
+
+                if (isMerged) {
+                    const cellId = cellIdentifier(bounds.top, bounds.left);
+                    if (mergedCellRenderMap.has(cellId)) {
+                        continue;
+                    }
+                    mergedCellRenderMap.add(cellId);
                 }
 
                 const y = getRowOffset(actualRowIndex);
@@ -1937,6 +2030,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         height,
                         rowIndex: actualRowIndex,
                         columnIndex: actualColumnIndex,
+                        isMergedCell: isMerged,
                         key: itemKey({
                             rowIndex: actualRowIndex,
                             columnIndex: actualColumnIndex,
@@ -1953,6 +2047,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             height,
                             rowIndex: actualRowIndex,
                             columnIndex: actualColumnIndex,
+                            isMergedCell: isMerged,
                             key: itemKey({
                                 rowIndex: actualRowIndex,
                                 columnIndex: actualColumnIndex,
@@ -2401,6 +2496,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     transform: [
                         {
                             translateX: -(scrollLeft + frozenColumnWidth),
+                        },
+                        {
                             translateY: -(scrollTop + frozenRowHeight),
                         },
                     ],
@@ -2417,7 +2514,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     overflow: 'hidden',
                 } as ViewStyle,
                 frozenColumnsSelectionContainerInner: {
-                    transform: [{ translateY: -(scrollTop + frozenRowHeight) }],
+                    transform: [{ translateX: 0 }, { translateY: -(scrollTop + frozenRowHeight) }],
                     // transform: `translate(0, -${scrollTop + frozenRowHeight}px)`,
                 } as ViewStyle,
                 frozenRowsSelectionContainer: {
@@ -2429,7 +2526,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     overflow: 'hidden',
                 } as ViewStyle,
                 frozenRowsSelectionContainerInner: {
-                    transform: [{ translateX: -(scrollLeft + frozenColumnWidth) }],
+                    transform: [
+                        { translateX: -(scrollLeft + frozenColumnWidth) },
+                        { translateY: 0 },
+                    ],
                     // transform: `translate(-${scrollLeft + frozenColumnWidth}px, 0)`,
                 } as ViewStyle,
                 frozenRowsAndColumnsSelectionArea: {
@@ -2449,7 +2549,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const selectionChildren = (
             <div style={selectionContainer}>
                 <View style={tableSelectionContainer}>
-                    <View style={tableSelectionContainerInner}>
+                    <View style={tableSelectionContainerInner} testID="table-selection-container">
                         {borderStyleCells}
                         {fillSelections}
                         {selectionAreas}

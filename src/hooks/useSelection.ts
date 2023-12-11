@@ -15,6 +15,7 @@ import {
     cellRangeToBounds,
 } from '../components/Grid/helpers';
 import { KeyCodes, Direction, MouseButtonCodes, SelectionPolicy } from '../components/Grid/types';
+import { useLatest, usePrevious } from '@bambooapp/bamboo-molecules';
 
 export interface UseSelectionOptions {
     /**
@@ -113,6 +114,14 @@ export interface UseSelectionOptions {
      * When selection is moved
      */
     onSelectionMove?: (from: SelectionArea, to: SelectionArea) => void;
+    /*
+     * When selection is done
+     * */
+    onSelectionEnd?: (start: CellInterface | null, end: CellInterface | null) => void;
+    /*
+     * When active cell changes
+     * */
+    onActiveCellChange?: (cell: CellInterface | null, prev: CellInterface | null) => void;
 }
 
 export type NewSelectionMode = 'clear' | 'modify' | 'append';
@@ -232,20 +241,26 @@ const useSelection = ({
     selectionRightBound = columnCount - 1,
     mouseDownInterceptor,
     mouseMoveInterceptor,
-    mergedCells = [],
+    // mergedCells = [],
+    onActiveCellChange,
     canSelectionSpanMergedCells = defaultSelectionSpan,
     getValue,
     onSelectionMove,
+    onSelectionEnd,
 }: UseSelectionOptions): SelectionResults => {
     const [activeCell, setActiveCell] = useState<CellInterface | null>(initialActiveCell);
     const [selections, setSelections] = useState<SelectionArea[]>(initialSelections);
     const [fillSelection, setFillSelection] = useState<SelectionArea>();
+
     const selectionStart = useRef<CellInterface | null>(null);
     const selectionEnd = useRef<CellInterface | null>(null);
     const isSelecting = useRef<boolean>(false);
     const isFilling = useRef<boolean>(false);
     const firstActiveCell = useRef<CellInterface | null>(null);
     const fillSelectionRef = useRef<SelectionArea>();
+
+    const prevActiveCell = usePrevious(activeCell);
+    const isFirstRender = useRef(true);
 
     /* Drag drop selection */
     const [_, forceRender] = useReducer(s => s + 1, 0);
@@ -261,17 +276,24 @@ const useSelection = ({
      */
     const activeCellRef = useRef(activeCell);
     const activeSelectionsRef = useRef(selections);
-    const mergedCellsRef = useRef(mergedCells);
+    const onActiveCellChangeRef = useLatest(onActiveCellChange);
+    // const mergedCellsRef = useRef(mergedCells);
 
+    useEffect(() => {
+        isFirstRender.current = false;
+    }, []);
     useEffect(() => {
         activeCellRef.current = activeCell;
     }, [activeCell]);
+
     useEffect(() => {
         activeSelectionsRef.current = selections;
     }, [selections]);
-    useEffect(() => {
-        mergedCellsRef.current = mergedCells;
-    }, [mergedCells]);
+
+    // useEffect(() => {
+    //     mergedCellsRef.current = mergedCells;
+    // }, [mergedCells]);
+
     useEffect(() => {
         fillSelectionRef.current = fillSelection;
     }, [fillSelection]);
@@ -605,6 +627,8 @@ const useSelection = ({
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
 
+        onSelectionEnd?.(selectionStart.current, selectionEnd.current);
+
         /* Update last selection */
         setSelections(prevSelection => {
             const len = prevSelection.length;
@@ -619,7 +643,7 @@ const useSelection = ({
                 return sel;
             });
         });
-    }, [handleMouseMove]);
+    }, [handleMouseMove, onSelectionEnd]);
 
     /**
      * Navigate selection using keyboard
@@ -1347,6 +1371,12 @@ const useSelection = ({
         // TODO - remove eslint ignore after testing
         // eslint-disable-next-line
     }, []);
+
+    useEffect(() => {
+        if (isFirstRender.current || !onActiveCellChangeRef.current) return;
+
+        onActiveCellChangeRef.current(activeCell, prevActiveCell.current);
+    }, [activeCell, onActiveCellChangeRef, prevActiveCell]);
 
     return {
         activeCell,

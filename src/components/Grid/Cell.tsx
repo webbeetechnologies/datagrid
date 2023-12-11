@@ -11,6 +11,7 @@ export interface CellProps extends RendererProps {
     fontWeight?: string;
     fontStyle?: string;
     onClick?: (e: KonvaEventObject<MouseEvent>) => void;
+    textWhiteSpace?: number;
 }
 
 /**
@@ -41,6 +42,7 @@ const Cell: React.FC<CellProps> = memo(props => {
         alpha = 1,
         strokeEnabled = true,
         isOverlay,
+        textWhiteSpace = 0,
         ...rest
     } = props;
     if (isOverlay) return null;
@@ -66,7 +68,7 @@ const Cell: React.FC<CellProps> = memo(props => {
             />
             {isNull(value) ? null : (
                 <Text
-                    x={x}
+                    x={x + textWhiteSpace}
                     y={y}
                     height={height}
                     width={width}

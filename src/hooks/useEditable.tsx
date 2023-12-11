@@ -16,6 +16,7 @@ import {
     isArrowKey,
     castToString,
 } from '../components/Grid/helpers';
+import { useLatest } from '@bambooapp/bamboo-molecules';
 // import { useWhatHasUpdated } from './useWhatHasUpdated';
 
 export interface UseEditableOptions {
@@ -23,7 +24,14 @@ export interface UseEditableOptions {
     /**
      * Inject custom editors based on a cell
      */
-    getEditor?: (cell: CellInterface | null) => React.ElementType;
+    getEditor?: (cell: CellInterface | null) => React.ElementType | undefined;
+    /*
+     *
+     * */
+    showEditorConfig?: (cell: CellInterface) => {
+        showOnFocused?: boolean;
+        // showOnDoubleClicked?: boolean;
+    };
     /**
      * Access grid methods
      */
@@ -41,12 +49,12 @@ export interface UseEditableOptions {
     /**
      * Callback when user changes a value in editor
      */
-    onChange?: (value: string, activeCell: CellInterface) => void;
+    onChange?: (value: any, activeCell: CellInterface) => void;
     /**
      * Callback when user submits a value. Use this to update state
      */
     onSubmit?: (
-        value: string,
+        value: any,
         activeCell: CellInterface,
         nextActiveCell?: CellInterface | null,
     ) => void;
@@ -81,11 +89,11 @@ export interface UseEditableOptions {
     /**
      * Hidden rows
      */
-    isHiddenRow: HiddenType;
+    isHiddenRow?: HiddenType;
     /**
      * Hidden columns
      */
-    isHiddenColumn: HiddenType;
+    isHiddenColumn?: HiddenType;
     /**
      * No of columns in the grid
      */
@@ -160,7 +168,7 @@ export interface EditableResults {
     /**
      * Set editable value imperatively
      */
-    setValue: (value: string, activeCell: CellInterface, previousValue?: string) => void;
+    setValue: (value: any, activeCell: CellInterface, previousValue?: string) => void;
     /**
      * Hide editor
      */
@@ -394,6 +402,8 @@ const DefaultEditor: React.FC<EditorProps> = props => {
     );
 };
 
+const showEditorConfigDefault = (_cell: CellInterface) => ({ showOnFocused: false });
+
 export const getDefaultEditor = (_cell: CellInterface | null) => DefaultEditor;
 const defaultCanEdit = (_cell: CellInterface) => true;
 const defaultIsHidden = (_i: number) => false;
@@ -404,6 +414,7 @@ const defaultIsHidden = (_i: number) => false;
  */
 const useEditable = ({
     getEditor = getDefaultEditor,
+    showEditorConfig = showEditorConfigDefault,
     gridRef,
     getValue,
     onChange,
@@ -430,7 +441,7 @@ const useEditable = ({
     sticky = false,
 }: UseEditableOptions): EditableResults => {
     const [isEditorShown, setShowEditor] = useState<boolean>(false);
-    const [value, setValue] = useState<string>('');
+    const [value, setValue] = useState<string | null>(null);
     const [position, setPosition] = useState<CellPosition>({
         x: 0,
         y: 0,
@@ -451,6 +462,8 @@ const useEditable = ({
     const maxEditorDimensionsRef = useRef<{ height: number; width: number }>();
     /* To prevent stale closures data */
     const getValueRef = useRef(getValue);
+
+    const showEditorConfigRef = useLatest(showEditorConfig);
 
     const showEditor = useCallback(() => setShowEditor(true), []);
 
@@ -542,6 +555,8 @@ const useEditable = ({
         // eslint-disable-next-line
         [frozenRows, frozenColumns, onBeforeEdit, canEdit, sticky],
     );
+
+    const makeEditableRef = useLatest(makeEditable);
 
     /* Frozen flags */
     const isFrozenRow =
@@ -745,7 +760,7 @@ const useEditable = ({
 
     /* Save the value */
     const handleSubmit = useCallback(
-        (value: string, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => {
+        (value: any, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => {
             /**
              * Hide the editor first, so that we can handle onBlur events
              * 1. Editor hides -> Submit
@@ -857,6 +872,13 @@ const useEditable = ({
     /* Get offset of frozen rows and columns */
     const frozenRowOffset = gridRef.current?.getRowOffset(frozenRows);
     const frozenColumnOffset = gridRef.current?.getColumnOffset(frozenColumns);
+
+    useEffect(() => {
+        if (!activeCell) return;
+
+        if (!showEditorConfigRef.current(activeCell).showOnFocused) return;
+        makeEditableRef.current(activeCell);
+    }, [activeCell, makeEditableRef, showEditorConfigRef]);
 
     const editorComponent =
         isEditorShown && Editor ? (

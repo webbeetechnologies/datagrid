@@ -19,7 +19,7 @@ export enum IconPacks {
     FontAwesome5 = 'font-awesome-5',
 }
 
-export type Props = Konva.NodeConfig & {
+export type Props = Konva.TextConfig & {
     size?: number;
     // TODO - map name to icon code
     // name: string;
