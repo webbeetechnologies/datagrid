@@ -1,5 +1,5 @@
 {
-  "name": "datagrid",
+  "name": "@bambooapp/datagrid",
   "version": "0.1.0",
   "author": "Thet Aung <thetaung.dev@gmail.com>",
   "license": "MIT",
@@ -21,8 +21,9 @@
     "type-check": "tsc --noEmit",
     "prepare:husky": "husky install",
     "test-jest": "jest",
-    "bundle": "MOLECULES_ENV=release rm -rf lib && yarn prepare && mkdir -p dist && npm pack --pack-destination=dist",
-    "do-release": "npm publish ./dist/bambooapp-virtualized-list-$npm_package_version.tgz --access=public",
+    "prepare": "bob build",
+    "bundle": "rm -rf lib && yarn prepare && mkdir -p dist && npm pack --pack-destination=dist",
+    "do-release": "npm publish ./dist/bambooapp-datagrid-$npm_package_version.tgz --access=public",
     "release": "yarn bundle && yarn do-release",
     "release:dev": "npm version prerelease --preid=dev && yarn release --tag=dev"
   },
