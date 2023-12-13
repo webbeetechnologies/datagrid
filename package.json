@@ -84,13 +84,11 @@
       [
         "commonjs",
         {
-          "configFile": true
         }
       ],
       [
         "module",
         {
-          "configFile": true
         }
       ],
       [

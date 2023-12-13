@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { Text } from 'react-konva';
 import type Konva from 'konva';
 
@@ -26,7 +27,7 @@ export type Props = Konva.TextConfig & {
     type?: any;
 };
 
-const CanvasIcon = ({
+const CanvasIcon: React.FC<Props> = ({
     size = 24,
     // name,
     type = IconPacks.MaterialCommunity,
@@ -35,7 +36,7 @@ const CanvasIcon = ({
     textColor = '#333',
     wrap = 'none',
     ...rest
-}: Props) => {
+}) => {
     return (
         <Text
             hitStrokeWidth={0}
@@ -50,4 +51,4 @@ const CanvasIcon = ({
     );
 };
 
-export default CanvasIcon;
+export default memo(CanvasIcon);

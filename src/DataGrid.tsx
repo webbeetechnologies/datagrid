@@ -11,27 +11,40 @@ import React, {
     ForwardedRef,
     RefObject,
 } from 'react';
-import { StyleSheet } from 'react-native';
+import { LayoutChangeEvent, StyleSheet } from 'react-native';
 import { Rect, Text, Group } from 'react-konva';
 import type { ViewProps } from '@bambooapp/bamboo-atoms';
 import { useMolecules } from '@bambooapp/bamboo-molecules';
-import { Icon } from '@bambooapp/bamboo-molecules/components';
+// import type { TDataTableRow } from '@bambooapp/bamboo-molecules/components';
 import type { Vector2d } from 'konva/lib/types';
 import type { RectConfig } from 'konva/lib/shapes/Rect';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { TextConfig } from 'konva/lib/shapes/Text';
 
-import useSelection, { SelectionResults, UseSelectionOptions } from './hooks/useSelection';
-import useEditable, { EditableResults, UseEditableOptions } from './hooks/useEditable';
-import Grid, {
+import {
+    InfiniteLoader,
+    InfiniteLoaderProps,
+    InfiniteLoaderChildrenArg,
+} from './components/InfiniteLoader';
+import {
+    Grid,
+    CanvasIcon,
+    GridCell as DefaultCell,
     CellInterface,
     GridProps,
     GridRef,
     RendererProps,
     ScrollCoords,
-} from './components/Grid/Grid';
-import { Cell as DefaultCell } from './components/Grid/Cell';
-import CanvasIcon from './components/Grid/CanvasIcon';
+    ViewPortProps,
+} from './components';
+import {
+    useSelection,
+    useEditable,
+    SelectionResults,
+    UseSelectionOptions,
+    EditableResults,
+    UseEditableOptions,
+} from './hooks';
 
 // const groupHeaderIndices = [0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800];
 
@@ -44,7 +57,7 @@ import CanvasIcon from './components/Grid/CanvasIcon';
 //     },
 // ];
 
-export type CellRendererProps = RendererProps & { getCellValue: <T>(cell: CellInterface) => T };
+export type CellRendererProps = RendererProps & { useCellValue: Props['useCellValue'] };
 
 export type Props = Pick<
     UseSelectionOptions,
@@ -53,18 +66,16 @@ export type Props = Pick<
     Pick<
         UseEditableOptions,
         | 'canEdit'
-        | 'showEditorConfig'
         | 'getEditor'
         | 'onDelete'
         | 'onBeforeEdit'
         | 'onChange'
         | 'onCancel'
+        | 'useEditorConfig'
     > &
     Pick<
         GridProps,
         | 'showScrollbar'
-        | 'width'
-        | 'height'
         | 'rowHeight'
         | 'columnWidth'
         | 'rowCount'
@@ -72,11 +83,21 @@ export type Props = Pick<
         | 'stageProps'
         | 'frozenColumns'
         | 'mergedCells'
+        | 'onViewChange'
+        | 'onContextMenu'
     > &
     ViewProps & {
-        useGetCellValue: <T>() => [
-            (cell: CellInterface) => T,
-            (cell: CellInterface, value: T) => void,
+        width?: number;
+        height?: number;
+        useCellValue: <T>(
+            cell: CellInterface | null,
+        ) => [
+            T,
+            (
+                newValue: T,
+                activeCell: CellInterface,
+                nextActiveCell: CellInterface | null | undefined,
+            ) => void,
         ];
         rowCount: number;
         columnCount: number;
@@ -85,6 +106,51 @@ export type Props = Pick<
         headerCellRenderer?: (props: RendererProps) => ReactNode;
         gridRef?: RefObject<GridRef>;
         headerGridRef?: RefObject<GridRef>;
+        countGridRef?: RefObject<GridRef>;
+        headerHeight?: number;
+        // records: TDataTableRow[];
+        rowsLoadingThreshold?: InfiniteLoaderProps['threshold'];
+
+        /**
+         *
+         * Infinite loader callback.
+         * minimum batch size to fetch records.
+         *
+         */
+        rowsMinimumBatchSize?: InfiniteLoaderProps['minimumBatchSize'];
+
+        /**
+         *
+         * Infinite loader callback.
+         * Will trigger everytime a new row is required to be loaded
+         *
+         */
+        loadMoreRows?: (
+            args: { startIndex: number; stopIndex: number },
+            currentViewport: ViewPortProps,
+        ) => void;
+
+        /**
+         *
+         * derive if the cell has loaded or not
+         * To be used for displaying a placeholder row.
+         *
+         */
+        hasRowLoaded?: (index: number) => boolean;
+        children?: ReactNode;
+        headerGridProps?: Omit<
+            GridProps,
+            | 'itemRenderer'
+            | 'containerStyle'
+            | 'columnCount'
+            | 'height'
+            | 'width'
+            | 'rowCount'
+            | 'frozenColumns'
+            | 'columnWidth'
+            | 'rowHeight'
+            | 'showScrollbar'
+        >;
     };
 
 export type DataGridRef = Pick<SelectionResults, 'selections' | 'activeCell' | 'setActiveCell'> &
@@ -133,9 +199,15 @@ export const HeaderCell = ({
     width = 0,
     height = 0,
     onResize,
+    onResizeEnd,
     textProps,
     children,
-}: RendererProps & { textProps?: TextConfig; children?: ReactNode }) => {
+}: RendererProps & {
+    textProps?: TextConfig;
+    children?: ReactNode;
+    onResize?: (columnIndex: number, newWidth: number) => void;
+    onResizeEnd?: (columnIndex: number, newWidth: number) => void;
+}) => {
     const text = columnIndex < 1 ? 'S/No' : `Header ${columnIndex}`;
     const fill = '#eee';
 
@@ -144,9 +216,19 @@ export const HeaderCell = ({
             const node = e.target;
             const newWidth = node.x() - x + dragHandleWidth;
 
-            onResize(columnIndex, newWidth);
+            onResize?.(columnIndex, newWidth);
         },
         [columnIndex, onResize, x],
+    );
+
+    const onDragEnd = useCallback(
+        (e: KonvaEventObject<DragEvent>) => {
+            const node = e.target;
+            const newWidth = node.x() - x + dragHandleWidth;
+
+            onResizeEnd?.(columnIndex, newWidth);
+        },
+        [columnIndex, onResizeEnd, x],
     );
 
     return (
@@ -178,6 +260,7 @@ export const HeaderCell = ({
                 width={dragHandleWidth}
                 height={height}
                 onDragMove={onMouseMove}
+                onDragEnd={onDragEnd}
             />
         </Group>
     );
@@ -197,83 +280,77 @@ const getEditorDefault = (cell: CellInterface | null) => {
     return undefined;
 };
 
-const defaultCellRenderer = ({
-    rowIndex,
-    columnIndex,
-    x = 0,
-    y = 0,
-    getCellValue,
-    ...restProps
-}: CellRendererProps) => {
-    const value = getCellValue<string>({ rowIndex, columnIndex });
-
-    // if (record?._rowType === 'group-header') {
-    //     return (
-    //         <Group x={x} y={y}>
-    //             {columnIndex === 0 && (
-    //                 <>
-    //                     <CanvasIcon
-    //                         // onClick={() => onToggleGroup(rowIndex)}
-    //                         x={x}
-    //                         y={y - 5}
-    //                         text="󰅂"
-    //                         align="center"
-    //                         verticalAlign="center"
-    //                         size={24}
-    //                     />
-    //                     <Text
-    //                         x={x + 25}
-    //                         y={y}
-    //                         align="center"
-    //                         verticalAlign="center"
-    //                         fill="#333"
-    //                         fontSize={12}
-    //                         text={`group-header${rowIndex}`}
-    //                     />
-    //                 </>
-    //             )}
-    //         </Group>
-    //     );
-    // }
-    //
-    // if (record?._rowType === 'group-footer') {
-    //     return (
-    //         <Group x={x} y={y}>
-    //             {columnIndex === 0 && (
-    //                 <Text
-    //                     x={x}
-    //                     y={y}
-    //                     align="center"
-    //                     verticalAlign="center"
-    //                     fill="#333"
-    //                     fontSize={12}
-    //                     text={`group-footer${rowIndex}`}
-    //                 />
-    //             )}
-    //         </Group>
-    //     );
-    // }
-
-    return (
-        <DefaultCell
-            x={x}
-            y={y}
-            value={value}
-            align="left"
-            rowIndex={rowIndex}
-            columnIndex={columnIndex}
-            {...restProps}
-        />
-    );
+const defaultCellRenderer = (props: CellRendererProps) => {
+    return <DefaultCellWrapper {...props} />;
 };
+
+const dummyGetValue = () => 'a';
+
+const defaultHasRowLoaded = () => true;
+
+const DefaultCellWrapper = memo(
+    ({ useCellValue, rowIndex, columnIndex, ...rest }: CellRendererProps) => {
+        const [value] = useCellValue<any>({ rowIndex, columnIndex });
+
+        // if (record?._rowType === 'group-header') {
+        //     return (
+        //         <Group x={x} y={y}>
+        //             {columnIndex === 0 && (
+        //                 <>
+        //                     <CanvasIcon
+        //                         // onClick={() => onToggleGroup(rowIndex)}
+        //                         x={x}
+        //                         y={y - 5}
+        //                         text="󰅂"
+        //                         align="center"
+        //                         verticalAlign="center"
+        //                         size={24}
+        //                     />
+        //                     <Text
+        //                         x={x + 25}
+        //                         y={y}
+        //                         align="center"
+        //                         verticalAlign="center"
+        //                         fill="#333"
+        //                         fontSize={12}
+        //                         text={`group-header${rowIndex}`}
+        //                     />
+        //                 </>
+        //             )}
+        //         </Group>
+        //     );
+        // }
+        //
+        // if (record?._rowType === 'group-footer') {
+        //     return (
+        //         <Group x={x} y={y}>
+        //             {columnIndex === 0 && (
+        //                 <Text
+        //                     x={x}
+        //                     y={y}
+        //                     align="center"
+        //                     verticalAlign="center"
+        //                     fill="#333"
+        //                     fontSize={12}
+        //                     text={`group-footer${rowIndex}`}
+        //                 />
+        //             )}
+        //         </Group>
+        //     );
+        // }
+
+        return (
+            <DefaultCell {...rest} value={value} rowIndex={rowIndex} columnIndex={columnIndex} />
+        );
+    },
+);
 
 const DataGrid = (
     {
-        useGetCellValue,
         rowCount,
         columnCount,
-        width,
-        height,
+        width: widthProp,
+        height: heightProp,
         mergedCells,
         onFill,
         onSelectionEnd,
@@ -282,6 +359,7 @@ const DataGrid = (
         showScrollbar = true,
         columnWidth = defaultColumnWidth,
         rowHeight = defaultRowHeight,
+        headerHeight = 40,
         frozenColumns = 1,
         cellRenderer = defaultCellRenderer,
         headerCellRenderer,
@@ -289,31 +367,49 @@ const DataGrid = (
         innerContainerProps,
         gridRef: gridRefProp,
         headerGridRef: headerGridRefProp,
-        showEditorConfig,
+        countGridRef: countGridRefProp,
         onDelete,
         getEditor = getEditorDefault,
+        useEditorConfig,
         canEdit,
         onBeforeEdit,
         onCancel,
         onChange,
         onActiveCellChange,
+        useCellValue,
+        // records,
+        onViewChange,
+        hasRowLoaded = defaultHasRowLoaded,
+        loadMoreRows: loadMoreRowsProp,
+        rowsLoadingThreshold,
+        rowsMinimumBatchSize,
+        children,
+        headerGridProps,
+        onContextMenu,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
 ) => {
     const { View } = useMolecules();
 
+    const [layout, setLayout] = useState({ width: 0, height: 0 });
+
+    const width = widthProp || layout.width;
+    const height = heightProp || layout.height;
+
     const headerGridRef = useRef<GridRef>(null);
     const countGridRef = useRef<GridRef>(null);
     const gridRef = useRef<GridRef>(null);
+    const currentViewPort = useRef<ViewPortProps>();
+
+    // const mergeGridRef = useMergedRefs([gridRef, gridRefProp]);
 
     useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
     useImperativeHandle(headerGridRefProp, () => headerGridRef.current as GridRef);
+    useImperativeHandle(countGridRefProp, () => countGridRef.current as GridRef);
 
     // const [collapsedGroups, setCollapsedGroups] = useState<number[]>([]);
     // const collapsedGroupsRef = useLatest(collapsedGroups);
-
-    const [getCellValue, setCellValue] = useGetCellValue<any>();
 
     // const getCellValue = useCallback(
     //     ({ rowIndex, columnIndex }) => data[[rowIndex, columnIndex]],
@@ -331,7 +427,8 @@ const DataGrid = (
         gridRef,
         rowCount,
         columnCount,
-        getValue: getCellValue,
+        // TODO - update this
+        getValue: dummyGetValue,
         onFill,
         onSelectionEnd,
         initialSelections,
@@ -418,17 +515,16 @@ const DataGrid = (
     //     }
     // }, []);
 
-    const onSubmit = useCallback(
-        (value: any, cell: CellInterface, nextActiveCell: CellInterface | null | undefined) => {
-            setCellValue(cell, value);
-            gridRef.current?.resizeColumns([cell.columnIndex]);
+    const onAfterSubmit = useCallback(
+        (_value: any, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => {
+            gridRef.current?.resizeColumns([activeCell.columnIndex]);
 
             /* Select the next cell */
             if (nextActiveCell) {
                 setActiveCell(nextActiveCell);
             }
         },
-        [setActiveCell, setCellValue],
+        [setActiveCell],
     );
 
     const {
@@ -437,23 +533,24 @@ const DataGrid = (
         onScroll: onEditableScroll,
         onKeyDown: onEditorKeyDown,
         onMouseDown: onEditorMouseDown,
+        hideEditor: _,
         ...editableProps
     } = useEditable({
         gridRef,
-        getValue: getCellValue,
+        useValue: useCellValue,
         selections,
         activeCell,
         rowCount,
         columnCount,
         frozenColumns,
         onDelete,
-        showEditorConfig,
         getEditor,
         canEdit,
         onBeforeEdit,
         onCancel,
         onChange,
-        onSubmit,
+        onAfterSubmit,
+        useEditorConfig,
     });
 
     const onScroll = useCallback(
@@ -483,10 +580,98 @@ const DataGrid = (
 
     const renderCell = useCallback(
         (props: RendererProps) => {
-            return cellRenderer({ ...props, getCellValue });
+            return cellRenderer({ ...props, useCellValue });
         },
-        [cellRenderer, getCellValue],
+        // eslint-disable-next-line
+        [cellRenderer],
     );
+
+    const countGridRowHeight = useCallback(
+        (index: number) => (index === 0 ? headerHeight : rowHeight(index)),
+        [headerHeight, rowHeight],
+    );
+
+    const headerGridRowHeight = useCallback(() => headerHeight, [headerHeight]);
+
+    const loadMoreRows = useCallback(
+        async (startIndex: number, stopIndex: number) => {
+            loadMoreRowsProp?.({ startIndex, stopIndex }, currentViewPort.current as ViewPortProps);
+        },
+        [loadMoreRowsProp],
+    );
+
+    const renderGrid = useCallback(
+        ({ ref: _ref, onItemsRendered }: InfiniteLoaderChildrenArg) => {
+            const setRef = (listRef: any) => {
+                return _ref(listRef);
+            };
+
+            const _onViewChange = (viewPortProps: ViewPortProps) => {
+                onItemsRendered({
+                    visibleStartIndex: viewPortProps.visibleRowStartIndex,
+                    visibleStopIndex: viewPortProps.visibleRowStopIndex,
+                });
+                currentViewPort.current = viewPortProps;
+
+                onViewChange?.(viewPortProps);
+            };
+
+            return (
+                <Grid
+                    ref={gridRef}
+                    verticalScrollRef={setRef as any}
+                    onViewChange={_onViewChange}
+                    mergedCells={mergedCells}
+                    showScrollbar={showScrollbar}
+                    columnCount={columnCount}
+                    rowCount={rowCount}
+                    frozenColumns={frozenColumns}
+                    height={height}
+                    width={width}
+                    columnWidth={columnWidth}
+                    rowHeight={rowHeight}
+                    itemRenderer={renderCell}
+                    selections={selections}
+                    activeCell={activeCell}
+                    showFillHandle={!isEditInProgress}
+                    {...selectionProps}
+                    {...editableProps}
+                    onKeyDown={onKeyDown}
+                    onMouseDown={onMouseDown}
+                    onScroll={onScroll}
+                    stageProps={stageProps}
+                    onContextMenu={onContextMenu}
+                />
+            );
+        },
+        [
+            activeCell,
+            columnCount,
+            columnWidth,
+            editableProps,
+            frozenColumns,
+            height,
+            isEditInProgress,
+            mergedCells,
+            onKeyDown,
+            onMouseDown,
+            onScroll,
+            onViewChange,
+            renderCell,
+            rowCount,
+            rowHeight,
+            selectionProps,
+            selections,
+            showScrollbar,
+            stageProps,
+            width,
+            onContextMenu,
+        ],
+    );
+
+    const onLayout = useCallback((e: LayoutChangeEvent) => {
+        setLayout({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height });
+    }, []);
 
     useImperativeHandle(ref, () => ({
         selections,
@@ -499,55 +684,47 @@ const DataGrid = (
         <View style={styles.container}>
             <Grid
                 ref={countGridRef}
+                containerStyle={styles.countGrid}
                 columnCount={1}
                 width={50}
-                height={height + 40}
+                height={height + headerHeight}
                 frozenRows={1}
                 rowCount={rowCount + 1}
                 columnWidth={defaultRowCountColumnWidth}
-                rowHeight={rowHeight}
+                rowHeight={countGridRowHeight}
                 showScrollbar={false}
                 itemRenderer={renderRowCountCell}
             />
-            <View {...rest}>
+            <View style={styles.innerContainer} {...rest}>
                 <Grid
+                    containerStyle={styles.header}
                     columnCount={columnCount}
-                    height={40}
+                    height={headerHeight}
                     rowCount={1}
                     frozenColumns={frozenColumns}
                     ref={headerGridRef}
                     width={width}
                     columnWidth={columnWidth}
-                    rowHeight={rowHeight}
+                    rowHeight={headerGridRowHeight}
                     showScrollbar={false}
                     itemRenderer={headerCellRenderer}
+                    {...headerGridProps}
                 />
-                <View style={styles.tableBodyContainer} {...innerContainerProps}>
-                    <Grid
-                        ref={gridRef}
-                        mergedCells={mergedCells}
-                        showScrollbar={showScrollbar}
-                        columnCount={columnCount}
-                        rowCount={rowCount}
-                        frozenColumns={frozenColumns}
-                        height={height}
-                        width={width}
-                        columnWidth={columnWidth}
-                        rowHeight={rowHeight}
-                        itemRenderer={renderCell}
-                        selections={selections}
-                        activeCell={activeCell}
-                        showFillHandle={!isEditInProgress}
-                        {...selectionProps}
-                        {...editableProps}
-                        onKeyDown={onKeyDown}
-                        onMouseDown={onMouseDown}
-                        onScroll={onScroll}
-                        stageProps={stageProps}
-                    />
+                <View
+                    style={styles.tableBodyContainer}
+                    {...innerContainerProps}
+                    onLayout={onLayout}>
+                    <InfiniteLoader
+                        isItemLoaded={hasRowLoaded}
+                        itemCount={rowCount}
+                        loadMoreItems={loadMoreRows}
+                        threshold={rowsLoadingThreshold}
+                        minimumBatchSize={rowsMinimumBatchSize}>
+                        {renderGrid}
+                    </InfiniteLoader>
                     {editorComponent}
+                    {children}
                 </View>
-                <Icon name="star-outline" size={12} />
             </View>
         </View>
     );
@@ -575,20 +752,18 @@ export const RowCountCell = ({ rowIndex, ...rest }: RendererProps) => {
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             value={rowIndex > 0 ? (!hovered ? `${rowIndex}` : '') : ''}
-            align="center"
-            padding={15}>
+            align="center">
             {(rowIndex === 0 || (rowIndex > 0 && hovered)) && (
                 <CanvasIcon
                     x={rest.x}
                     y={rest.y}
                     width={rest.width}
                     height={rest.height}
-                    padding={10}
                     text="󰄱"
                     size={20}
                     textColor="#00000051"
                     align="center"
-                    verticalAlign="center"
+                    verticalAlign="middle"
                 />
             )}
         </DefaultCell>
@@ -597,12 +772,23 @@ export const RowCountCell = ({ rowIndex, ...rest }: RendererProps) => {
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
         flexDirection: 'row',
+    },
+    innerContainer: {
+        flex: 1,
+    },
+    header: {
+        zIndex: 10,
+    },
+    countGrid: {
+        zIndex: 10,
     },
     tableBodyContainer: {
         position: 'relative',
         display: 'flex',
         flexDirection: 'row',
+        flex: 1,
     },
 });
 

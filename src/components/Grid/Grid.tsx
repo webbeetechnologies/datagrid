@@ -10,8 +10,9 @@ import React, {
     useEffect,
     Key,
     CSSProperties,
+    RefObject,
 } from 'react';
-import type { NativeScrollEvent, NativeSyntheticEvent, ViewStyle } from 'react-native';
+import type { NativeScrollEvent, NativeSyntheticEvent, ViewStyle, ScrollView } from 'react-native';
 import { Stage, Layer, Group, Line } from 'react-konva';
 import type Konva from 'konva';
 import type { ShapeConfig } from 'konva/lib/Shape';
@@ -50,6 +51,7 @@ import invariant from 'tiny-invariant';
 import type { StageConfig } from 'konva/lib/Stage';
 import { Direction } from './types';
 import { useMolecules } from '@bambooapp/bamboo-molecules';
+import { StyleSheet } from 'react-native';
 
 export interface GridProps
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onScroll' | 'children'> {
@@ -264,6 +266,8 @@ export interface GridProps
      * Is user currently dragging a selection
      */
     isDraggingSelection?: boolean;
+    verticalScrollRef?: RefObject<ScrollView>;
+    containerStyle?: ViewStyle;
 }
 
 export interface CellRangeArea extends CellInterface {
@@ -543,6 +547,9 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             scale = 1,
             enableSelectionDrag = false,
             isDraggingSelection = false,
+            style,
+            verticalScrollRef: verticalScrollRefProp,
+            containerStyle: containerStyleProp,
             ...rest
         } = props;
 
@@ -594,6 +601,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const verticalScrollRef = useRef<any>(null);
         const wheelingRef = useRef<number | null>(null);
         const horizontalScrollRef = useRef<any>(null);
+
+        useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current);
 
         const snapToRowThrottler = useRef<({ deltaY }: SnapRowProps) => void>();
         const snapToColumnThrottler = useRef<({ deltaX }: SnapColumnProps) => void>();
@@ -2590,17 +2599,27 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
         const {
             containerStyle,
+            innerContainerStyle,
             verticalScrollbarStyle,
             verticalScrollbarHandleStyle,
             horizontalScrollbarStyle,
             horizontalScrollbarHandleStyle,
         } = useMemo(
             () => ({
-                containerStyle: {
-                    position: 'relative',
-                    width: containerWidth,
-                    userSelect: 'none',
-                } as ViewStyle,
+                containerStyle: [
+                    {
+                        position: 'relative',
+                        width: containerWidth,
+                        userSelect: 'none',
+                    },
+                    containerStyleProp,
+                ] as ViewStyle,
+                innerContainerStyle: StyleSheet.flatten([
+                    {
+                        outline: 'none',
+                    },
+                    style,
+                ]),
                 verticalScrollbarStyle: {
                     height: containerHeight,
                     position: 'absolute',
@@ -2634,12 +2653,13 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 estimatedTotalHeight,
                 estimatedTotalWidth,
                 scrollbarSize,
+                style,
             ],
         );
 
         return (
             <View style={containerStyle} ref={scrollContainerRef}>
-                <div {...{ tabIndex: 0 }} ref={containerRef} {...rest}>
+                <div {...{ tabIndex: 0 }} ref={containerRef} style={innerContainerStyle} {...rest}>
                     <Stage
                         width={containerWidth}
                         height={containerHeight}
@@ -2678,6 +2698,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
     }),
 );
 
-const selectionContainer = { pointerEvents: 'none' } as CSSProperties;
+const selectionContainer = { pointerEvents: 'none', outline: 'none' } as CSSProperties;
 
 export default Grid;

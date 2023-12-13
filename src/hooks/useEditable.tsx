@@ -19,6 +19,13 @@ import {
 import { useLatest } from '@bambooapp/bamboo-molecules';
 // import { useWhatHasUpdated } from './useWhatHasUpdated';
 
+export type EditorConfig = {
+    showOnFocused?: boolean;
+    showOnDoubleClicked?: boolean;
+    concatInitialValue?: boolean;
+    canEdit?: boolean;
+};
+
 export interface UseEditableOptions {
     editorProps?: () => any;
     /**
@@ -28,10 +35,7 @@ export interface UseEditableOptions {
     /*
      *
      * */
-    showEditorConfig?: (cell: CellInterface) => {
-        showOnFocused?: boolean;
-        // showOnDoubleClicked?: boolean;
-    };
+    useEditorConfig?: (cell: CellInterface | null) => EditorConfig | undefined;
     /**
      * Access grid methods
      */
@@ -39,7 +43,12 @@ export interface UseEditableOptions {
     /**
      * Value getter
      */
-    getValue: (cell: CellInterface) => any;
+    useValue: (
+        cell: CellInterface | null,
+    ) => [
+        any,
+        (newValue: any, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => void,
+    ];
     /**
      * Callback when user cancels editing
      */
@@ -53,7 +62,7 @@ export interface UseEditableOptions {
     /**
      * Callback when user submits a value. Use this to update state
      */
-    onSubmit?: (
+    onAfterSubmit?: (
         value: any,
         activeCell: CellInterface,
         nextActiveCell?: CellInterface | null,
@@ -402,11 +411,16 @@ const DefaultEditor: React.FC<EditorProps> = props => {
     );
 };
 
-const showEditorConfigDefault = (_cell: CellInterface) => ({ showOnFocused: false });
-
 export const getDefaultEditor = (_cell: CellInterface | null) => DefaultEditor;
+const useDefaultEditorConfig = () => ({
+    showOnDoubleClicked: true,
+    concatInitialValue: true,
+});
+
 const defaultCanEdit = (_cell: CellInterface) => true;
 const defaultIsHidden = (_i: number) => false;
+
+const EMPTY_ARR = [] as SelectionArea[];
 
 /**
  * Hook to make grid editable
@@ -414,14 +428,14 @@ const defaultIsHidden = (_i: number) => false;
  */
 const useEditable = ({
     getEditor = getDefaultEditor,
-    showEditorConfig = showEditorConfigDefault,
+    useEditorConfig = useDefaultEditorConfig,
     gridRef,
-    getValue,
+    useValue,
     onChange,
-    onSubmit,
+    onAfterSubmit,
     onCancel,
     onDelete,
-    selections = [],
+    selections = EMPTY_ARR,
     activeCell,
     canEdit = defaultCanEdit,
     frozenRows = 0,
@@ -461,9 +475,13 @@ const useEditable = ({
     const initialValueRef = useRef<string>();
     const maxEditorDimensionsRef = useRef<{ height: number; width: number }>();
     /* To prevent stale closures data */
-    const getValueRef = useRef(getValue);
+    // const getValueRef = useRef(getValue);
+    const activeCellRef = useLatest(activeCell);
 
-    const showEditorConfigRef = useLatest(showEditorConfig);
+    const [actualValue, onSubmitValue] = useValue(activeCell);
+    const actualValueRef = useLatest(actualValue);
+
+    const editorConfig = useLatest(useEditorConfig(activeCell));
 
     const showEditor = useCallback(() => setShowEditor(true), []);
 
@@ -480,11 +498,6 @@ const useEditable = ({
     useEffect(() => {
         currentValueRef.current = value;
     });
-
-    /* Keep getvalue ref in sync with upstream prop */
-    useEffect(() => {
-        getValueRef.current = getValue;
-    }, [getValue]);
 
     // useWhatHasUpdated('useEditable', { isEditorShown, value, position, autoFocus, scrollPosition });
 
@@ -505,7 +518,7 @@ const useEditable = ({
             }
 
             /* Call on before edit */
-            if (canEdit(coords)) {
+            if (editorConfig.current || canEdit(coords)) {
                 /* Let user modify coords before edit */
                 onBeforeEdit?.(coords);
 
@@ -517,8 +530,7 @@ const useEditable = ({
                 /* Get offsets */
                 const pos = gridRef.current.getCellOffsetFromCoords(coords);
                 const scrollPosition = gridRef.current.getScrollPosition();
-                const cellValue = getValueRef.current(coords);
-                const value = initialValue || cellValue || '';
+                const value = initialValue || actualValueRef.current || '';
                 const cellPosition = sticky
                     ? // Editor is rendered outside the <Grid /> component
                       // If the user has scrolled down, and then activate the editor, we will need to adjust the position
@@ -553,7 +565,7 @@ const useEditable = ({
         },
         // TODO - remove eslint ignore after testing
         // eslint-disable-next-line
-        [frozenRows, frozenColumns, onBeforeEdit, canEdit, sticky],
+        [frozenRows, frozenColumns, onBeforeEdit, sticky],
     );
 
     const makeEditableRef = useLatest(makeEditable);
@@ -581,7 +593,9 @@ const useEditable = ({
     /* Activate edit mode */
     const handleDoubleClick = useCallback(
         (e: React.MouseEvent<HTMLElement>) => {
-            if (!gridRef.current) return;
+            if (!gridRef.current || !activeCellRef.current) return;
+            if (!editorConfig.current?.showOnDoubleClicked) return;
+
             const coords = gridRef.current.getCellCoordsFromOffset(
                 e.nativeEvent.clientX,
                 e.nativeEvent.clientY,
@@ -592,7 +606,7 @@ const useEditable = ({
         },
         // TODO - remove eslint ignore after testing
         // eslint-disable-next-line
-        [getValue, frozenRows, frozenColumns],
+        [frozenRows, frozenColumns],
     );
 
     const isSelectionKey = useCallback((keyCode: number) => {
@@ -656,14 +670,19 @@ const useEditable = ({
                     ? undefined
                     : e.nativeEvent.key;
 
-            makeEditable({ rowIndex, columnIndex }, initialValue);
+            makeEditable(
+                { rowIndex, columnIndex },
+                editorConfig.current?.concatInitialValue
+                    ? (currentValueRef.current || '') + initialValue
+                    : undefined,
+            );
 
             /* Prevent the first keystroke */
             e.preventDefault();
         },
         // TODO - remove eslint ignore after testing
         // eslint-disable-next-line
-        [getValue, selections, activeCell, onDelete],
+        [selections, activeCell, onDelete],
     );
 
     /**
@@ -758,6 +777,15 @@ const useEditable = ({
         [selections, isHiddenRow, isHiddenColumn, selectionBottomBound, selectionTopBound],
     );
 
+    const onSubmit = useCallback(
+        (value: any, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => {
+            onSubmitValue(value, activeCell, nextActiveCell);
+
+            onAfterSubmit?.(value, activeCell, nextActiveCell);
+        },
+        [onAfterSubmit, onSubmitValue],
+    );
+
     /* Save the value */
     const handleSubmit = useCallback(
         (value: any, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => {
@@ -769,7 +797,7 @@ const useEditable = ({
             hideEditor();
 
             /* Save the new value */
-            onSubmit && onSubmit(value, activeCell, nextActiveCell);
+            onSubmit(value, activeCell, nextActiveCell);
 
             /* Keep the focus */
             focusGrid();
@@ -835,7 +863,11 @@ const useEditable = ({
     const editingCell = currentActiveCellRef.current;
 
     const Editor = useMemo(() => {
-        return editingCell ? getEditor(editingCell) || getDefaultEditor(editingCell) : null;
+        if (editingCell) {
+            return getEditor(editingCell) || getDefaultEditor(editingCell);
+        }
+
+        return null;
     }, [editingCell, getEditor]);
 
     const handleBlur = useCallback(
@@ -876,9 +908,15 @@ const useEditable = ({
     useEffect(() => {
         if (!activeCell) return;
 
-        if (!showEditorConfigRef.current(activeCell).showOnFocused) return;
+        if (!editorConfig.current?.showOnFocused) return;
         makeEditableRef.current(activeCell);
-    }, [activeCell, makeEditableRef, showEditorConfigRef]);
+    }, [activeCell, makeEditableRef, editorConfig]);
+
+    useEffect(() => {
+        if (actualValue !== currentValueRef.current) {
+            setValue(actualValue);
+        }
+    }, [actualValue]);
 
     const editorComponent =
         isEditorShown && Editor ? (
@@ -889,6 +927,7 @@ const useEditable = ({
                 activeCell={activeCell}
                 autoFocus={autoFocus}
                 value={value}
+                onSubmitValue={onSubmitValue}
                 selections={selections}
                 onChange={handleChange}
                 onSubmit={handleSubmit}

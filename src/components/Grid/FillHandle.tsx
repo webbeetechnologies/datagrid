@@ -1,9 +1,10 @@
+import React, { memo } from 'react';
 import type { ShapeConfig } from 'konva/lib/Shape';
 
 /**
  * Fill handle component
  */
-const FillHandle = ({
+const FillHandle: React.FC<ShapeConfig> = ({
     x = 0,
     y = 0,
     stroke,
@@ -11,7 +12,7 @@ const FillHandle = ({
     size = 8,
     borderColor,
     ...props
-}: ShapeConfig) => {
+}) => {
     if (x === 0 || y === 0) return null;
     return (
         <div
@@ -33,4 +34,4 @@ const FillHandle = ({
     );
 };
 
-export default FillHandle;
+export default memo(FillHandle);
