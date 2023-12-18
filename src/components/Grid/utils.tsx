@@ -2,6 +2,8 @@ import React from 'react';
 import type { ShapeConfig } from 'konva/lib/Shape';
 import { Line, Rect } from 'react-konva';
 import type { SelectionProps } from './Grid';
+import { View } from '@bambooapp/bamboo-atoms';
+import type { ViewStyle } from 'react-native';
 
 /**
  * Create a box with custom top/right/bottom/left colors and widths
@@ -100,6 +102,7 @@ export const createCanvasBox = ({
     );
 };
 
+// TODO - improve this, get rid of inline styles
 export const createHTMLBox = ({
     x = 0,
     y = 0,
@@ -144,7 +147,9 @@ export const createHTMLBox = ({
     height = height - Math.floor(strokeWidth / 2);
     // y = y - Math.ceil(strokeWidth / 2);
     const lines = [
-        <div
+        <View
+            pointerEvents="none"
+            // @ts-ignore
             style={{
                 ...lineStyles,
                 left: x,
@@ -158,7 +163,9 @@ export const createHTMLBox = ({
             key="top"
             {...props}
         />,
-        <div
+        <View
+            pointerEvents="none"
+            // @ts-ignore
             style={{
                 ...lineStyles,
                 left: x + width,
@@ -172,7 +179,9 @@ export const createHTMLBox = ({
             key="right"
             {...props}
         />,
-        <div
+        <View
+            pointerEvents="none"
+            // @ts-ignore
             style={{
                 ...lineStyles,
                 left: x,
@@ -186,7 +195,9 @@ export const createHTMLBox = ({
             key="bottom"
             {...props}
         />,
-        <div
+        <View
+            pointerEvents="none"
+            // @ts-ignore
             style={{
                 ...lineStyles,
                 left: x,
@@ -202,7 +213,9 @@ export const createHTMLBox = ({
         />,
     ];
     const borderCovers = [
-        <div
+        <View
+            pointerEvents={draggable ? 'auto' : 'none'}
+            // @ts-ignore
             // eslint-disable-next-line react-native/no-inline-styles
             style={{
                 ...borderCoverStyle,
@@ -214,7 +227,9 @@ export const createHTMLBox = ({
             key="top"
             {...props}
         />,
-        <div
+        <View
+            pointerEvents={draggable ? 'auto' : 'none'}
+            // @ts-ignore
             style={{
                 ...borderCoverStyle,
                 left: x + width - borderCoverWidth + strokeRightWidth,
@@ -225,7 +240,9 @@ export const createHTMLBox = ({
             key="right"
             {...props}
         />,
-        <div
+        <View
+            pointerEvents={draggable ? 'auto' : 'none'}
+            // @ts-ignore
             style={{
                 ...borderCoverStyle,
                 left: x,
@@ -236,14 +253,18 @@ export const createHTMLBox = ({
             key="bottom"
             {...props}
         />,
-        <div
-            style={{
-                ...borderCoverStyle,
-                left: x,
-                top: y,
-                width: borderCoverWidth,
-                height: height,
-            }}
+        <View
+            pointerEvents={draggable ? 'auto' : 'none'}
+            // @ts-ignore
+            style={
+                {
+                    ...borderCoverStyle,
+                    left: x,
+                    top: y,
+                    width: borderCoverWidth,
+                    height: height,
+                } as ViewStyle
+            }
             key="left"
             {...props}
         />,
@@ -261,22 +282,25 @@ export const createHTMLBox = ({
     //     bounds,
     //     strokeWidth,
     // };
+
     return (
         <React.Fragment key={key}>
             {fill && (
-                <div
-                    // eslint-disable-next-line react-native/no-inline-styles
-                    style={{
-                        position: 'absolute',
-                        top: y,
-                        left: x,
-                        height,
-                        width,
-                        backgroundColor: fill,
-                        opacity: fillOpacity,
-                        userSelect: 'none',
-                        pointerEvents: 'none',
-                    }}
+                <View
+                    pointerEvents="none"
+                    style={
+                        {
+                            position: 'absolute',
+                            top: y,
+                            left: x,
+                            height,
+                            width,
+                            backgroundColor: fill,
+                            opacity: fillOpacity,
+                            userSelect: 'none',
+                            pointerEvents: 'none',
+                        } as ViewStyle
+                    }
                 />
             )}
             {lines}

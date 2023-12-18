@@ -1,7 +1,9 @@
 import React, { memo } from 'react';
-import type { RendererProps } from './Grid';
 import { Group, Rect, Text } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
+import type { TextConfig } from 'konva/lib/shapes/Text';
+
+import type { RendererProps } from './Grid';
 import { isNull } from './helpers';
 
 export interface CellProps extends RendererProps {
@@ -12,6 +14,7 @@ export interface CellProps extends RendererProps {
     fontStyle?: string;
     onClick?: (e: KonvaEventObject<MouseEvent>) => void;
     textWhiteSpace?: number;
+    textProps?: TextConfig;
 }
 
 /**
@@ -43,6 +46,7 @@ const Cell: React.FC<CellProps> = memo(props => {
         strokeEnabled = true,
         isOverlay,
         textWhiteSpace = 0,
+        textProps,
         ...rest
     } = props;
     if (isOverlay) return null;
@@ -83,6 +87,7 @@ const Cell: React.FC<CellProps> = memo(props => {
                     wrap={wrap}
                     fontSize={fontSize}
                     hitStrokeWidth={0}
+                    {...textProps}
                 />
             )}
             {children}

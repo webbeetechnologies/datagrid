@@ -17,6 +17,27 @@ import {
 import { KeyCodes, Direction, MouseButtonCodes, SelectionPolicy } from '../components/Grid/types';
 import { useLatest, usePrevious } from '@bambooapp/bamboo-molecules';
 
+const cellEqualsSelection = (cell: CellInterface | null, selections: SelectionArea[]): boolean => {
+    if (cell === null) return false;
+    return selections.some(sel => {
+        return (
+            sel.bounds.left === cell.columnIndex &&
+            sel.bounds.top === cell.rowIndex &&
+            sel.bounds.right === cell.columnIndex &&
+            sel.bounds.bottom === cell.rowIndex
+        );
+    });
+};
+
+const boundsSubsetOfSelection = (bounds: AreaProps, selection: AreaProps) => {
+    return (
+        bounds.top >= selection.top &&
+        bounds.bottom <= selection.bottom &&
+        bounds.left >= selection.left &&
+        bounds.right <= selection.right
+    );
+};
+
 export interface UseSelectionOptions {
     /**
      * Access grid functions
@@ -122,6 +143,10 @@ export interface UseSelectionOptions {
      * When active cell changes
      * */
     onActiveCellChange?: (cell: CellInterface | null, prev: CellInterface | null) => void;
+    selectionIgnoredIndices?: {
+        rowIndices?: number[];
+        columnIndices?: number[];
+    };
 }
 
 export type NewSelectionMode = 'clear' | 'modify' | 'append';
@@ -247,6 +272,7 @@ const useSelection = ({
     getValue,
     onSelectionMove,
     onSelectionEnd,
+    selectionIgnoredIndices,
 }: UseSelectionOptions): SelectionResults => {
     const [activeCell, setActiveCell] = useState<CellInterface | null>(initialActiveCell);
     const [selections, setSelections] = useState<SelectionArea[]>(initialSelections);
@@ -274,21 +300,14 @@ const useSelection = ({
      * Need to store in ref because on mousemove and mouseup event that are
      * registered in document
      */
-    const activeCellRef = useRef(activeCell);
-    const activeSelectionsRef = useRef(selections);
+    const activeCellRef = useLatest(activeCell);
+    const activeSelectionsRef = useLatest(selections);
     const onActiveCellChangeRef = useLatest(onActiveCellChange);
     // const mergedCellsRef = useRef(mergedCells);
 
     useEffect(() => {
         isFirstRender.current = false;
     }, []);
-    useEffect(() => {
-        activeCellRef.current = activeCell;
-    }, [activeCell]);
-
-    useEffect(() => {
-        activeSelectionsRef.current = selections;
-    }, [selections]);
 
     // useEffect(() => {
     //     mergedCellsRef.current = mergedCells;
@@ -301,33 +320,28 @@ const useSelection = ({
     /* Check if cell is out of bounds */
     const isCellOutOfBounds = useCallback(
         (cell: CellInterface) => {
-            return cell.rowIndex < selectionTopBound || cell.columnIndex < selectionLeftBound;
+            return (
+                cell.rowIndex < selectionTopBound ||
+                cell.columnIndex < selectionLeftBound ||
+                isHiddenRow(cell.rowIndex) ||
+                isHiddenColumn(cell.columnIndex) ||
+                selectionIgnoredIndices?.rowIndices?.includes?.(cell.rowIndex) ||
+                selectionIgnoredIndices?.columnIndices?.includes?.(cell.columnIndex)
+            );
         },
-        [selectionTopBound, selectionLeftBound],
+        [
+            selectionTopBound,
+            selectionLeftBound,
+            isHiddenRow,
+            isHiddenColumn,
+            selectionIgnoredIndices?.rowIndices,
+            selectionIgnoredIndices?.columnIndices,
+        ],
     );
 
-    /* New selection */
-    const newSelection = (start: CellInterface, end: CellInterface = start) => {
-        /* Validate bounds */
-        if (isCellOutOfBounds(start)) {
-            return;
-        }
-        selectionStart.current = start;
-        selectionEnd.current = end;
-        const bounds = selectionFromStartEnd(start, end);
-        if (!bounds) return;
-        const coords = { rowIndex: bounds.top, columnIndex: bounds.left };
-        /* Keep track  of first cell that was selected by user */
-        setActiveCell(coords);
-        if (newSelectionMode === 'clear') {
-            firstActiveCell.current = coords;
-            clearSelections();
-        } else if (newSelectionMode === 'modify') {
-            modifySelection(coords);
-        } else {
-            appendSelection(coords);
-        }
-    };
+    const clearSelections = useCallback(() => {
+        setSelections(EMPTY_SELECTION);
+    }, []);
 
     /**
      * selection object from start, end
@@ -342,6 +356,27 @@ const useSelection = ({
             return cellRangeToBounds(start, end, spanMerges, gridRef.current.getCellBounds);
         },
         [canSelectionSpanMergedCells, gridRef],
+    );
+
+    /* Adds a new selection, CMD key */
+    const appendSelection = useCallback(
+        (start: CellInterface, end: CellInterface = start) => {
+            if (selectionPolicy !== 'multiple') {
+                return;
+            }
+            if (!start) return;
+            /* Validate bounds */
+            if (isCellOutOfBounds(start)) {
+                return;
+            }
+            selectionStart.current = start;
+            selectionEnd.current = end;
+            const bounds = selectionFromStartEnd(start, end);
+            if (!bounds) return;
+            setActiveCell({ rowIndex: bounds.top, columnIndex: bounds.left });
+            setSelections(prev => [...prev, { bounds }]);
+        },
+        [isCellOutOfBounds, selectionFromStartEnd, selectionPolicy],
     );
 
     /* Modify current selection */
@@ -365,14 +400,14 @@ const useSelection = ({
             setSelections(prevSelection => {
                 const len = prevSelection.length;
                 if (!len) {
-                    return [{ bounds, inProgress: setInProgress ? true : false }];
+                    return [{ bounds, inProgress: !!setInProgress }];
                 }
                 return prevSelection.map((sel, i) => {
                     if (len - 1 === i) {
                         return {
                             ...sel,
                             bounds,
-                            inProgress: setInProgress ? true : false,
+                            inProgress: !!setInProgress,
                         };
                     }
                     return sel;
@@ -382,82 +417,155 @@ const useSelection = ({
         [isCellOutOfBounds, selectionFromStartEnd, selectionPolicy],
     );
 
-    /* Adds a new selection, CMD key */
-    const appendSelection = (start: CellInterface, end: CellInterface = start) => {
-        if (selectionPolicy !== 'multiple') {
-            return;
-        }
-        if (!start) return;
-        /* Validate bounds */
-        if (isCellOutOfBounds(start)) {
-            return;
-        }
-        selectionStart.current = start;
-        selectionEnd.current = end;
-        const bounds = selectionFromStartEnd(start, end);
-        if (!bounds) return;
-        setActiveCell({ rowIndex: bounds.top, columnIndex: bounds.left });
-        setSelections(prev => [...prev, { bounds }]);
-    };
+    /**
+     * User modified active cell deliberately
+     */
+    const handleSetActiveCell = useCallback(
+        (coords: CellInterface | null, shouldScroll = true) => {
+            selectionStart.current = coords;
+            firstActiveCell.current = coords;
+            selectionEnd.current = coords;
+            setActiveCell(coords);
+            /* Scroll to the cell */
+            if (shouldScroll && coords && gridRef?.current) {
+                gridRef.current.scrollToItem(coords);
+            }
+        },
+        [gridRef],
+    );
+
+    /* New selection */
+    const newSelection = useCallback(
+        (start: CellInterface, end: CellInterface = start) => {
+            /* Validate bounds */
+            if (isCellOutOfBounds(start)) {
+                return;
+            }
+
+            selectionStart.current = start;
+            selectionEnd.current = end;
+
+            const bounds = selectionFromStartEnd(start, end);
+
+            if (!bounds) return;
+
+            const coords = { rowIndex: bounds.top, columnIndex: bounds.left };
+            /* Keep track  of first cell that was selected by user */
+            setActiveCell(coords);
+
+            if (newSelectionMode === 'clear') {
+                firstActiveCell.current = coords;
+                clearSelections();
+            } else if (newSelectionMode === 'modify') {
+                modifySelection(coords);
+            } else {
+                appendSelection(coords);
+            }
+        },
+        [
+            appendSelection,
+            clearSelections,
+            isCellOutOfBounds,
+            modifySelection,
+            newSelectionMode,
+            selectionFromStartEnd,
+        ],
+    );
 
     const removeSelectionByIndex = useCallback(
         (index: number): SelectionArea[] => {
             const newSelection = selections.filter((_, idx) => idx !== index);
+
             setSelections(newSelection);
+
             return newSelection;
         },
         [selections],
     );
 
-    const clearSelections = () => {
-        setSelections(EMPTY_SELECTION);
-    };
+    const getPossibleActiveCellFromSelections = useCallback(
+        (selections: SelectionArea[]): CellInterface | null => {
+            if (!selections.length) return null;
 
-    const getPossibleActiveCellFromSelections = (
-        selections: SelectionArea[],
-    ): CellInterface | null => {
-        if (!selections.length) return null;
-        const { bounds } = selections[selections.length - 1];
-        return {
-            rowIndex: bounds.top,
-            columnIndex: bounds.left,
-        };
-    };
+            const { bounds } = selections[selections.length - 1];
 
-    const cellIndexInSelection = (cell: CellInterface, selections: SelectionArea[]) => {
-        const id = cellIdentifier(
-            Math.max(selectionTopBound, cell.rowIndex),
-            Math.max(selectionLeftBound, cell.columnIndex),
-        );
-        return selections.findIndex(sel => {
-            const boundedCells = getBoundedCells(sel.bounds);
-            return boundedCells.has(id);
-        });
-    };
+            return {
+                rowIndex: bounds.top,
+                columnIndex: bounds.left,
+            };
+        },
+        [],
+    );
 
-    const cellEqualsSelection = (
-        cell: CellInterface | null,
-        selections: SelectionArea[],
-    ): boolean => {
-        if (cell === null) return false;
-        return selections.some(sel => {
-            return (
-                sel.bounds.left === cell.columnIndex &&
-                sel.bounds.top === cell.rowIndex &&
-                sel.bounds.right === cell.columnIndex &&
-                sel.bounds.bottom === cell.rowIndex
+    const cellIndexInSelection = useCallback(
+        (cell: CellInterface, selections: SelectionArea[]) => {
+            const id = cellIdentifier(
+                Math.max(selectionTopBound, cell.rowIndex),
+                Math.max(selectionLeftBound, cell.columnIndex),
             );
-        });
-    };
 
-    const boundsSubsetOfSelection = (bounds: AreaProps, selection: AreaProps) => {
-        return (
-            bounds.top >= selection.top &&
-            bounds.bottom <= selection.bottom &&
-            bounds.left >= selection.left &&
-            bounds.right <= selection.right
-        );
-    };
+            return selections.findIndex(sel => {
+                const boundedCells = getBoundedCells(sel.bounds);
+                return boundedCells.has(id);
+            });
+        },
+        [selectionLeftBound, selectionTopBound],
+    );
+
+    /**
+     * Mousemove handler
+     */
+    const handleMouseMove = useCallback(
+        (e: globalThis.MouseEvent) => {
+            /* Exit if user is not in selection mode */
+            if (!isSelecting.current || !gridRef?.current) return;
+
+            const coords = gridRef.current.getCellCoordsFromOffset(e.clientX, e.clientY);
+
+            if (!coords) return;
+
+            if (mouseMoveInterceptor?.(e, coords, selectionStart, selectionEnd) === false) {
+                return;
+            }
+
+            if (isEqualCells(firstActiveCell.current, coords)) {
+                return clearSelections();
+            }
+
+            modifySelection(coords, true);
+
+            gridRef.current?.scrollToItem(coords);
+        },
+        [clearSelections, gridRef, modifySelection, mouseMoveInterceptor],
+    );
+    /**
+     * Mouse up handler
+     */
+    const handleMouseUp = useCallback(() => {
+        /* Reset selection mode */
+        isSelecting.current = false;
+
+        /* Remove listener */
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+
+        onSelectionEnd?.(selectionStart.current, selectionEnd.current);
+
+        /* Update last selection */
+        setSelections(prevSelection => {
+            const len = prevSelection.length;
+            if (!len) return EMPTY_SELECTION;
+            return prevSelection.map((sel, i) => {
+                if (len - 1 === i) {
+                    return {
+                        ...sel,
+                        inProgress: false,
+                    };
+                }
+                return sel;
+            });
+        });
+    }, [handleMouseMove, onSelectionEnd]);
 
     /**
      * Triggers a new selection start
@@ -466,17 +574,22 @@ const useSelection = ({
         (e: React.MouseEvent<HTMLDivElement>) => {
             /* Exit early if grid is not initialized */
             if (!gridRef || !gridRef.current) return;
+
             const coords = gridRef.current.getCellCoordsFromOffset(
                 e.nativeEvent.clientX,
                 e.nativeEvent.clientY,
             );
+
             if (!coords) return;
+
             /* Check if its context menu click */
             const isContextMenuClick = e.nativeEvent.which === MouseButtonCodes.right;
+
             if (isContextMenuClick) {
                 const cellIndex = cellIndexInSelection(coords, selections);
                 if (cellIndex !== -1) return;
             }
+
             const isShiftKey = e.nativeEvent.shiftKey;
             const isMetaKey = e.nativeEvent.ctrlKey || e.nativeEvent.metaKey;
             const allowMultiple = isMetaKey;
@@ -534,9 +647,11 @@ const useSelection = ({
                  */
                 if (isMetaKey && allowDeselect) {
                     const cellIndex = cellIndexInSelection(coords, selections);
+
                     if (cellIndex !== -1) {
                         const newSelection = removeSelectionByIndex(cellIndex);
                         const nextActiveCell = getPossibleActiveCellFromSelections(newSelection);
+
                         if (nextActiveCell !== null) {
                             setActiveCell(nextActiveCell);
                         }
@@ -577,73 +692,25 @@ const useSelection = ({
             /* Trigger new selection */
             newSelection(coords);
         },
-        // eslint-disable-next-line
         [
-            activeCell,
+            gridRef,
+            allowDeselectSelection,
             selections,
             selectionPolicy,
-            allowDeselectSelection,
+            mouseDownInterceptor,
+            activeCell,
             alwaysScrollToActiveCell,
-            rowCount,
-            columnCount,
-            newSelectionMode,
+            newSelection,
+            cellIndexInSelection,
+            handleMouseUp,
+            handleMouseMove,
+            modifySelection,
+            appendSelection,
+            removeSelectionByIndex,
+            getPossibleActiveCellFromSelections,
+            clearSelections,
         ],
     );
-
-    /**
-     * Mousemove handler
-     */
-    const handleMouseMove = useCallback(
-        (e: globalThis.MouseEvent) => {
-            /* Exit if user is not in selection mode */
-            if (!isSelecting.current || !gridRef?.current) return;
-
-            const coords = gridRef.current.getCellCoordsFromOffset(e.clientX, e.clientY);
-
-            if (!coords) return;
-
-            if (mouseMoveInterceptor?.(e, coords, selectionStart, selectionEnd) === false) {
-                return;
-            }
-
-            if (isEqualCells(firstActiveCell.current, coords)) {
-                return clearSelections();
-            }
-
-            modifySelection(coords, true);
-
-            gridRef.current?.scrollToItem(coords);
-        },
-        [gridRef, modifySelection, mouseMoveInterceptor],
-    );
-    /**
-     * Mouse up handler
-     */
-    const handleMouseUp = useCallback(() => {
-        /* Reset selection mode */
-        isSelecting.current = false;
-
-        /* Remove listener */
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-
-        onSelectionEnd?.(selectionStart.current, selectionEnd.current);
-
-        /* Update last selection */
-        setSelections(prevSelection => {
-            const len = prevSelection.length;
-            if (!len) return EMPTY_SELECTION;
-            return prevSelection.map((sel, i) => {
-                if (len - 1 === i) {
-                    return {
-                        ...sel,
-                        inProgress: false,
-                    };
-                }
-                return sel;
-            });
-        });
-    }, [handleMouseMove, onSelectionEnd]);
 
     /**
      * Navigate selection using keyboard
@@ -659,6 +726,7 @@ const useSelection = ({
                 !activeCell
             )
                 return;
+
             const currentCell = modify ? selectionEnd.current : activeCell;
             var { rowIndex, columnIndex } = currentCell;
 
@@ -766,6 +834,7 @@ const useSelection = ({
                 rowIndex,
                 columnIndex,
             });
+
             const coords = { rowIndex: newBounds.top, columnIndex: newBounds.left };
             const scrollToCell = modify
                 ? selectionEnd.current.rowIndex === coords.rowIndex
@@ -787,21 +856,23 @@ const useSelection = ({
             /* Keep the item in view */
             gridRef.current.scrollToItem(scrollToCell);
         },
-        // TODO - remove eslint ignore after testing
-        // eslint-disable-next-line
         [
+            gridRef,
             activeCell,
-            isHiddenRow,
-            isHiddenColumn,
-            selectionLeftBound,
             selectionTopBound,
-            selectionPolicy,
-            newSelectionMode,
+            isHiddenRow,
+            selectionBottomBound,
+            selectionLeftBound,
+            isHiddenColumn,
+            selectionRightBound,
+            getValue,
+            modifySelection,
+            newSelection,
         ],
     );
 
     // ⌘A or ⌘+Shift+Space
-    const selectAll = () => {
+    const selectAll = useCallback(() => {
         selectionStart.current = {
             rowIndex: selectionTopBound,
             columnIndex: selectionLeftBound,
@@ -810,11 +881,18 @@ const useSelection = ({
             rowIndex: selectionBottomBound,
             columnIndex: selectionRightBound,
         });
-    };
+    }, [
+        modifySelection,
+        selectionBottomBound,
+        selectionLeftBound,
+        selectionRightBound,
+        selectionTopBound,
+    ]);
 
     // Ctrl+Space
     const selectColumn = useCallback(() => {
         if (!selectionEnd.current || !selectionStart.current) return;
+
         selectionStart.current = {
             rowIndex: selectionTopBound,
             columnIndex: selectionStart.current.columnIndex,
@@ -828,6 +906,7 @@ const useSelection = ({
     // Shift+Space
     const selectRow = useCallback(() => {
         if (!selectionEnd.current || !selectionStart.current) return;
+
         selectionStart.current = {
             rowIndex: selectionStart.current.rowIndex,
             columnIndex: selectionLeftBound,
@@ -839,8 +918,9 @@ const useSelection = ({
     }, [modifySelection, selectionLeftBound, selectionRightBound]);
 
     //  Home
-    const selectFirstCellInRow = () => {
+    const selectFirstCellInRow = useCallback(() => {
         if (!selectionStart.current || !gridRef?.current) return;
+
         const cell = {
             rowIndex: selectionStart.current.rowIndex,
             columnIndex: selectionLeftBound,
@@ -848,21 +928,23 @@ const useSelection = ({
         newSelection(cell);
 
         gridRef?.current.scrollToItem(cell);
-    };
+    }, [gridRef, newSelection, selectionLeftBound]);
     //  End
-    const selectLastCellInRow = () => {
+    const selectLastCellInRow = useCallback(() => {
         if (!selectionStart.current || !gridRef?.current) return;
+
         const cell = {
             rowIndex: selectionStart.current.rowIndex,
             columnIndex: selectionRightBound,
         };
         newSelection(cell);
         gridRef?.current.scrollToItem(cell);
-    };
+    }, [gridRef, newSelection, selectionRightBound]);
 
     //  ⌘+Home
-    const selectFirstCellInColumn = () => {
+    const selectFirstCellInColumn = useCallback(() => {
         if (!selectionStart.current || !gridRef?.current) return;
+
         const cell = {
             rowIndex: selectionTopBound,
             columnIndex: selectionStart.current.columnIndex,
@@ -870,42 +952,48 @@ const useSelection = ({
         newSelection(cell);
 
         gridRef?.current.scrollToItem(cell);
-    };
+    }, [gridRef, newSelection, selectionTopBound]);
     //  ⌘+End
-    const selectLastCellInColumn = () => {
+    const selectLastCellInColumn = useCallback(() => {
         if (!selectionStart.current || !gridRef?.current) return;
+
         const cell = {
             rowIndex: rowCount - 1,
             columnIndex: selectionStart.current.columnIndex,
         };
         newSelection(cell);
         gridRef?.current.scrollToItem(cell);
-    };
+    }, [gridRef, newSelection, rowCount]);
 
     //  ⌘+Backspace
-    const scrollToActiveCell = () => {
+    const scrollToActiveCell = useCallback(() => {
         if (!activeCell || !gridRef?.current) return;
+
         gridRef?.current.scrollToItem(activeCell, Align.smart);
-    };
+    }, [activeCell, gridRef]);
 
     // Page down
-    const pageDown = () => {
+    const pageDown = useCallback(() => {
         if (!activeCell || !gridRef?.current) return;
+
         const { visibleRowStartIndex, visibleRowStopIndex } = gridRef.current.getViewPort();
+
         const pageSize = visibleRowStopIndex - visibleRowStartIndex;
         const rowIndex = Math.min(activeCell.rowIndex + pageSize, rowCount - 1);
         const newActiveCell = {
             rowIndex,
             columnIndex: activeCell.columnIndex,
         };
+
         handleSetActiveCell(newActiveCell, false);
         /* Scroll to the new row */
         gridRef?.current.scrollToItem({ rowIndex }, Align.end);
-    };
+    }, [activeCell, gridRef, handleSetActiveCell, rowCount]);
 
     // Page up
-    const pageUp = () => {
+    const pageUp = useCallback(() => {
         if (!activeCell || !gridRef?.current) return;
+
         const { visibleRowStartIndex, visibleRowStopIndex } = gridRef.current.getViewPort();
         const pageSize = visibleRowStopIndex - visibleRowStartIndex;
         const rowIndex = Math.max(activeCell.rowIndex - pageSize, selectionTopBound);
@@ -913,14 +1001,16 @@ const useSelection = ({
             rowIndex,
             columnIndex: activeCell.columnIndex,
         };
+
         handleSetActiveCell(newActiveCell, false);
         /* Scroll to the new row */
         gridRef?.current.scrollToItem({ rowIndex }, Align.end);
-    };
+    }, [activeCell, gridRef, handleSetActiveCell, selectionTopBound]);
 
     // Page right
-    const pageRight = () => {
+    const pageRight = useCallback(() => {
         if (!activeCell || !gridRef?.current) return;
+
         const { visibleColumnStartIndex, visibleColumnStopIndex } = gridRef.current.getViewPort();
         const pageSize = visibleColumnStopIndex - visibleColumnStartIndex;
         const columnIndex = Math.min(activeCell.columnIndex + pageSize, selectionRightBound);
@@ -928,14 +1018,16 @@ const useSelection = ({
             columnIndex,
             rowIndex: activeCell.rowIndex,
         };
+
         handleSetActiveCell(newActiveCell, false);
         /* Scroll to the new row */
         gridRef?.current.scrollToItem({ columnIndex }, Align.end);
-    };
+    }, [activeCell, gridRef, handleSetActiveCell, selectionRightBound]);
 
     // Page left
-    const pageLeft = () => {
+    const pageLeft = useCallback(() => {
         if (!activeCell || !gridRef?.current) return;
+
         const { visibleColumnStartIndex, visibleColumnStopIndex } = gridRef.current.getViewPort();
         const pageSize = visibleColumnStopIndex - visibleColumnStartIndex;
         const columnIndex = Math.max(activeCell.columnIndex - pageSize, selectionLeftBound);
@@ -943,17 +1035,20 @@ const useSelection = ({
             columnIndex,
             rowIndex: activeCell.rowIndex,
         };
+
         handleSetActiveCell(newActiveCell, false);
         /* Scroll to the new row */
         gridRef?.current.scrollToItem({ columnIndex }, Align.end);
-    };
+    }, [activeCell, gridRef, handleSetActiveCell, selectionLeftBound]);
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
             if (!gridRef?.current) return;
+
             const isShiftKey = e.nativeEvent.shiftKey;
             const isAltKey = e.nativeEvent.altKey;
             const isMetaKey = e.nativeEvent.ctrlKey || e.nativeEvent.metaKey;
+
             switch (e.nativeEvent.which) {
                 case KeyCodes.Right:
                     keyNavigate(Direction.Right, isShiftKey, isMetaKey);
@@ -1051,94 +1146,104 @@ const useSelection = ({
                     break;
             }
         },
-        // TODO - remove eslint ignore after testing
-        // eslint-disable-next-line
-        [rowCount, columnCount, activeCell, selections, selectionPolicy, newSelectionMode],
+        [
+            gridRef,
+            keyNavigate,
+            scrollToActiveCell,
+            selections,
+            activeCell,
+            pageDown,
+            pageUp,
+            selectAll,
+            selectFirstCellInColumn,
+            selectFirstCellInRow,
+            selectLastCellInColumn,
+            selectLastCellInRow,
+            selectColumn,
+            selectRow,
+            pageRight,
+            pageLeft,
+        ],
     );
 
-    /**
-     * User modified active cell deliberately
-     */
-    const handleSetActiveCell = useCallback(
-        (coords: CellInterface | null, shouldScroll = true) => {
-            selectionStart.current = coords;
-            firstActiveCell.current = coords;
-            selectionEnd.current = coords;
-            setActiveCell(coords);
-            /* Scroll to the cell */
-            if (shouldScroll && coords && gridRef?.current) {
-                gridRef.current.scrollToItem(coords);
+    const handleFillHandleMouseMove = useCallback(
+        (e: globalThis.MouseEvent) => {
+            /* Exit if user is not in selection mode */
+            if (!isFilling.current || !gridRef?.current || !activeCellRef.current) return;
+
+            const coords = gridRef.current.getCellCoordsFromOffset(e.clientX, e.clientY, false);
+            if (!coords) return;
+
+            const selections = activeSelectionsRef.current;
+            let bounds = selectionFromStartEnd(activeCellRef.current, coords);
+
+            const hasSelections = selections.length > 0;
+            const activeCellBounds = hasSelections
+                ? selections[selections.length - 1].bounds
+                : gridRef.current.getCellBounds(activeCellRef.current);
+
+            if (!bounds) return;
+
+            const direction =
+                bounds.top < activeCellBounds.top
+                    ? Direction.Up
+                    : bounds.bottom > activeCellBounds.bottom
+                    ? Direction.Down
+                    : bounds.right > activeCellBounds.right
+                    ? Direction.Right
+                    : Direction.Left;
+
+            if (direction === Direction.Right) {
+                bounds = {
+                    ...activeCellBounds,
+                    right: Math.min(selectionRightBound, bounds.right),
+                };
             }
+
+            if (direction === Direction.Up) {
+                bounds = {
+                    ...activeCellBounds,
+                    top: Math.max(selectionTopBound, bounds.top),
+                };
+            }
+
+            if (direction === Direction.Left) {
+                bounds = {
+                    ...activeCellBounds,
+                    left: Math.max(selectionLeftBound, bounds.left),
+                };
+            }
+
+            if (direction === Direction.Down) {
+                bounds = {
+                    ...activeCellBounds,
+                    bottom: Math.min(selectionBottomBound, bounds.bottom),
+                };
+            }
+
+            /**
+             * If user moves back to the same selection, clear
+             */
+            if (hasSelections && boundsSubsetOfSelection(bounds, selections[0].bounds)) {
+                setFillSelection(undefined);
+                return;
+            }
+
+            setFillSelection({ bounds });
+
+            gridRef.current.scrollToItem(coords);
         },
-        [gridRef],
+        [
+            activeCellRef,
+            activeSelectionsRef,
+            gridRef,
+            selectionBottomBound,
+            selectionFromStartEnd,
+            selectionLeftBound,
+            selectionRightBound,
+            selectionTopBound,
+        ],
     );
-
-    const handleFillHandleMouseMove = useCallback((e: globalThis.MouseEvent) => {
-        /* Exit if user is not in selection mode */
-        if (!isFilling.current || !gridRef?.current || !activeCellRef.current) return;
-
-        const coords = gridRef.current.getCellCoordsFromOffset(e.clientX, e.clientY, false);
-        if (!coords) return;
-        const selections = activeSelectionsRef.current;
-        let bounds = selectionFromStartEnd(activeCellRef.current, coords);
-        const hasSelections = selections.length > 0;
-        const activeCellBounds = hasSelections
-            ? selections[selections.length - 1].bounds
-            : gridRef.current.getCellBounds(activeCellRef.current);
-        if (!bounds) return;
-
-        const direction =
-            bounds.top < activeCellBounds.top
-                ? Direction.Up
-                : bounds.bottom > activeCellBounds.bottom
-                ? Direction.Down
-                : bounds.right > activeCellBounds.right
-                ? Direction.Right
-                : Direction.Left;
-
-        if (direction === Direction.Right) {
-            bounds = {
-                ...activeCellBounds,
-                right: Math.min(selectionRightBound, bounds.right),
-            };
-        }
-
-        if (direction === Direction.Up) {
-            bounds = {
-                ...activeCellBounds,
-                top: Math.max(selectionTopBound, bounds.top),
-            };
-        }
-
-        if (direction === Direction.Left) {
-            bounds = {
-                ...activeCellBounds,
-                left: Math.max(selectionLeftBound, bounds.left),
-            };
-        }
-
-        if (direction === Direction.Down) {
-            bounds = {
-                ...activeCellBounds,
-                bottom: Math.min(selectionBottomBound, bounds.bottom),
-            };
-        }
-
-        /**
-         * If user moves back to the same selection, clear
-         */
-        if (hasSelections && boundsSubsetOfSelection(bounds, selections[0].bounds)) {
-            setFillSelection(undefined);
-            return;
-        }
-
-        setFillSelection({ bounds });
-
-        gridRef.current.scrollToItem(coords);
-
-        // TODO - remove eslint ignore after testing
-        // eslint-disable-next-line
-    }, []);
 
     /**
      * When user releases mouse on the fill handle
@@ -1191,13 +1296,15 @@ const useSelection = ({
                 });
             });
         },
-        [gridRef, handleFillHandleMouseMove, onFill],
+        [activeCellRef, activeSelectionsRef, gridRef, handleFillHandleMouseMove, onFill],
     );
 
     const handleFillHandleMouseDown = useCallback(
         (e: React.MouseEvent<HTMLDivElement>) => {
             e.stopPropagation();
+
             isFilling.current = true;
+
             document.addEventListener('mousemove', handleFillHandleMouseMove);
             document.addEventListener('mouseup', handleFillHandleMouseUp);
         },
@@ -1218,105 +1325,52 @@ const useSelection = ({
     }, [handleFillHandleMouseDown]);
 
     /**
-     * When user mouse downs on selection
+     * Ond drag move
      */
-    const handleSelectionMouseDown = useCallback(
-        (
-            e: React.MouseEvent<HTMLDivElement>,
-            activeCell: CellInterface | undefined,
-            selection: SelectionArea | undefined,
-            index: number | undefined,
-            shouldClamp: boolean = true,
-        ) => {
-            if (!gridRef.current) {
-                return;
-            }
-            let coords = gridRef.current.getCellCoordsFromOffset(
-                e.nativeEvent.clientX,
-                e.nativeEvent.clientY,
-                false, // Todo
-            );
+    const handleSelectionMouseMove = useCallback(
+        (e: globalThis.MouseEvent) => {
+            if (!gridRef?.current) return;
+            const coords = gridRef.current.getCellCoordsFromOffset(e.clientX, e.clientY);
             if (!coords) {
                 return;
             }
-            /* Initial cell that is selected by user */
-            initialDraggedCell.current = coords;
-
-            /* Make sure the coords do not extend selection bounds */
-            if (shouldClamp) {
-                coords = clampCellCoords(coords, activeCell, selection);
+            if (!initialDraggedSelection.current || !initialDraggedCell.current) {
+                return;
             }
-
-            /* Set selection */
-            if (activeCell) {
-                initialDraggedSelection.current = draggedSelection.current = {
-                    bounds: gridRef.current.getCellBounds(activeCell),
-                };
+            /**
+             * Skip if user is moving the selection
+             * to the same starting position
+             */
+            if (
+                !hasUserMovedSelection.current &&
+                isEqualCells(initialDraggedCell.current, coords)
+            ) {
+                return;
             }
-            if (selection) {
-                initialDraggedSelection.current = draggedSelection.current = selection;
-                draggedSelectionIndex.current = index;
-            }
+            const sel = newSelectionFromDrag(
+                initialDraggedSelection.current,
+                initialDraggedCell.current,
+                coords,
+                selectionTopBound,
+                selectionLeftBound,
+                rowCount,
+                columnCount,
+            );
+            // Not required
+            // sel = { bounds : extendAreaToMergedCells(sel.bounds, mergedCellsRef.current) }
+            draggedSelection.current = sel;
 
-            /* Set dragging flag */
-            isDragging.current = true;
+            // User has now moved the selection,
+            hasUserMovedSelection.current = true;
 
-            /* Listen to mousemove and mousedown events */
-            document.addEventListener('mouseup', handleSelectionMouseUp);
-            document.addEventListener('mousemove', handleSelectionMouseMove);
+            /* Scroll to the cell */
+            gridRef.current?.scrollToItem(coords);
 
-            /* Force a re-render */
+            /* Re-render */
             forceRender();
         },
-        // TODO - remove eslint ignore after testing
-        // eslint-disable-next-line
-        [selectionTopBound, selectionLeftBound, rowCount, columnCount, selections],
+        [columnCount, gridRef, rowCount, selectionLeftBound, selectionTopBound],
     );
-
-    /**
-     * Ond drag move
-     */
-    const handleSelectionMouseMove = useCallback((e: globalThis.MouseEvent) => {
-        if (!gridRef?.current) return;
-        const coords = gridRef.current.getCellCoordsFromOffset(e.clientX, e.clientY);
-        if (!coords) {
-            return;
-        }
-        if (!initialDraggedSelection.current || !initialDraggedCell.current) {
-            return;
-        }
-        /**
-         * Skip if user is moving the selection
-         * to the same starting position
-         */
-        if (!hasUserMovedSelection.current && isEqualCells(initialDraggedCell.current, coords)) {
-            return;
-        }
-        const sel = newSelectionFromDrag(
-            initialDraggedSelection.current,
-            initialDraggedCell.current,
-            coords,
-            selectionTopBound,
-            selectionLeftBound,
-            rowCount,
-            columnCount,
-        );
-        // Not required
-        // sel = { bounds : extendAreaToMergedCells(sel.bounds, mergedCellsRef.current) }
-        draggedSelection.current = sel;
-
-        // User has now moved the selection,
-        hasUserMovedSelection.current = true;
-
-        /* Scroll to the cell */
-        gridRef.current?.scrollToItem(coords);
-
-        /* Re-render */
-        forceRender();
-
-        // TODO - remove eslint ignore after testing
-        // eslint-disable-next-line
-    }, []);
 
     /**
      * When drag/drop is complete
@@ -1367,10 +1421,63 @@ const useSelection = ({
 
         /* Force render */
         forceRender();
+    }, [gridRef, handleSelectionMouseMove, onSelectionMove]);
 
-        // TODO - remove eslint ignore after testing
-        // eslint-disable-next-line
-    }, []);
+    /**
+     * When user mouse downs on selection
+     */
+    const handleSelectionMouseDown = useCallback(
+        (
+            e: React.MouseEvent<HTMLDivElement>,
+            activeCell: CellInterface | undefined,
+            selection: SelectionArea | undefined,
+            index: number | undefined,
+            shouldClamp: boolean = true,
+        ) => {
+            if (!gridRef.current) {
+                return;
+            }
+
+            let coords = gridRef.current.getCellCoordsFromOffset(
+                e.nativeEvent.clientX,
+                e.nativeEvent.clientY,
+                false, // Todo
+            );
+
+            if (!coords) {
+                return;
+            }
+            /* Initial cell that is selected by user */
+            initialDraggedCell.current = coords;
+
+            /* Make sure the coords do not extend selection bounds */
+            if (shouldClamp) {
+                coords = clampCellCoords(coords, activeCell, selection);
+            }
+
+            /* Set selection */
+            if (activeCell) {
+                initialDraggedSelection.current = draggedSelection.current = {
+                    bounds: gridRef.current.getCellBounds(activeCell),
+                };
+            }
+            if (selection) {
+                initialDraggedSelection.current = draggedSelection.current = selection;
+                draggedSelectionIndex.current = index;
+            }
+
+            /* Set dragging flag */
+            isDragging.current = true;
+
+            /* Listen to mousemove and mousedown events */
+            document.addEventListener('mouseup', handleSelectionMouseUp);
+            document.addEventListener('mousemove', handleSelectionMouseMove);
+
+            /* Force a re-render */
+            forceRender();
+        },
+        [gridRef, handleSelectionMouseUp, handleSelectionMouseMove],
+    );
 
     useEffect(() => {
         if (isFirstRender.current || !onActiveCellChangeRef.current) return;

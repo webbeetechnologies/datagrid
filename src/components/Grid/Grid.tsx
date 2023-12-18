@@ -508,7 +508,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             onScroll,
             onImmediateScroll,
             showScrollbar = true,
-            selectionBackgroundColor = 'rgb(14, 101, 235, 0.1)',
+            selectionBackgroundColor = '#0E65EB19',
             selectionBorderColor = '#1a73e8',
             selectionStrokeWidth = 1,
             activeCellStrokeWidth = 2,
@@ -2649,6 +2649,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             }),
             [
                 containerHeight,
+                containerStyleProp,
                 containerWidth,
                 estimatedTotalHeight,
                 estimatedTotalWidth,

@@ -387,7 +387,7 @@ const DefaultEditor: React.FC<EditorProps> = props => {
                 width: inputWidth,
                 height: inputHeight + borderWidth,
                 padding: borderWidth,
-                boxShadow: '0 2px 6px 2px rgba(60,64,67,.15)',
+                // boxShadow: '0 2px 6px 2px rgba(60,64,67,.15)',
                 border: '2px #1a73e8 solid',
                 background: 'white',
             } as CSSProperties,
@@ -481,7 +481,7 @@ const useEditable = ({
     const [actualValue, onSubmitValue] = useValue(activeCell);
     const actualValueRef = useLatest(actualValue);
 
-    const editorConfig = useLatest(useEditorConfig(activeCell));
+    const editorConfigRef = useLatest(useEditorConfig(activeCell));
 
     const showEditor = useCallback(() => setShowEditor(true), []);
 
@@ -518,7 +518,7 @@ const useEditable = ({
             }
 
             /* Call on before edit */
-            if (editorConfig.current || canEdit(coords)) {
+            if (editorConfigRef.current || canEdit(coords)) {
                 /* Let user modify coords before edit */
                 onBeforeEdit?.(coords);
 
@@ -594,7 +594,7 @@ const useEditable = ({
     const handleDoubleClick = useCallback(
         (e: React.MouseEvent<HTMLElement>) => {
             if (!gridRef.current || !activeCellRef.current) return;
-            if (!editorConfig.current?.showOnDoubleClicked) return;
+            if (!editorConfigRef.current?.showOnDoubleClicked) return;
 
             const coords = gridRef.current.getCellCoordsFromOffset(
                 e.nativeEvent.clientX,
@@ -643,9 +643,12 @@ const useEditable = ({
             if (isArrowKey(keyCode)) {
                 initialActiveCell.current = undefined;
             }
+
+            // TODO - make this configurable
             if (
                 isSelectionKey(keyCode) ||
                 e.nativeEvent.ctrlKey ||
+                e.nativeEvent.which === KeyCodes.SPACE ||
                 (e.nativeEvent.shiftKey &&
                     (e.nativeEvent.key === 'Shift' || e.nativeEvent.which === KeyCodes.SPACE)) ||
                 e.nativeEvent.metaKey ||
@@ -672,7 +675,7 @@ const useEditable = ({
 
             makeEditable(
                 { rowIndex, columnIndex },
-                editorConfig.current?.concatInitialValue
+                editorConfigRef.current?.concatInitialValue
                     ? (currentValueRef.current || '') + initialValue
                     : undefined,
             );
@@ -908,9 +911,9 @@ const useEditable = ({
     useEffect(() => {
         if (!activeCell) return;
 
-        if (!editorConfig.current?.showOnFocused) return;
+        if (!editorConfigRef.current?.showOnFocused) return;
         makeEditableRef.current(activeCell);
-    }, [activeCell, makeEditableRef, editorConfig]);
+    }, [activeCell, makeEditableRef, editorConfigRef]);
 
     useEffect(() => {
         if (actualValue !== currentValueRef.current) {
@@ -951,7 +954,7 @@ const useEditable = ({
         onDoubleClick: handleDoubleClick,
         onKeyDown: handleKeyDown,
         nextFocusableCell,
-        isEditInProgress: !!editingCell,
+        isEditInProgress: !!editingCell && !editorConfigRef.current?.showOnFocused,
         editingCell,
         makeEditable,
         setValue: handleChange,
