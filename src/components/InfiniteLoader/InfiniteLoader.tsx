@@ -1,4 +1,4 @@
-import { PureComponent } from 'react';
+import React, { createContext, PureComponent, useContext } from 'react';
 
 import isInteger from './isInteger';
 import isRangeVisible from './isRangeVisible';
@@ -16,7 +16,7 @@ export type InfiniteLoaderChildrenArg = { onItemsRendered: onItemsRendered; ref:
 
 export type InfiniteLoaderProps = {
     // Render prop.
-    children: (arg0: InfiniteLoaderChildrenArg) => React.ReactNode;
+    children: React.ReactNode;
     // Function responsible for tracking the loaded state of each item.
     isItemLoaded: (index: number) => boolean;
     // Number of rows in list; can be arbitrary high number if actual number is unknown.
@@ -137,6 +137,11 @@ export class InfiniteLoader extends PureComponent<InfiniteLoaderProps> {
         }
     }
 
+    contextValue = {
+        onItemsRendered: this._onItemsRendered,
+        ref: this._setRef,
+    };
+
     componentDidMount() {
         if (process.env.NODE_ENV !== 'production') {
             if (this._listRef == null) {
@@ -147,9 +152,22 @@ export class InfiniteLoader extends PureComponent<InfiniteLoaderProps> {
 
     render() {
         const { children } = this.props;
-        return children({
-            onItemsRendered: this._onItemsRendered,
-            ref: this._setRef,
-        });
+        return (
+            <InfiniteLoaderArgsContext.Provider value={this.contextValue}>
+                {children}
+            </InfiniteLoaderArgsContext.Provider>
+        );
     }
 }
+
+export const InfiniteLoaderArgsContext = createContext<InfiniteLoaderChildrenArg | null>(null);
+
+export const useInfiniteLoaderArgsContext = () => {
+    const contextValue = useContext(InfiniteLoaderArgsContext);
+
+    if (!contextValue) {
+        throw new Error('useInfiniteLoaderArgsContext must be used inside the InfiniteLoader');
+    }
+
+    return contextValue;
+};

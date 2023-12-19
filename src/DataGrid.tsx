@@ -25,7 +25,7 @@ import type { TextConfig } from 'konva/lib/shapes/Text';
 import {
     InfiniteLoader,
     InfiniteLoaderProps,
-    InfiniteLoaderChildrenArg,
+    useInfiniteLoaderArgsContext,
 } from './components/InfiniteLoader';
 import {
     Grid,
@@ -627,73 +627,13 @@ const DataGrid = (
         [loadMoreRowsProp],
     );
 
-    const renderGrid = useCallback(
-        ({ ref: _ref, onItemsRendered }: InfiniteLoaderChildrenArg) => {
-            const setRef = (listRef: any) => {
-                return _ref(listRef);
-            };
+    const _onViewChange = useCallback(
+        (viewPortProps: ViewPortProps) => {
+            currentViewPort.current = viewPortProps;
 
-            const _onViewChange = (viewPortProps: ViewPortProps) => {
-                onItemsRendered({
-                    visibleStartIndex: viewPortProps.visibleRowStartIndex,
-                    visibleStopIndex: viewPortProps.visibleRowStopIndex,
-                });
-                currentViewPort.current = viewPortProps;
-
-                onViewChange?.(viewPortProps);
-            };
-
-            return (
-                <Grid
-                    ref={gridRef}
-                    verticalScrollRef={setRef as any}
-                    onViewChange={_onViewChange}
-                    mergedCells={mergedCells}
-                    showScrollbar={showScrollbar}
-                    columnCount={columnCount}
-                    rowCount={rowCount}
-                    frozenColumns={frozenColumns}
-                    height={height}
-                    width={width}
-                    columnWidth={columnWidth}
-                    rowHeight={rowHeight}
-                    itemRenderer={renderCell}
-                    selections={selections}
-                    activeCell={activeCell}
-                    showFillHandle={!isEditInProgress}
-                    {...selectionProps}
-                    {...editableProps}
-                    onKeyDown={onKeyDown}
-                    onMouseDown={onMouseDown}
-                    onScroll={onScroll}
-                    stageProps={stageProps}
-                    onContextMenu={onContextMenu}
-                />
-            );
+            onViewChange?.(viewPortProps);
         },
-        [
-            activeCell,
-            columnCount,
-            columnWidth,
-            editableProps,
-            frozenColumns,
-            height,
-            isEditInProgress,
-            mergedCells,
-            onKeyDown,
-            onMouseDown,
-            onScroll,
-            onViewChange,
-            renderCell,
-            rowCount,
-            rowHeight,
-            selectionProps,
-            selections,
-            showScrollbar,
-            stageProps,
-            width,
-            onContextMenu,
-        ],
+        [onViewChange],
     );
 
     const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -750,7 +690,30 @@ const DataGrid = (
                     loadMoreItems={loadMoreRows}
                     threshold={rowsLoadingThreshold}
                     minimumBatchSize={rowsMinimumBatchSize}>
-                    {renderGrid}
+                    <BodyGrid
+                        ref={gridRef}
+                        onViewChange={_onViewChange}
+                        mergedCells={mergedCells}
+                        showScrollbar={showScrollbar}
+                        columnCount={columnCount}
+                        rowCount={rowCount}
+                        frozenColumns={frozenColumns}
+                        height={height}
+                        width={width}
+                        columnWidth={columnWidth}
+                        rowHeight={rowHeight}
+                        itemRenderer={renderCell}
+                        selections={selections}
+                        activeCell={activeCell}
+                        showFillHandle={!isEditInProgress}
+                        {...selectionProps}
+                        {...editableProps}
+                        onKeyDown={onKeyDown}
+                        onMouseDown={onMouseDown}
+                        onScroll={onScroll}
+                        stageProps={stageProps}
+                        onContextMenu={onContextMenu}
+                    />
                 </InfiniteLoader>
                 {editorComponent}
                 {children}
@@ -759,6 +722,40 @@ const DataGrid = (
         // </View>
     );
 };
+
+const BodyGrid = memo(
+    forwardRef(({ onViewChange, ...rest }: GridProps, ref: any) => {
+        const { ref: infiniteLoaderRefSetter, onItemsRendered } = useInfiniteLoaderArgsContext();
+
+        const setRef = useCallback(
+            (listRef: any) => {
+                return infiniteLoaderRefSetter(listRef);
+            },
+            [infiniteLoaderRefSetter],
+        );
+
+        const _onViewChange = useCallback(
+            (viewPortProps: ViewPortProps) => {
+                onItemsRendered({
+                    visibleStartIndex: viewPortProps.visibleRowStartIndex,
+                    visibleStopIndex: viewPortProps.visibleRowStopIndex,
+                });
+
+                onViewChange?.(viewPortProps);
+            },
+            [onItemsRendered, onViewChange],
+        );
+
+        return (
+            <Grid
+                ref={ref}
+                verticalScrollRef={setRef as any}
+                onViewChange={_onViewChange}
+                {...rest}
+            />
+        );
+    }),
+);
 
 // const defaultRowCountCellRenderer = (props: RendererProps) => <RowCountCell {...props} />;
 
