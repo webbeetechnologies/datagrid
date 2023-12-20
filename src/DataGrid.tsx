@@ -154,7 +154,29 @@ export type Props = Pick<
             | 'rowHeight'
             | 'showScrollbar'
         >;
+        datagridMethodsRef?: RefObject<DataGridMethodsRef>;
+        bodyGridProps?: Omit<
+            GridProps,
+            | 'itemRenderer'
+            | 'containerStyle'
+            | 'columnCount'
+            | 'height'
+            | 'width'
+            | 'rowCount'
+            | 'frozenColumns'
+            | 'columnWidth'
+            | 'rowHeight'
+            | 'showScrollbar'
+        >;
     };
+
+// TODO - add more methods
+export type DataGridMethodsRef = {
+    setActiveCell: SelectionResults['setActiveCell'];
+    setSelections: SelectionResults['setSelections'];
+    hideEditor: () => void;
+    isEditInProgress: boolean;
+};
 
 export type DataGridRef = Pick<SelectionResults, 'selections' | 'activeCell' | 'setActiveCell'> &
     Pick<EditableResults, 'isEditInProgress'> & {};
@@ -348,6 +370,8 @@ const DataGrid = (
         isHiddenRow,
         onBeforeSelection,
         onBeforeFill,
+        datagridMethodsRef,
+        bodyGridProps,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -360,23 +384,11 @@ const DataGrid = (
     const height = heightProp || layout.height;
 
     const headerGridRef = useRef<GridRef>(null);
-    // const countGridRef = useRef<GridRef>(null);
     const gridRef = useRef<GridRef>(null);
     const currentViewPort = useRef<ViewPortProps>();
 
-    // const mergeGridRef = useMergedRefs([gridRef, gridRefProp]);
-
     useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
     useImperativeHandle(headerGridRefProp, () => headerGridRef.current as GridRef);
-    // useImperativeHandle(countGridRefProp, () => countGridRef.current as GridRef);
-
-    // const [collapsedGroups, setCollapsedGroups] = useState<number[]>([]);
-    // const collapsedGroupsRef = useLatest(collapsedGroups);
-
-    // const getCellValue = useCallback(
-    //     ({ rowIndex, columnIndex }) => data[[rowIndex, columnIndex]],
-    //     [data],
-    // );
 
     const {
         selections,
@@ -407,37 +419,6 @@ const DataGrid = (
         onBeforeFill,
     });
 
-    // const onDelete = useCallback((_activeCell: CellInterface, _selections: SelectionArea[]) => {
-    //     if (selections.length) {
-    //         const newValues = selections.reduce((acc, { bounds: sel }) => {
-    //             for (let i = sel.top; i <= sel.bottom; i++) {
-    //                 for (let j = sel.left; j <= sel.right; j++) {
-    //                     acc[[i, j]] = '';
-    //                 }
-    //             }
-    //             return acc;
-    //         }, {});
-    //         setData(prev => ({ ...prev, ...newValues }));
-    //         const selectionBounds = selections[0].bounds;
-    //
-    //         gridRef.current?.resetAfterIndices(
-    //             {
-    //                 columnIndex: selectionBounds.left,
-    //                 rowIndex: selectionBounds.top,
-    //             },
-    //             true,
-    //         );
-    //     } else if (activeCell) {
-    //         setData(prev => {
-    //             return {
-    //                 ...prev,
-    //                 [[activeCell.rowIndex, activeCell.columnIndex]]: '',
-    //             };
-    //         });
-    //         gridRef.current?.resetAfterIndices(activeCell);
-    //     }
-    // }, []);
-
     const onAfterSubmit = useCallback(
         (_value: any, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => {
             gridRef.current?.resizeColumns([activeCell.columnIndex]);
@@ -456,7 +437,7 @@ const DataGrid = (
         onScroll: onEditableScroll,
         onKeyDown: onEditorKeyDown,
         onMouseDown: onEditorMouseDown,
-        hideEditor: _,
+        hideEditor,
         ...editableProps
     } = useEditable({
         gridRef,
@@ -475,6 +456,13 @@ const DataGrid = (
         onAfterSubmit,
         useEditorConfig,
     });
+
+    useImperativeHandle(datagridMethodsRef, () => ({
+        setActiveCell,
+        hideEditor,
+        isEditInProgress,
+        setSelections: selectionProps.setSelections,
+    }));
 
     const onScroll = useCallback(
         (scrollCoords: ScrollCoords) => {
@@ -602,6 +590,7 @@ const DataGrid = (
                         selections={selections}
                         activeCell={activeCell}
                         showFillHandle={!isEditInProgress}
+                        {...bodyGridProps}
                         {...selectionProps}
                         {...editableProps}
                         onKeyDown={onKeyDown}
