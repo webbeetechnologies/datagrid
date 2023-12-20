@@ -16,7 +16,6 @@ import { LayoutChangeEvent, StyleSheet } from 'react-native';
 import { Rect, Text, Group } from 'react-konva';
 import type { ViewProps } from '@bambooapp/bamboo-atoms';
 import { useMolecules } from '@bambooapp/bamboo-molecules';
-// import type { TDataTableRow } from '@bambooapp/bamboo-molecules/components';
 import type { Vector2d } from 'konva/lib/types';
 import type { RectConfig } from 'konva/lib/shapes/Rect';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -47,17 +46,6 @@ import {
     UseEditableOptions,
 } from './hooks';
 
-// const groupHeaderIndices = [0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800];
-
-// const mergedCells = [
-//     {
-//         top: 5,
-//         left: 5,
-//         right: 6,
-//         bottom: 5,
-//     },
-// ];
-
 export type CellRendererProps = RendererProps & { useCellValue: Props['useCellValue'] };
 
 export type Props = Pick<
@@ -73,6 +61,8 @@ export type Props = Pick<
     | 'selectionRightBound'
     | 'isHiddenRow'
     | 'isHiddenColumn'
+    | 'onBeforeSelection'
+    | 'onBeforeFill'
 > &
     Pick<
         UseEditableOptions,
@@ -305,53 +295,6 @@ const DefaultCellWrapper = memo(
     ({ useCellValue, rowIndex, columnIndex, ...rest }: CellRendererProps) => {
         const [value] = useCellValue<any>({ rowIndex, columnIndex });
 
-        // if (record?._rowType === 'group-header') {
-        //     return (
-        //         <Group x={x} y={y}>
-        //             {columnIndex === 0 && (
-        //                 <>
-        //                     <CanvasIcon
-        //                         // onClick={() => onToggleGroup(rowIndex)}
-        //                         x={x}
-        //                         y={y - 5}
-        //                         text="󰅂"
-        //                         align="center"
-        //                         verticalAlign="center"
-        //                         size={24}
-        //                     />
-        //                     <Text
-        //                         x={x + 25}
-        //                         y={y}
-        //                         align="center"
-        //                         verticalAlign="center"
-        //                         fill="#333"
-        //                         fontSize={12}
-        //                         text={`group-header${rowIndex}`}
-        //                     />
-        //                 </>
-        //             )}
-        //         </Group>
-        //     );
-        // }
-        //
-        // if (record?._rowType === 'group-footer') {
-        //     return (
-        //         <Group x={x} y={y}>
-        //             {columnIndex === 0 && (
-        //                 <Text
-        //                     x={x}
-        //                     y={y}
-        //                     align="center"
-        //                     verticalAlign="center"
-        //                     fill="#333"
-        //                     fontSize={12}
-        //                     text={`group-footer${rowIndex}`}
-        //                 />
-        //             )}
-        //         </Group>
-        //     );
-        // }
-
         return (
             <DefaultCell {...rest} value={value} rowIndex={rowIndex} columnIndex={columnIndex} />
         );
@@ -380,7 +323,6 @@ const DataGrid = (
         innerContainerProps,
         gridRef: gridRefProp,
         headerGridRef: headerGridRefProp,
-        // countGridRef: countGridRefProp,
         onDelete,
         getEditor = getEditorDefault,
         useEditorConfig,
@@ -390,7 +332,6 @@ const DataGrid = (
         onChange,
         onActiveCellChange,
         useCellValue,
-        // records,
         onViewChange,
         hasRowLoaded = defaultHasRowLoaded,
         loadMoreRows: loadMoreRowsProp,
@@ -399,14 +340,14 @@ const DataGrid = (
         children,
         headerGridProps,
         onContextMenu,
-        // rowCountCellRenderer = defaultRowCountCellRenderer,
-        // countGridProps,
         selectionTopBound,
         selectionLeftBound,
         selectionBottomBound,
         selectionRightBound,
         isHiddenColumn,
         isHiddenRow,
+        onBeforeSelection,
+        onBeforeFill,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -462,54 +403,9 @@ const DataGrid = (
         selectionTopBound,
         isHiddenRow,
         isHiddenColumn,
+        onBeforeSelection,
+        onBeforeFill,
     });
-
-    // const onToggleGroup = useCallback(
-    //     (index: number) => {
-    //         let _collapsedGroups;
-    //
-    //         if (collapsedGroupsRef.current.includes(index)) {
-    //             _collapsedGroups = collapsedGroupsRef.current.filter(item => item !== index);
-    //         } else {
-    //             _collapsedGroups = [...collapsedGroupsRef.current, index];
-    //         }
-    //
-    //         // const newRecordsArr: number[] = new Array(2000).fill(' ').map((_, i) => i);
-    //         //
-    //         // _collapsedGroups.forEach(headerIndex => {
-    //         //     newRecordsArr.splice(headerIndex + 1, headerIndex + 199);
-    //         // });
-    //
-    //         // setData(prev => {
-    //         //     const newData = [...prev];
-    //         //
-    //         //     return newData.filter((_, i) => newRecordsArr.includes(Number(i)));
-    //         // });
-    //
-    //         setCollapsedGroups(_collapsedGroups);
-    //     },
-    //     [collapsedGroupsRef, setData],
-    // );
-
-    // const calculateSpace = useCallback(
-    //     (rowIndex: number) => {
-    //         let nearestGroupIndex = 0;
-    //         for (let i = 0; i < groupHeaderIndices.length; i++) {
-    //             if (groupHeaderIndices[i] < rowIndex) {
-    //                 if (collapsedGroups.includes(groupHeaderIndices[i])) {
-    //                     continue;
-    //                 }
-    //
-    //                 nearestGroupIndex = i;
-    //                 continue;
-    //             }
-    //             break;
-    //         }
-    //
-    //         return { groupIndex: nearestGroupIndex, space: 0 };
-    //     },
-    //     [collapsedGroups],
-    // );
 
     // const onDelete = useCallback((_activeCell: CellInterface, _selections: SelectionArea[]) => {
     //     if (selections.length) {

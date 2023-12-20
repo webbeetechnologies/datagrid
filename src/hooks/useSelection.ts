@@ -64,6 +64,14 @@ export interface UseSelectionOptions {
      */
     allowDeselectSelection?: boolean;
     /**
+     * before fill
+     */
+    onBeforeFill?: (
+        activeCell: CellInterface,
+        selection: SelectionArea | null,
+        selections: SelectionArea[],
+    ) => boolean | void;
+    /**
      * onFill
      */
     onFill?: (
@@ -135,6 +143,10 @@ export interface UseSelectionOptions {
      * When selection is moved
      */
     onSelectionMove?: (from: SelectionArea, to: SelectionArea) => void;
+    /*
+     * before selection
+     * */
+    onBeforeSelection?: (start: CellInterface | null, end: CellInterface) => boolean | void;
     /*
      * When selection is done
      * */
@@ -273,6 +285,8 @@ const useSelection = ({
     onSelectionMove,
     onSelectionEnd,
     selectionIgnoredIndices,
+    onBeforeSelection,
+    onBeforeFill,
 }: UseSelectionOptions): SelectionResults => {
     const [activeCell, setActiveCell] = useState<CellInterface | null>(initialActiveCell);
     const [selections, setSelections] = useState<SelectionArea[]>(initialSelections);
@@ -524,7 +538,10 @@ const useSelection = ({
 
             if (!coords) return;
 
-            if (mouseMoveInterceptor?.(e, coords, selectionStart, selectionEnd) === false) {
+            if (
+                mouseMoveInterceptor?.(e, coords, selectionStart, selectionEnd) === false ||
+                onBeforeSelection?.(selectionStart.current, coords) === false
+            ) {
                 return;
             }
 
@@ -536,7 +553,7 @@ const useSelection = ({
 
             gridRef.current?.scrollToItem(coords);
         },
-        [clearSelections, gridRef, modifySelection, mouseMoveInterceptor],
+        [clearSelections, gridRef, modifySelection, mouseMoveInterceptor, onBeforeSelection],
     );
     /**
      * Mouse up handler
@@ -605,7 +622,10 @@ const useSelection = ({
             /* Activate selection mode */
             isSelecting.current = true;
 
-            if (mouseDownInterceptor?.(e, coords, selectionStart, selectionEnd) === false) {
+            if (
+                mouseDownInterceptor?.(e, coords, selectionStart, selectionEnd) === false ||
+                onBeforeSelection?.(selectionStart.current, coords) === false
+            ) {
                 return;
             }
 
@@ -698,6 +718,7 @@ const useSelection = ({
             selections,
             selectionPolicy,
             mouseDownInterceptor,
+            onBeforeSelection,
             activeCell,
             alwaysScrollToActiveCell,
             newSelection,
@@ -1221,10 +1242,17 @@ const useSelection = ({
                 };
             }
 
-            /**
-             * If user moves back to the same selection, clear
-             */
+            if (
+                onBeforeFill?.(activeCellRef.current, { bounds }, activeSelectionsRef.current) ===
+                false
+            ) {
+                return;
+            }
+
             if (hasSelections && boundsSubsetOfSelection(bounds, selections[0].bounds)) {
+                /**
+                 * If user moves back to the same selection, clear
+                 */
                 setFillSelection(undefined);
                 return;
             }
@@ -1237,6 +1265,7 @@ const useSelection = ({
             activeCellRef,
             activeSelectionsRef,
             gridRef,
+            onBeforeFill,
             selectionBottomBound,
             selectionFromStartEnd,
             selectionLeftBound,
@@ -1394,6 +1423,8 @@ const useSelection = ({
                     });
                 });
 
+                if (onBeforeSelection?.(selectionStart.current, coords) === false) return;
+
                 /* Update selection end */
                 selectionEnd.current = {
                     rowIndex: sel.bounds.bottom,
@@ -1421,7 +1452,7 @@ const useSelection = ({
 
         /* Force render */
         forceRender();
-    }, [gridRef, handleSelectionMouseMove, onSelectionMove]);
+    }, [gridRef, handleSelectionMouseMove, onBeforeSelection, onSelectionMove]);
 
     /**
      * When user mouse downs on selection
