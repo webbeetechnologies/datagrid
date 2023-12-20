@@ -146,7 +146,11 @@ export interface UseSelectionOptions {
     /*
      * before selection
      * */
-    onBeforeSelection?: (start: CellInterface | null, end: CellInterface) => boolean | void;
+    onBeforeSelection?: (
+        start: CellInterface | null,
+        end: CellInterface | null,
+        newEnd: CellInterface,
+    ) => boolean | void;
     /*
      * When selection is done
      * */
@@ -540,7 +544,7 @@ const useSelection = ({
 
             if (
                 mouseMoveInterceptor?.(e, coords, selectionStart, selectionEnd) === false ||
-                onBeforeSelection?.(selectionStart.current, coords) === false
+                onBeforeSelection?.(selectionStart.current, selectionEnd.current, coords) === false
             ) {
                 return;
             }
@@ -624,7 +628,7 @@ const useSelection = ({
 
             if (
                 mouseDownInterceptor?.(e, coords, selectionStart, selectionEnd) === false ||
-                onBeforeSelection?.(selectionStart.current, coords) === false
+                onBeforeSelection?.(selectionStart.current, selectionEnd.current, coords) === false
             ) {
                 return;
             }
@@ -1423,7 +1427,11 @@ const useSelection = ({
                     });
                 });
 
-                if (onBeforeSelection?.(selectionStart.current, coords) === false) return;
+                if (
+                    onBeforeSelection?.(selectionStart.current, selectionEnd.current, coords) ===
+                    false
+                )
+                    return;
 
                 /* Update selection end */
                 selectionEnd.current = {
