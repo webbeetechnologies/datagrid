@@ -75,7 +75,6 @@ cache/
 
 example/cache
 
-.yarn/
 !.yarn/releases
 .yarn/cache
 
