@@ -11,6 +11,8 @@ import React, {
     Key,
     CSSProperties,
     RefObject,
+    RefCallback,
+    MutableRefObject,
 } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent, ViewStyle, ScrollView } from 'react-native';
 import { Stage, Layer, Group, Line } from 'react-konva';
@@ -266,7 +268,10 @@ export interface GridProps
      * Is user currently dragging a selection
      */
     isDraggingSelection?: boolean;
-    verticalScrollRef?: RefObject<ScrollView>;
+    verticalScrollRef?:
+        | RefObject<ScrollView>
+        | RefCallback<ScrollView>
+        | MutableRefObject<ScrollView>;
     containerStyle?: ViewStyle;
 }
 

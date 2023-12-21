@@ -12,10 +12,10 @@ import React, {
     RefObject,
     useMemo,
 } from 'react';
-import { LayoutChangeEvent, StyleSheet } from 'react-native';
+import { LayoutChangeEvent, ScrollView, StyleSheet } from 'react-native';
 import { Rect, Text, Group } from 'react-konva';
 import type { ViewProps } from '@bambooapp/bamboo-atoms';
-import { useMolecules } from '@bambooapp/bamboo-molecules';
+import { useMergedRefs, useMolecules } from '@bambooapp/bamboo-molecules';
 import type { Vector2d } from 'konva/lib/types';
 import type { RectConfig } from 'konva/lib/shapes/Rect';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -609,15 +609,13 @@ const DataGrid = (
 };
 
 const BodyGrid = memo(
-    forwardRef(({ onViewChange, ...rest }: GridProps, ref: any) => {
+    forwardRef(({ onViewChange, verticalScrollRef, ...rest }: GridProps, ref: any) => {
         const { ref: infiniteLoaderRefSetter, onItemsRendered } = useInfiniteLoaderArgsContext();
 
-        const setRef = useCallback(
-            (listRef: any) => {
-                return infiniteLoaderRefSetter(listRef);
-            },
-            [infiniteLoaderRefSetter],
-        );
+        const mergedBodyGridRef = useMergedRefs<ScrollView>([
+            infiniteLoaderRefSetter,
+            verticalScrollRef,
+        ]);
 
         const _onViewChange = useCallback(
             (viewPortProps: ViewPortProps) => {
@@ -634,7 +632,7 @@ const BodyGrid = memo(
         return (
             <Grid
                 ref={ref}
-                verticalScrollRef={setRef as any}
+                verticalScrollRef={mergedBodyGridRef}
                 onViewChange={_onViewChange}
                 {...rest}
             />

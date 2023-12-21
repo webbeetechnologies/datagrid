@@ -159,10 +159,6 @@ export interface UseSelectionOptions {
      * When active cell changes
      * */
     onActiveCellChange?: (cell: CellInterface | null, prev: CellInterface | null) => void;
-    selectionIgnoredIndices?: {
-        rowIndices?: number[];
-        columnIndices?: number[];
-    };
 }
 
 export type NewSelectionMode = 'clear' | 'modify' | 'append';
@@ -288,7 +284,6 @@ const useSelection = ({
     getValue,
     onSelectionMove,
     onSelectionEnd,
-    selectionIgnoredIndices,
     onBeforeSelection,
     onBeforeFill,
 }: UseSelectionOptions): SelectionResults => {
@@ -342,19 +337,10 @@ const useSelection = ({
                 cell.rowIndex < selectionTopBound ||
                 cell.columnIndex < selectionLeftBound ||
                 isHiddenRow(cell.rowIndex) ||
-                isHiddenColumn(cell.columnIndex) ||
-                selectionIgnoredIndices?.rowIndices?.includes?.(cell.rowIndex) ||
-                selectionIgnoredIndices?.columnIndices?.includes?.(cell.columnIndex)
+                isHiddenColumn(cell.columnIndex)
             );
         },
-        [
-            selectionTopBound,
-            selectionLeftBound,
-            isHiddenRow,
-            isHiddenColumn,
-            selectionIgnoredIndices?.rowIndices,
-            selectionIgnoredIndices?.columnIndices,
-        ],
+        [selectionTopBound, selectionLeftBound, isHiddenRow, isHiddenColumn],
     );
 
     const clearSelections = useCallback(() => {
