@@ -469,7 +469,9 @@ interface ScrollSnapRef {
     isHiddenColumn?: (columnIndex: number) => boolean;
 }
 
-const DEFAULT_ESTIMATED_ITEM_SIZE = 50;
+const DEFAULT_ESTIMATED_COLUMN_SIZE = 100;
+const DEFAULT_ESTIMATED_ROW_SIZE = 50;
+
 const defaultShadowSettings: ShapeConfig = {
     strokeWidth: 1,
 };
@@ -588,8 +590,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             rowMetadataMap: {},
             lastMeasuredColumnIndex: -1,
             lastMeasuredRowIndex: -1,
-            estimatedColumnWidth: estimatedColumnWidth || DEFAULT_ESTIMATED_ITEM_SIZE,
-            estimatedRowHeight: estimatedRowHeight || DEFAULT_ESTIMATED_ITEM_SIZE,
+            estimatedColumnWidth: estimatedColumnWidth || DEFAULT_ESTIMATED_COLUMN_SIZE,
+            estimatedRowHeight: estimatedRowHeight || DEFAULT_ESTIMATED_ROW_SIZE,
             recalcColumnIndices: [],
             recalcRowIndices: [],
         });

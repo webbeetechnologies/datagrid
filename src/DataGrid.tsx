@@ -438,7 +438,7 @@ const DataGrid = (
         onKeyDown: onEditorKeyDown,
         onMouseDown: onEditorMouseDown,
         hideEditor,
-        ...editableProps
+        onDoubleClick,
     } = useEditable({
         gridRef,
         useValue: useCellValue,
@@ -592,7 +592,7 @@ const DataGrid = (
                         showFillHandle={!isEditInProgress}
                         {...bodyGridProps}
                         {...selectionProps}
-                        {...editableProps}
+                        onDoubleClick={onDoubleClick}
                         onKeyDown={onKeyDown}
                         onMouseDown={onMouseDown}
                         onScroll={onScroll}
