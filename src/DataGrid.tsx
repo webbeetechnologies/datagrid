@@ -154,7 +154,6 @@ export type Props = Pick<
             | 'rowHeight'
             | 'showScrollbar'
         >;
-        datagridMethodsRef?: RefObject<DataGridMethodsRef>;
         bodyGridProps?: Omit<
             GridProps,
             | 'itemRenderer'
@@ -370,7 +369,6 @@ const DataGrid = (
         isHiddenRow,
         onBeforeSelection,
         onBeforeFill,
-        datagridMethodsRef,
         bodyGridProps,
         ...rest
     }: Props,
@@ -387,8 +385,6 @@ const DataGrid = (
     const gridRef = useRef<GridRef>(null);
     const currentViewPort = useRef<ViewPortProps>();
     const infiniteLoaderRef = useRef(null);
-
-    console.log({ infiniteLoaderRef });
 
     useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
     useImperativeHandle(headerGridRefProp, () => headerGridRef.current as GridRef);
@@ -460,13 +456,6 @@ const DataGrid = (
         useEditorConfig,
     });
 
-    useImperativeHandle(datagridMethodsRef, () => ({
-        setActiveCell,
-        hideEditor,
-        isEditInProgress,
-        setSelections: selectionProps.setSelections,
-    }));
-
     const onScroll = useCallback(
         (scrollCoords: ScrollCoords) => {
             headerGridRef.current?.scrollTo({ scrollLeft: scrollCoords.scrollLeft });
@@ -537,24 +526,12 @@ const DataGrid = (
         activeCell,
         setActiveCell,
         isEditInProgress,
+        hideEditor,
+        setSelections: selectionProps.setSelections,
+        infiniteLoader: infiniteLoaderRef.current,
     }));
 
     return (
-        // <View style={styles.container}>
-        //     <Grid
-        //         ref={countGridRef}
-        //         containerStyle={styles.countGrid}
-        //         columnCount={1}
-        //         width={50}
-        //         height={height + headerHeight}
-        //         frozenRows={1}
-        //         rowCount={rowCount + 1}
-        //         columnWidth={defaultRowCountColumnWidth}
-        //         rowHeight={countGridRowHeight}
-        //         showScrollbar={false}
-        //         itemRenderer={rowCountCellRenderer}
-        //         {...countGridProps}
-        //     />
         <View style={styles.innerContainer} {...rest}>
             <Grid
                 containerStyle={styles.header}
