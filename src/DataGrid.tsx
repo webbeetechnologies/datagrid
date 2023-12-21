@@ -386,6 +386,9 @@ const DataGrid = (
     const headerGridRef = useRef<GridRef>(null);
     const gridRef = useRef<GridRef>(null);
     const currentViewPort = useRef<ViewPortProps>();
+    const infiniteLoaderRef = useRef(null);
+
+    console.log({ infiniteLoaderRef });
 
     useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
     useImperativeHandle(headerGridRefProp, () => headerGridRef.current as GridRef);
@@ -569,6 +572,7 @@ const DataGrid = (
             />
             <View {...innerContainerProps} style={tableContainerStyle} onLayout={onLayout}>
                 <InfiniteLoader
+                    ref={infiniteLoaderRef}
                     isItemLoaded={hasRowLoaded}
                     itemCount={rowCount}
                     loadMoreItems={loadMoreRows}
