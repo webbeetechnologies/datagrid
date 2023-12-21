@@ -169,16 +169,13 @@ export type Props = Pick<
         >;
     };
 
-// TODO - add more methods
-export type DataGridMethodsRef = {
-    setActiveCell: SelectionResults['setActiveCell'];
-    setSelections: SelectionResults['setSelections'];
-    hideEditor: () => void;
-    isEditInProgress: boolean;
-};
-
-export type DataGridRef = Pick<SelectionResults, 'selections' | 'activeCell' | 'setActiveCell'> &
-    Pick<EditableResults, 'isEditInProgress'> & {};
+export type DataGridRef = Pick<
+    SelectionResults,
+    'selections' | 'activeCell' | 'setActiveCell' | 'setSelections'
+> &
+    Pick<EditableResults, 'isEditInProgress' | 'hideEditor'> & {
+        infiniteLoader: InfiniteLoader | null;
+    };
 
 const dragHandleWidth = 5;
 
