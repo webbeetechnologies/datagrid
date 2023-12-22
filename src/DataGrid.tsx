@@ -594,12 +594,12 @@ const BodyGrid = memo(
 
         const _onViewChange = useCallback(
             (viewPortProps: ViewPortProps) => {
+                onViewChange?.(viewPortProps);
+
                 onItemsRendered({
                     visibleStartIndex: viewPortProps.rowStartIndex,
                     visibleStopIndex: viewPortProps.rowStopIndex,
                 });
-
-                onViewChange?.(viewPortProps);
             },
             [onItemsRendered, onViewChange],
         );
