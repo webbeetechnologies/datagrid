@@ -90,16 +90,7 @@ export type Props = Pick<
     ViewProps & {
         width?: number;
         height?: number;
-        useCellValue: <T>(
-            cell: CellInterface | null,
-        ) => [
-            T,
-            (
-                newValue: T,
-                activeCell: CellInterface,
-                nextActiveCell: CellInterface | null | undefined,
-            ) => void,
-        ];
+        useCellValue: <T>(cell: CellInterface | null) => [T, (newValue: T) => void];
         rowCount: number;
         columnCount: number;
         innerContainerProps?: ViewProps;

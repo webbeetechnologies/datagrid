@@ -43,12 +43,7 @@ export interface UseEditableOptions {
     /**
      * Value getter
      */
-    useValue: (
-        cell: CellInterface | null,
-    ) => [
-        any,
-        (newValue: any, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => void,
-    ];
+    useValue: (cell: CellInterface | null) => [any, (newValue: any) => void];
     /**
      * Callback when user cancels editing
      */
@@ -139,6 +134,14 @@ export interface UseEditableOptions {
      * Editor will not scroll with the grid
      */
     sticky?: boolean;
+    /**
+     * Callback to submit the value back to data store
+     */
+    onSubmit?: (
+        value: string | number,
+        activeCell: CellInterface,
+        nextActiveCell?: CellInterface | null,
+    ) => void;
 }
 
 export interface EditableResults {
@@ -213,6 +216,10 @@ export interface EditorProps {
      * Initial value of the cell
      */
     value?: string | number;
+    /**
+     * setValue that we got from useValue
+     */
+    setValue?: (newValue: string) => void;
     /**
      * Callback when a value has changed.
      */
@@ -453,9 +460,9 @@ const useEditable = ({
     onBeforeEdit,
     onKeyDown,
     sticky = false,
+    onSubmit: onSubmitValue,
 }: UseEditableOptions): EditableResults => {
     const [isEditorShown, setShowEditor] = useState<boolean>(false);
-    const [value, setValue] = useState<string | null>(null);
     const [position, setPosition] = useState<CellPosition>({
         x: 0,
         y: 0,
@@ -469,17 +476,17 @@ const useEditable = ({
         scrollLeft: 0,
         scrollTop: 0,
     });
+    const [value, _setValue] = useValue(activeCell);
+    const setValueRef = useLatest(_setValue);
+
     const [autoFocus, setAutoFocus] = useState<boolean>(true);
     const isDirtyRef = useRef<boolean>(false);
-    const currentValueRef = useRef(value);
+    const currentValueRef = useLatest(value);
     const initialValueRef = useRef<string>();
     const maxEditorDimensionsRef = useRef<{ height: number; width: number }>();
     /* To prevent stale closures data */
     // const getValueRef = useRef(getValue);
     const activeCellRef = useLatest(activeCell);
-
-    const [actualValue, onSubmitValue] = useValue(activeCell);
-    const actualValueRef = useLatest(actualValue);
 
     const editorConfigRef = useLatest(useEditorConfig(activeCell));
 
@@ -494,12 +501,28 @@ const useEditable = ({
         requestAnimationFrame(() => gridRef.current && gridRef.current.focus());
     }, [gridRef]);
 
-    /* Keep ref in sync */
-    useEffect(() => {
-        currentValueRef.current = value;
-    });
+    /* Frozen flags */
+    const isFrozenRow =
+        currentActiveCellRef.current && currentActiveCellRef.current?.rowIndex < frozenRows;
+    const isFrozenColumn =
+        currentActiveCellRef.current && currentActiveCellRef.current?.columnIndex < frozenColumns;
 
-    // useWhatHasUpdated('useEditable', { isEditorShown, value, position, autoFocus, scrollPosition });
+    /**
+     * Get current cell position based on scroll position
+     * @param position
+     * @param scrollPosition
+     */
+    const getCellPosition = useCallback(
+        (position: CellPosition, scrollPosition: ScrollCoords) => {
+            if (!currentActiveCellRef.current) return { x: 0, y: 0 };
+            return {
+                ...position,
+                x: (position.x as number) - (isFrozenColumn ? 0 : scrollPosition.scrollLeft),
+                y: (position.y as number) - (isFrozenRow ? 0 : scrollPosition.scrollTop),
+            };
+        },
+        [isFrozenColumn, isFrozenRow],
+    );
 
     /**
      * Make a cell editable
@@ -530,7 +553,7 @@ const useEditable = ({
                 /* Get offsets */
                 const pos = gridRef.current.getCellOffsetFromCoords(coords);
                 const scrollPosition = gridRef.current.getScrollPosition();
-                const value = initialValue || actualValueRef.current || '';
+                const value = initialValue || currentValueRef.current || '';
                 const cellPosition = sticky
                     ? // Editor is rendered outside the <Grid /> component
                       // If the user has scrolled down, and then activate the editor, we will need to adjust the position
@@ -555,7 +578,7 @@ const useEditable = ({
                 initialValueRef.current = initialValue;
 
                 /* Trigger onChange handlers */
-                setValue(value);
+                setValueRef.current(value);
                 onChange?.(value, coords);
                 setAutoFocus(autoFocus);
                 setScrollPosition(scrollPosition);
@@ -565,30 +588,23 @@ const useEditable = ({
         },
         // TODO - remove eslint ignore after testing
         // eslint-disable-next-line
-        [frozenRows, frozenColumns, onBeforeEdit, sticky],
+        [
+            frozenRows,
+            frozenColumns,
+            gridRef,
+            editorConfigRef,
+            canEdit,
+            onBeforeEdit,
+            currentValueRef,
+            sticky,
+            getCellPosition,
+            setValueRef,
+            onChange,
+            showEditor,
+        ],
     );
 
     const makeEditableRef = useLatest(makeEditable);
-
-    /* Frozen flags */
-    const isFrozenRow =
-        currentActiveCellRef.current && currentActiveCellRef.current?.rowIndex < frozenRows;
-    const isFrozenColumn =
-        currentActiveCellRef.current && currentActiveCellRef.current?.columnIndex < frozenColumns;
-
-    /**
-     * Get current cell position based on scroll position
-     * @param position
-     * @param scrollPosition
-     */
-    const getCellPosition = (position: CellPosition, scrollPosition: ScrollCoords) => {
-        if (!currentActiveCellRef.current) return { x: 0, y: 0 };
-        return {
-            ...position,
-            x: (position.x as number) - (isFrozenColumn ? 0 : scrollPosition.scrollLeft),
-            y: (position.y as number) - (isFrozenRow ? 0 : scrollPosition.scrollTop),
-        };
-    };
 
     /* Activate edit mode */
     const handleDoubleClick = useCallback(
@@ -676,16 +692,22 @@ const useEditable = ({
             makeEditable(
                 { rowIndex, columnIndex },
                 editorConfigRef.current?.concatInitialValue
-                    ? (currentValueRef.current || '') + initialValue
+                    ? (currentValueRef.current || '') + (initialValue || '')
                     : undefined,
             );
 
             /* Prevent the first keystroke */
             e.preventDefault();
         },
-        // TODO - remove eslint ignore after testing
-        // eslint-disable-next-line
-        [selections, activeCell, onDelete],
+        [
+            isSelectionKey,
+            activeCell,
+            makeEditable,
+            editorConfigRef,
+            currentValueRef,
+            onDelete,
+            selections,
+        ],
     );
 
     /**
@@ -775,18 +797,26 @@ const useEditable = ({
             }
             return nextActiveCell;
         },
-        // TODO - remove eslint ignore after testing
-        // eslint-disable-next-line
-        [selections, isHiddenRow, isHiddenColumn, selectionBottomBound, selectionTopBound],
+        [
+            gridRef,
+            selections,
+            selectionTopBound,
+            isHiddenRow,
+            selectionRightBound,
+            isHiddenColumn,
+            selectionLeftBound,
+            selectionBottomBound,
+        ],
     );
 
     const onSubmit = useCallback(
         (value: any, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => {
-            onSubmitValue(value, activeCell, nextActiveCell);
+            setValueRef.current(value);
+            onSubmitValue?.(value, activeCell, nextActiveCell);
 
             onAfterSubmit?.(value, activeCell, nextActiveCell);
         },
-        [onAfterSubmit, onSubmitValue],
+        [onAfterSubmit, onSubmitValue, setValueRef],
     );
 
     /* Save the value */
@@ -834,7 +864,7 @@ const useEditable = ({
             }
             initialActiveCell.current = undefined;
         },
-        [hideOnBlur, handleSubmit, handleCancel],
+        [hideOnBlur, handleSubmit, currentValueRef, handleCancel],
     );
 
     const handleChange = useCallback(
@@ -851,10 +881,10 @@ const useEditable = ({
             if (!currentActiveCellRef.current) return;
             /* Check if the value has changed. Used to conditionally submit if editor is not in focus */
             isDirtyRef.current = newValue !== value;
-            setValue(newValue);
+            setValueRef.current(newValue);
             onChange?.(newValue, activeCell);
         },
-        [onChange, value],
+        [onChange, setValueRef, value],
     );
 
     const handleScroll = useCallback((scrollPos: ScrollCoords) => {
@@ -915,12 +945,6 @@ const useEditable = ({
         makeEditableRef.current(activeCell);
     }, [activeCell, makeEditableRef, editorConfigRef]);
 
-    useEffect(() => {
-        if (actualValue !== currentValueRef.current) {
-            setValue(actualValue);
-        }
-    }, [actualValue]);
-
     const editorComponent =
         isEditorShown && Editor ? (
             <Editor
@@ -930,7 +954,7 @@ const useEditable = ({
                 activeCell={activeCell}
                 autoFocus={autoFocus}
                 value={value}
-                onSubmitValue={onSubmitValue}
+                setValue={_setValue}
                 selections={selections}
                 onChange={handleChange}
                 onSubmit={handleSubmit}
