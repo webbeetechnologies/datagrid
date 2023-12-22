@@ -4,6 +4,7 @@ import isInteger from './isInteger';
 import isRangeVisible from './isRangeVisible';
 import scanForUnloadedRanges from './scanForUnloadedRanges';
 import type { Ranges } from './types';
+import type { GridRef } from '../Grid';
 
 type onItemsRenderedParams = {
     visibleStartIndex: number;
@@ -34,7 +35,7 @@ export type InfiniteLoaderProps = {
 export class InfiniteLoader extends PureComponent<InfiniteLoaderProps> {
     _lastRenderedStartIndex: number = -1;
     _lastRenderedStopIndex: number = -1;
-    _listRef: any;
+    _listRef: GridRef | undefined;
     _memoizedUnloadedRanges: Ranges = [];
 
     resetloadMoreItemsCache(autoReload: boolean = false) {
@@ -118,18 +119,18 @@ export class InfiniteLoader extends PureComponent<InfiniteLoaderProps> {
 
                         // Resize cached row sizes for VariableSizeList,
                         // otherwise just re-render the list.
-                        if (typeof this._listRef.resetAfterIndex === 'function') {
-                            this._listRef.resetAfterIndex(startIndex, true);
+                        if (typeof this._listRef.resetAfterIndices === 'function') {
+                            this._listRef?.resetAfterIndices({ rowIndex: startIndex }, true);
                         } else {
                             // HACK reset temporarily cached item styles to force PureComponent to re-render.
                             // This is pretty gross, but I'm okay with it for now.
                             // Don't judge me.
-                            if (typeof this._listRef._getItemStyleCache === 'function') {
-                                this._listRef._getItemStyleCache(-1);
-                            }
-
-                            // TODO - check if this is needed
-                            // this._listRef.forceUpdate();
+                            // if (typeof this._listRef._getItemStyleCache === 'function') {
+                            //     this._listRef?._getItemStyleCache(-1);
+                            // }
+                            //
+                            // // TODO - check if this is needed
+                            // this._listRef?.forceUpdate();
                         }
                     }
                 });

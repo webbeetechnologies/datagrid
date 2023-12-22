@@ -12,7 +12,7 @@ import React, {
     RefObject,
     useMemo,
 } from 'react';
-import { LayoutChangeEvent, ScrollView, StyleSheet } from 'react-native';
+import { LayoutChangeEvent, StyleSheet } from 'react-native';
 import { Rect, Text, Group } from 'react-konva';
 import type { ViewProps } from '@bambooapp/bamboo-atoms';
 import { useMergedRefs, useMolecules } from '@bambooapp/bamboo-molecules';
@@ -587,19 +587,16 @@ const DataGrid = (
 };
 
 const BodyGrid = memo(
-    forwardRef(({ onViewChange, verticalScrollRef, ...rest }: GridProps, ref: any) => {
+    forwardRef(({ onViewChange, ...rest }: GridProps, ref: any) => {
         const { ref: infiniteLoaderRefSetter, onItemsRendered } = useInfiniteLoaderArgsContext();
 
-        const mergedBodyGridRef = useMergedRefs<ScrollView>([
-            infiniteLoaderRefSetter,
-            verticalScrollRef,
-        ]);
+        const mergedBodyGridRef = useMergedRefs<GridRef>([infiniteLoaderRefSetter, ref]);
 
         const _onViewChange = useCallback(
             (viewPortProps: ViewPortProps) => {
                 onItemsRendered({
-                    visibleStartIndex: viewPortProps.visibleRowStartIndex,
-                    visibleStopIndex: viewPortProps.visibleRowStopIndex,
+                    visibleStartIndex: viewPortProps.rowStartIndex,
+                    visibleStopIndex: viewPortProps.rowStopIndex,
                 });
 
                 onViewChange?.(viewPortProps);
@@ -607,14 +604,7 @@ const BodyGrid = memo(
             [onItemsRendered, onViewChange],
         );
 
-        return (
-            <Grid
-                ref={ref}
-                verticalScrollRef={mergedBodyGridRef}
-                onViewChange={_onViewChange}
-                {...rest}
-            />
-        );
+        return <Grid ref={mergedBodyGridRef} onViewChange={_onViewChange} {...rest} />;
     }),
 );
 
