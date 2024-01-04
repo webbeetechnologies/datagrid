@@ -213,14 +213,6 @@ export interface EditorProps {
      */
     selections?: SelectionArea[];
     /**
-     * Initial value of the cell
-     */
-    value?: string | number;
-    /**
-     * setValue that we got from useValue
-     */
-    setValue?: (newValue: string) => void;
-    /**
      * Callback when a value has changed.
      */
     onChange?: (value: string, activeCell: CellInterface) => void;
@@ -306,7 +298,6 @@ const DefaultEditor: React.FC<EditorProps> = props => {
         position,
         cell,
         nextFocusableCell,
-        value = '',
         autoFocus = true,
         onKeyDown: onKeyDownProp,
         ...rest
@@ -315,6 +306,7 @@ const DefaultEditor: React.FC<EditorProps> = props => {
     const padding = 10; /* 2 + 1 + 1 + 2 + 2 */
 
     const inputRef = useRef<HTMLTextAreaElement | null>(null);
+    const value = '';
 
     const { x = 0, y = 0, width = 0, height = 0 } = position;
 
@@ -953,8 +945,6 @@ const useEditable = ({
                 cell={editingCell}
                 activeCell={activeCell}
                 autoFocus={autoFocus}
-                value={value}
-                setValue={_setValue}
                 selections={selections}
                 onChange={handleChange}
                 onSubmit={handleSubmit}
