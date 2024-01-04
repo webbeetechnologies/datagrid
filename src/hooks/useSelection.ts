@@ -860,8 +860,11 @@ const useSelection = ({
 
             if (modify && !isUserNavigatingToActiveCell) {
                 modifySelection(coords);
+
+                onSelectionEnd?.(selectionStart.current, coords);
             } else {
                 newSelection(coords);
+                onSelectionEnd?.(coords, coords);
             }
 
             /* Keep the item in view */
@@ -870,6 +873,7 @@ const useSelection = ({
         [
             gridRef,
             activeCell,
+            onSelectionEnd,
             selectionTopBound,
             isHiddenRow,
             selectionBottomBound,
