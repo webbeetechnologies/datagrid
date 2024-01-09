@@ -2676,8 +2676,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             isDragging: _isD,
             modifySelection: _m,
             newSelection: _n,
-            onContextMenu: _oc,
-            onDoubleClick: _od,
 
             onSelectionMouseDown: _os,
 
