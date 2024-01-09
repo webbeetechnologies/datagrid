@@ -2665,9 +2665,37 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             ],
         );
 
+        const {
+            appendSelection: _a,
+
+            clearLastSelection: _c,
+
+            clearSelections: _cl,
+            draggedSelection: _d,
+            initialDraggedSelection: _i,
+            isDragging: _isD,
+            modifySelection: _m,
+            newSelection: _n,
+            onContextMenu: _oc,
+            onDoubleClick: _od,
+
+            onSelectionMouseDown: _os,
+
+            selectAll: _s,
+
+            setActiveCellState: _sa,
+
+            setSelections: _ss,
+            ...restContainerProps
+        } = rest as any;
+
         return (
             <View style={containerStyle} ref={scrollContainerRef}>
-                <div {...{ tabIndex: 0 }} ref={containerRef} style={innerContainerStyle} {...rest}>
+                <div
+                    {...{ tabIndex: 0 }}
+                    ref={containerRef}
+                    style={innerContainerStyle}
+                    {...restContainerProps}>
                     <Stage
                         width={containerWidth}
                         height={containerHeight}
