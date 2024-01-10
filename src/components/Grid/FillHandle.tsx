@@ -1,5 +1,7 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import type { ShapeConfig } from 'konva/lib/Shape';
+import type { ViewStyle } from 'react-native';
+import { View } from '@bambooapp/bamboo-atoms';
 
 /**
  * Fill handle component
@@ -7,31 +9,33 @@ import type { ShapeConfig } from 'konva/lib/Shape';
 const FillHandle: React.FC<ShapeConfig> = ({
     x = 0,
     y = 0,
-    stroke,
+    // stroke,
     strokeWidth = 1,
     size = 8,
     borderColor,
     ...props
 }) => {
-    if (x === 0 || y === 0) return null;
-    return (
-        <div
-            style={{
+    const style = useMemo(
+        () =>
+            ({
                 position: 'absolute',
                 left: x - size / 2,
                 top: y - size / 2,
                 width: size,
                 height: size,
-                border: `${strokeWidth}px ${borderColor} solid`,
-                borderRightWidth: 0,
-                borderBottomWidth: 0,
-                background: stroke as string,
+                borderWidth: strokeWidth,
+                borderColor,
+                backgroundColor: '#fff',
                 cursor: 'crosshair',
                 pointerEvents: 'all',
-            }}
-            {...props}
-        />
+                borderRadius: 2,
+            } as ViewStyle),
+        [borderColor, size, strokeWidth, x, y],
     );
+
+    if (x === 0 || y === 0) return null;
+
+    return <View style={style} {...props} />;
 };
 
 export default memo(FillHandle);

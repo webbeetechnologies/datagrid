@@ -2483,9 +2483,9 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             showFillHandle && !isSelectionInProgress ? (
                 <FillHandle
                     {...fillHandleDimension}
-                    stroke={selectionBorderColor}
+                    // stroke={selectionBorderColor}
                     size={fillHandleWidth}
-                    borderColor={fillhandleBorderColor}
+                    borderColor={selectionBorderColor}
                     {...fillHandleProps}
                 />
             ) : null;
