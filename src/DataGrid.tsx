@@ -59,8 +59,8 @@ export type Props = Pick<
     | 'selectionLeftBound'
     | 'selectionBottomBound'
     | 'selectionRightBound'
-    | 'isHiddenRow'
-    | 'isHiddenColumn'
+    | 'isSelectionIgnoredRow'
+    | 'isSelectionIgnoredColumn'
     | 'onBeforeSelection'
     | 'onBeforeFill'
 > &
@@ -353,8 +353,8 @@ const DataGrid = (
         selectionLeftBound,
         selectionBottomBound,
         selectionRightBound,
-        isHiddenColumn,
-        isHiddenRow,
+        isSelectionIgnoredColumn,
+        isSelectionIgnoredRow,
         onBeforeSelection,
         onBeforeFill,
         bodyGridProps,
@@ -400,8 +400,8 @@ const DataGrid = (
         selectionBottomBound,
         selectionLeftBound,
         selectionTopBound,
-        isHiddenRow,
-        isHiddenColumn,
+        isSelectionIgnoredColumn,
+        isSelectionIgnoredRow,
         onBeforeSelection,
         onBeforeFill,
     });

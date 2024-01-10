@@ -82,11 +82,11 @@ export interface UseSelectionOptions {
     /**
      * Hidden rows
      */
-    isHiddenRow?: HiddenType;
+    isSelectionIgnoredRow?: HiddenType;
     /**
      * Hidden columns
      */
-    isHiddenColumn?: HiddenType;
+    isSelectionIgnoredColumn?: HiddenType;
     /**
      * Always scroll to active cell
      */
@@ -269,8 +269,8 @@ const useSelection = ({
     newSelectionMode = 'clear',
     allowDeselectSelection = true,
     onFill,
-    isHiddenRow = defaultIsHidden,
-    isHiddenColumn = defaultIsHidden,
+    isSelectionIgnoredColumn = defaultIsHidden,
+    isSelectionIgnoredRow = defaultIsHidden,
     alwaysScrollToActiveCell = true,
     selectionTopBound = 0,
     selectionBottomBound = rowCount - 1,
@@ -336,11 +336,11 @@ const useSelection = ({
             return (
                 cell.rowIndex < selectionTopBound ||
                 cell.columnIndex < selectionLeftBound ||
-                isHiddenRow(cell.rowIndex) ||
-                isHiddenColumn(cell.columnIndex)
+                isSelectionIgnoredRow(cell.rowIndex) ||
+                isSelectionIgnoredColumn(cell.columnIndex)
             );
         },
-        [selectionTopBound, selectionLeftBound, isHiddenRow, isHiddenColumn],
+        [selectionTopBound, selectionLeftBound, isSelectionIgnoredRow, isSelectionIgnoredColumn],
     );
 
     const clearSelections = useCallback(() => {
@@ -750,7 +750,7 @@ const useSelection = ({
                 case Direction.Up:
                     rowIndex = clampIndex(
                         Math.max(rowIndex - 1, selectionTopBound),
-                        isHiddenRow,
+                        isSelectionIgnoredRow,
                         direction,
                     );
                     // Shift + Ctrl/Commmand
@@ -764,7 +764,7 @@ const useSelection = ({
                         rowIndex = findNextCellInDataRegion(
                             startCell,
                             getValue,
-                            isHiddenRow,
+                            isSelectionIgnoredRow,
                             direction,
                             selectionTopBound,
                         );
@@ -774,7 +774,7 @@ const useSelection = ({
                 case Direction.Down:
                     rowIndex = clampIndex(
                         Math.min(rowIndex + 1, selectionBottomBound),
-                        isHiddenRow,
+                        isSelectionIgnoredRow,
                         direction,
                     );
                     // Shift + Ctrl/Commmand
@@ -787,7 +787,7 @@ const useSelection = ({
                         rowIndex = findNextCellInDataRegion(
                             startCell,
                             getValue,
-                            isHiddenRow,
+                            isSelectionIgnoredRow,
                             direction,
                             selectionBottomBound,
                         );
@@ -797,7 +797,7 @@ const useSelection = ({
                 case Direction.Left:
                     columnIndex = clampIndex(
                         Math.max(columnIndex - 1, selectionLeftBound),
-                        isHiddenColumn,
+                        isSelectionIgnoredColumn,
                         direction,
                     );
                     // Shift + Ctrl/Commmand
@@ -810,7 +810,7 @@ const useSelection = ({
                         columnIndex = findNextCellInDataRegion(
                             startCell,
                             getValue,
-                            isHiddenColumn,
+                            isSelectionIgnoredColumn,
                             direction,
                             selectionLeftBound,
                         );
@@ -820,7 +820,7 @@ const useSelection = ({
                 case Direction.Right:
                     columnIndex = clampIndex(
                         Math.min(columnIndex + 1, selectionRightBound),
-                        isHiddenColumn,
+                        isSelectionIgnoredColumn,
                         direction,
                     );
                     // Shift + Ctrl/Commmand
@@ -833,7 +833,7 @@ const useSelection = ({
                         columnIndex = findNextCellInDataRegion(
                             startCell,
                             getValue,
-                            isHiddenColumn,
+                            isSelectionIgnoredColumn,
                             direction,
                             selectionRightBound,
                         );
@@ -875,10 +875,10 @@ const useSelection = ({
             activeCell,
             onSelectionEnd,
             selectionTopBound,
-            isHiddenRow,
+            isSelectionIgnoredColumn,
+            isSelectionIgnoredRow,
             selectionBottomBound,
             selectionLeftBound,
-            isHiddenColumn,
             selectionRightBound,
             getValue,
             modifySelection,

@@ -543,7 +543,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             fillSelection,
             overscanCount = 1,
             fillHandleProps,
-            fillhandleBorderColor = 'white',
+            fillhandleBorderColor = '#5c6ae7',
             showGridLines = false,
             gridLineColor = '#E3E2E2',
             gridLineWidth = 1,
@@ -559,6 +559,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             containerStyle: containerStyleProp,
             ...rest
         } = props;
+
+        console.log({  isHiddenRow })
 
         invariant(!(children && typeof children !== 'function'), 'Children should be a function');
 
@@ -2485,7 +2487,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     {...fillHandleDimension}
                     // stroke={selectionBorderColor}
                     size={fillHandleWidth}
-                    borderColor={selectionBorderColor}
+                    borderColor={fillhandleBorderColor}
                     {...fillHandleProps}
                 />
             ) : null;
