@@ -533,7 +533,7 @@ const useEditable = ({
             }
 
             /* Call on before edit */
-            if (editorConfigRef.current || canEdit(coords)) {
+            if (editorConfigRef.current && canEdit(coords)) {
                 /* Let user modify coords before edit */
                 onBeforeEdit?.(coords);
 
@@ -684,7 +684,7 @@ const useEditable = ({
             makeEditable(
                 { rowIndex, columnIndex },
                 editorConfigRef.current?.concatInitialValue
-                    ? (currentValueRef.current || '') + (initialValue || '')
+                    ? initialValue || currentValueRef.current
                     : undefined,
             );
 
