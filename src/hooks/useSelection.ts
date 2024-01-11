@@ -15,7 +15,7 @@ import {
     cellRangeToBounds,
 } from '../components/Grid/helpers';
 import { KeyCodes, Direction, MouseButtonCodes, SelectionPolicy } from '../components/Grid/types';
-import { useLatest, usePrevious } from '@bambooapp/bamboo-molecules';
+import { useLatest } from '@bambooapp/bamboo-molecules';
 
 const cellEqualsSelection = (cell: CellInterface | null, selections: SelectionArea[]): boolean => {
     if (cell === null) return false;
@@ -287,7 +287,7 @@ const useSelection = ({
     onBeforeSelection,
     onBeforeFill,
 }: UseSelectionOptions): SelectionResults => {
-    const [activeCell, setActiveCell] = useState<CellInterface | null>(initialActiveCell);
+    const [activeCell, _setActiveCell] = useState<CellInterface | null>(initialActiveCell);
     const [selections, setSelections] = useState<SelectionArea[]>(initialSelections);
     const [fillSelection, setFillSelection] = useState<SelectionArea>();
 
@@ -298,7 +298,7 @@ const useSelection = ({
     const firstActiveCell = useRef<CellInterface | null>(null);
     const fillSelectionRef = useRef<SelectionArea>();
 
-    const prevActiveCell = usePrevious(activeCell);
+    const prevActiveCell = useRef<CellInterface | null>(null);
     const isFirstRender = useRef(true);
 
     /* Drag drop selection */
@@ -317,6 +317,15 @@ const useSelection = ({
     const activeSelectionsRef = useLatest(selections);
     const onActiveCellChangeRef = useLatest(onActiveCellChange);
     // const mergedCellsRef = useRef(mergedCells);
+
+    const setActiveCell = useCallback(
+        (cell: CellInterface | null) => {
+            prevActiveCell.current = activeCellRef.current;
+
+            _setActiveCell(cell);
+        },
+        [activeCellRef],
+    );
 
     useEffect(() => {
         isFirstRender.current = false;
@@ -429,13 +438,14 @@ const useSelection = ({
             selectionStart.current = coords;
             firstActiveCell.current = coords;
             selectionEnd.current = coords;
+
             setActiveCell(coords);
             /* Scroll to the cell */
             if (shouldScroll && coords && gridRef?.current) {
                 gridRef.current.scrollToItem(coords);
             }
         },
-        [gridRef],
+        [gridRef, setActiveCell],
     );
 
     /* New selection */
@@ -473,6 +483,7 @@ const useSelection = ({
             modifySelection,
             newSelectionMode,
             selectionFromStartEnd,
+            setActiveCell,
         ],
     );
 
@@ -720,6 +731,7 @@ const useSelection = ({
             removeSelectionByIndex,
             getPossibleActiveCellFromSelections,
             clearSelections,
+            setActiveCell,
         ],
     );
 
@@ -1178,6 +1190,7 @@ const useSelection = ({
             selectRow,
             pageRight,
             pageLeft,
+            setActiveCell,
         ],
     );
 
@@ -1450,7 +1463,7 @@ const useSelection = ({
 
         /* Force render */
         forceRender();
-    }, [gridRef, handleSelectionMouseMove, onBeforeSelection, onSelectionMove]);
+    }, [gridRef, handleSelectionMouseMove, onBeforeSelection, onSelectionMove, setActiveCell]);
 
     /**
      * When user mouse downs on selection
@@ -1509,7 +1522,13 @@ const useSelection = ({
     );
 
     useEffect(() => {
-        if (isFirstRender.current || !onActiveCellChangeRef.current) return;
+        if (
+            isFirstRender.current ||
+            !onActiveCellChangeRef.current ||
+            (activeCell?.columnIndex === prevActiveCell.current?.columnIndex &&
+                activeCell?.rowIndex === prevActiveCell.current?.rowIndex)
+        )
+            return;
 
         onActiveCellChangeRef.current(activeCell, prevActiveCell.current);
     }, [activeCell, onActiveCellChangeRef, prevActiveCell]);
