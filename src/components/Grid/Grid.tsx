@@ -560,8 +560,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             ...rest
         } = props;
 
-        console.log({  isHiddenRow })
-
         invariant(!(children && typeof children !== 'function'), 'Children should be a function');
 
         /* Expose some methods in ref */
