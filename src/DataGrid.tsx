@@ -442,6 +442,12 @@ const DataGrid = (
         onChange,
         onAfterSubmit,
         useEditorConfig,
+        isHiddenColumn: isSelectionIgnoredColumn,
+        isHiddenRow: isSelectionIgnoredRow,
+        selectionRightBound,
+        selectionBottomBound,
+        selectionLeftBound,
+        selectionTopBound,
     });
 
     const onScroll = useCallback(

@@ -150,6 +150,7 @@ export interface UseSelectionOptions {
         start: CellInterface | null,
         end: CellInterface | null,
         newEnd: CellInterface,
+        e?: React.MouseEvent<HTMLDivElement>,
     ) => boolean | void;
     /*
      * When selection is done
@@ -389,7 +390,7 @@ const useSelection = ({
             setActiveCell({ rowIndex: bounds.top, columnIndex: bounds.left });
             setSelections(prev => [...prev, { bounds }]);
         },
-        [isCellOutOfBounds, selectionFromStartEnd, selectionPolicy],
+        [isCellOutOfBounds, selectionFromStartEnd, selectionPolicy, setActiveCell],
     );
 
     /* Modify current selection */
@@ -625,7 +626,8 @@ const useSelection = ({
 
             if (
                 mouseDownInterceptor?.(e, coords, selectionStart, selectionEnd) === false ||
-                onBeforeSelection?.(selectionStart.current, selectionEnd.current, coords) === false
+                onBeforeSelection?.(selectionStart.current, selectionEnd.current, coords, e) ===
+                    false
             ) {
                 return;
             }

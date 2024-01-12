@@ -1068,7 +1068,7 @@ export const clampIndex = (
     index: number,
     isHidden: HiddenType | undefined,
     direction: Direction,
-) => {
+): number => {
     switch (direction) {
         case Direction.Right:
         case Direction.Down:
