@@ -433,6 +433,8 @@ export type GridRef = {
     };
     getRowOffset: (index: number) => number;
     getColumnOffset: (index: number) => number;
+    verticalScrollRef: RefObject<ScrollView>;
+    horizontalScrollRef: RefObject<ScrollView>;
 };
 
 export type MergedCellMap = Map<string, AreaProps>;
@@ -562,6 +564,15 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
         invariant(!(children && typeof children !== 'function'), 'Children should be a function');
 
+        const stageRef = useRef<Konva.Stage>(null);
+        // TODO - correct the type
+        const containerRef = useRef<any>(null);
+
+        const scrollContainerRef = useRef<any>(null);
+        const verticalScrollRef = useRef<any>(null);
+        const wheelingRef = useRef<number | null>(null);
+        const horizontalScrollRef = useRef<any>(null);
+
         /* Expose some methods in ref */
         useImperativeHandle(forwardedRef, () => {
             return {
@@ -587,6 +598,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 getDimensions,
                 getRowOffset,
                 getColumnOffset,
+                verticalScrollRef,
+                horizontalScrollRef,
             };
         });
 
@@ -600,14 +613,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             recalcColumnIndices: [],
             recalcRowIndices: [],
         });
-        const stageRef = useRef<Konva.Stage>(null);
-        // TODO - correct the type
-        const containerRef = useRef<any>(null);
-
-        const scrollContainerRef = useRef<any>(null);
-        const verticalScrollRef = useRef<any>(null);
-        const wheelingRef = useRef<number | null>(null);
-        const horizontalScrollRef = useRef<any>(null);
 
         useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current);
 

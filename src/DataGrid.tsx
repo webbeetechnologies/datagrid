@@ -86,6 +86,7 @@ export type Props = Pick<
         | 'mergedCells'
         | 'onViewChange'
         | 'onContextMenu'
+        | 'onScroll'
     > &
     ViewProps & {
         width?: number;
@@ -358,6 +359,7 @@ const DataGrid = (
         onBeforeSelection,
         onBeforeFill,
         bodyGridProps,
+        onScroll: onScrollProp,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -455,8 +457,10 @@ const DataGrid = (
             headerGridRef.current?.scrollTo({ scrollLeft: scrollCoords.scrollLeft });
             // countGridRef.current?.scrollTo({ scrollTop: scrollCoords.scrollTop });
             onEditableScroll?.(scrollCoords);
+
+            onScrollProp?.(scrollCoords);
         },
-        [onEditableScroll],
+        [onScrollProp, onEditableScroll],
     );
 
     const onKeyDown = useCallback(
