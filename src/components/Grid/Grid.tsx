@@ -488,7 +488,7 @@ const defaultSelectionRenderer = (props: SelectionProps) => {
 const defaultGridLineRenderer = (props: ShapeConfig) => {
     return <GridLine {...props} />;
 };
-export const RESET_SCROLL_EVENTS_DEBOUNCE_INTERVAL = 150;
+export const RESET_SCROLL_EVENTS_DEBOUNCE_INTERVAL = 100;
 /* Placeholder for empty array -> Prevents re-render */
 const EMPTY_ARRAY: any = [];
 

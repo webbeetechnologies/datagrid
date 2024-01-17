@@ -105,7 +105,7 @@
     "cache"
   ],
   "dependencies": {
-    "@bambooapp/bamboo-molecules": "^0.3.30",
+    "@bambooapp/bamboo-molecules": "^0.3.33",
     "konva": "^9.2.3",
     "react-konva": "^18.2.10",
     "tiny-invariant": "^1.3.1"
