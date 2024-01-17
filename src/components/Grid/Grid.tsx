@@ -433,6 +433,7 @@ export type GridRef = {
     };
     getRowOffset: (index: number) => number;
     getColumnOffset: (index: number) => number;
+    horizontalScrollRef: RefObject<ScrollView>;
 };
 
 export type MergedCellMap = Map<string, AreaProps>;
