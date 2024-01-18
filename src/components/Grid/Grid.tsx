@@ -911,8 +911,11 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 overscanCount,
             ]);
 
-        const estimatedTotalHeight = getEstimatedTotalHeight(rowCount, instanceProps.current);
-        const estimatedTotalWidth = getEstimatedTotalWidth(columnCount, instanceProps.current);
+        const estimatedTotalHeight =
+            getEstimatedTotalHeight(rowCount, instanceProps.current) + (overshootScrollHeight || 0);
+        const estimatedTotalWidth =
+            getEstimatedTotalWidth(columnCount, instanceProps.current) +
+            (overshootScrollWidth || 0);
 
         /* Method to get dimensions of the grid */
         const getDimensions = useCallback(() => {
@@ -2645,7 +2648,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 } as ViewStyle,
                 verticalScrollbarHandleStyle: {
                     position: 'absolute',
-                    height: estimatedTotalHeight + (overshootScrollHeight || 0),
+                    height: estimatedTotalHeight,
                     width: 1,
                 } as ViewStyle,
                 horizontalScrollbarStyle: {
@@ -2658,7 +2661,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 } as ViewStyle,
                 horizontalScrollbarHandleStyle: {
                     position: 'absolute',
-                    width: estimatedTotalWidth + (overshootScrollWidth || 0),
+                    width: estimatedTotalWidth,
                     height: 1,
                 } as ViewStyle,
             }),
@@ -2668,8 +2671,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 containerWidth,
                 estimatedTotalHeight,
                 estimatedTotalWidth,
-                overshootScrollHeight,
-                overshootScrollWidth,
                 scrollbarSize,
                 style,
             ],
