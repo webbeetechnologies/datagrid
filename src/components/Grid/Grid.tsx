@@ -273,6 +273,8 @@ export interface GridProps
         | RefCallback<ScrollView>
         | MutableRefObject<ScrollView>;
     containerStyle?: ViewStyle;
+    overshootScrollWidth?: number;
+    overshootScrollHeight?: number;
 }
 
 export interface CellRangeArea extends CellInterface {
@@ -558,6 +560,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             style,
             verticalScrollRef: verticalScrollRefProp,
             containerStyle: containerStyleProp,
+            overshootScrollHeight,
+            overshootScrollWidth,
             ...rest
         } = props;
 
@@ -2641,7 +2645,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 } as ViewStyle,
                 verticalScrollbarHandleStyle: {
                     position: 'absolute',
-                    height: estimatedTotalHeight,
+                    height: estimatedTotalHeight + (overshootScrollHeight || 0),
                     width: 1,
                 } as ViewStyle,
                 horizontalScrollbarStyle: {
@@ -2654,7 +2658,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 } as ViewStyle,
                 horizontalScrollbarHandleStyle: {
                     position: 'absolute',
-                    width: estimatedTotalWidth,
+                    width: estimatedTotalWidth + (overshootScrollWidth || 0),
                     height: 1,
                 } as ViewStyle,
             }),
@@ -2664,6 +2668,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 containerWidth,
                 estimatedTotalHeight,
                 estimatedTotalWidth,
+                overshootScrollHeight,
+                overshootScrollWidth,
                 scrollbarSize,
                 style,
             ],
