@@ -5,7 +5,7 @@ import type {
     CellPosition,
     GridRef,
     SelectionArea,
-} from '../components/Grid/Grid';
+} from '../components/Grid/types';
 import { KeyCodes, Direction } from '../components/Grid/types';
 import {
     findNextCellWithinBounds,

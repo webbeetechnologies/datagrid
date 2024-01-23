@@ -49,7 +49,7 @@ UseGridProps) => {
                 fontWeight: 'normal',
             });
 
-            if (!instance.current) return [];
+            if (!instance.current) return;
 
             for (
                 let columnIndex = columnStartIndex;

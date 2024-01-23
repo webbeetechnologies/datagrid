@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo, useReducer } from 'react';
-import type { SelectionArea, CellInterface, GridRef, AreaProps } from '../components/Grid/Grid';
+import type { SelectionArea, CellInterface, GridRef, AreaProps } from '../components/Grid/types';
 import {
     findNextCellWithinBounds,
     Align,
