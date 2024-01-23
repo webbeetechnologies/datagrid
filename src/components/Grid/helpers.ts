@@ -1,13 +1,14 @@
 // Utilities extracted from https://github.com/bvaughn/react-window
-import type {
+import {
+    Direction,
+    KeyCodes,
     ItemSizer,
     InstanceInterface,
     AreaProps,
     CellInterface,
     CellMetaData,
     SelectionArea,
-} from './Grid';
-import { Direction, KeyCodes } from './types';
+} from './types';
 
 export enum Align {
     start = 'start',

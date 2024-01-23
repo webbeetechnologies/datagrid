@@ -83,10 +83,16 @@ export type Props = Pick<
         | 'columnCount'
         | 'stageProps'
         | 'frozenColumns'
-        | 'mergedCells'
         | 'onViewChange'
         | 'onContextMenu'
         | 'onScroll'
+        | 'getCellValue'
+        | 'getField'
+        | 'getRecordInfo'
+        | 'groupingLevel'
+        | 'headerHeight'
+        | 'rowHeadCellRenderer'
+        | 'rowHeadColumnWidth'
     > &
     ViewProps & {
         width?: number;
@@ -102,7 +108,6 @@ export type Props = Pick<
         gridRef?: RefObject<GridRef>;
         headerGridRef?: RefObject<GridRef>;
         // countGridRef?: RefObject<GridRef>;
-        headerHeight?: number;
         // records: TDataTableRow[];
         rowsLoadingThreshold?: InfiniteLoaderProps['threshold'];
 
@@ -133,7 +138,7 @@ export type Props = Pick<
          */
         hasRowLoaded?: (index: number) => boolean;
         children?: ReactNode;
-        headerGridProps?: Omit<
+        gridProps?: Omit<
             GridProps,
             | 'itemRenderer'
             | 'containerStyle'
@@ -145,19 +150,12 @@ export type Props = Pick<
             | 'columnWidth'
             | 'rowHeight'
             | 'showScrollbar'
-        >;
-        bodyGridProps?: Omit<
-            GridProps,
-            | 'itemRenderer'
-            | 'containerStyle'
-            | 'columnCount'
-            | 'height'
-            | 'width'
-            | 'rowCount'
-            | 'frozenColumns'
-            | 'columnWidth'
-            | 'rowHeight'
-            | 'showScrollbar'
+            | 'getCellValue'
+            | 'getField'
+            | 'getRecordInfo'
+            | 'groupingLevel'
+            | 'rowHeadCellRenderer'
+            | 'rowHeadColumnWidth'
         >;
     };
 
@@ -317,7 +315,6 @@ const DataGrid = (
         columnCount,
         width: widthProp,
         height: heightProp,
-        mergedCells,
         onFill,
         onSelectionEnd,
         initialSelections,
@@ -348,7 +345,6 @@ const DataGrid = (
         rowsLoadingThreshold,
         rowsMinimumBatchSize,
         children,
-        headerGridProps,
         onContextMenu,
         selectionTopBound,
         selectionLeftBound,
@@ -358,8 +354,14 @@ const DataGrid = (
         isSelectionIgnoredRow,
         onBeforeSelection,
         onBeforeFill,
-        bodyGridProps,
+        gridProps,
         onScroll: onScrollProp,
+        getCellValue,
+        getField,
+        getRecordInfo,
+        groupingLevel,
+        rowHeadCellRenderer,
+        rowHeadColumnWidth,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -396,7 +398,6 @@ const DataGrid = (
         onSelectionEnd,
         initialSelections,
         initialActiveCell,
-        mergedCells,
         onActiveCellChange,
         selectionRightBound,
         selectionBottomBound,
@@ -492,8 +493,6 @@ const DataGrid = (
     //     [headerHeight, rowHeight],
     // );
 
-    const headerGridRowHeight = useCallback(() => headerHeight, [headerHeight]);
-
     const loadMoreRows = useCallback(
         async (startIndex: number, stopIndex: number) => {
             loadMoreRowsProp?.({ startIndex, stopIndex }, currentViewPort.current as ViewPortProps);
@@ -531,7 +530,7 @@ const DataGrid = (
 
     return (
         <View style={styles.innerContainer} {...rest}>
-            <Grid
+            {/* <Grid
                 containerStyle={styles.header}
                 columnCount={columnCount}
                 height={headerHeight}
@@ -544,7 +543,7 @@ const DataGrid = (
                 showScrollbar={false}
                 itemRenderer={headerCellRenderer}
                 {...headerGridProps}
-            />
+            /> */}
             <View {...innerContainerProps} style={tableContainerStyle} onLayout={onLayout}>
                 <InfiniteLoader
                     ref={infiniteLoaderRef}
@@ -556,7 +555,6 @@ const DataGrid = (
                     <BodyGrid
                         ref={gridRef}
                         onViewChange={_onViewChange}
-                        mergedCells={mergedCells}
                         showScrollbar={showScrollbar}
                         columnCount={columnCount}
                         rowCount={rowCount}
@@ -569,14 +567,22 @@ const DataGrid = (
                         selections={selections}
                         activeCell={activeCell}
                         showFillHandle={!isEditInProgress}
-                        {...bodyGridProps}
+                        headerCellRenderer={headerCellRenderer}
+                        {...gridProps}
                         {...selectionProps}
+                        getCellValue={getCellValue}
+                        getField={getField}
+                        getRecordInfo={getRecordInfo}
+                        groupingLevel={groupingLevel}
                         onDoubleClick={onDoubleClick}
                         onKeyDown={onKeyDown}
                         onMouseDown={onMouseDown}
                         onScroll={onScroll}
                         stageProps={stageProps}
                         onContextMenu={onContextMenu}
+                        headerHeight={headerHeight}
+                        rowHeadCellRenderer={rowHeadCellRenderer}
+                        rowHeadColumnWidth={rowHeadColumnWidth}
                     />
                 </InfiniteLoader>
                 {editorComponent}

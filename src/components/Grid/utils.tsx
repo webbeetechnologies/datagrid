@@ -1,9 +1,12 @@
 import React from 'react';
 import type { ShapeConfig } from 'konva/lib/Shape';
 import { Line, Rect } from 'react-konva';
-import type { SelectionProps } from './Grid';
+import type { SelectionProps } from './types';
 import { View } from '@bambooapp/bamboo-atoms';
 import type { ViewStyle } from 'react-native';
+import { KonvaDrawer } from '../../utils/drawer';
+import type { IRenderProps } from '../../utils/types';
+import type { Context } from 'konva/lib/Context';
 
 /**
  * Create a box with custom top/right/bottom/left colors and widths
@@ -308,3 +311,35 @@ export const createHTMLBox = ({
         </React.Fragment>
     );
 };
+
+export class CellsDrawer extends KonvaDrawer {
+    private renderCellText(renderProps: IRenderProps, _ctx?: any) {
+        const { x, y, cellValue, columnWidth } = renderProps;
+        // const renderX = textAlign === 'right' ? x + columnWidth - 4 : x + 4;
+        const renderY = y + 10;
+
+        const { text } = this.textEllipsis({
+            text: cellValue,
+            maxWidth: columnWidth && columnWidth - 8,
+            fontWeight: 'normal',
+        });
+
+        this.text({
+            x: x + 4,
+            y: renderY,
+            text,
+            fillStyle: '#333',
+            fontWeight: 'normal',
+            textDecoration: 'none',
+        });
+    }
+
+    public renderCellValue(renderProps: IRenderProps, ctx?: Context | undefined) {
+        // const { field } = renderProps;
+        // const fieldType = field.type;
+
+        return this.renderCellText(renderProps, ctx);
+    }
+}
+
+export const cellsDrawer = new CellsDrawer();

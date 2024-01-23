@@ -8,16 +8,11 @@ import React, {
     useReducer,
     memo,
     useEffect,
-    Key,
     CSSProperties,
-    RefObject,
-    RefCallback,
-    MutableRefObject,
 } from 'react';
-import type { NativeScrollEvent, NativeSyntheticEvent, ViewStyle, ScrollView } from 'react-native';
-import { Stage, Layer, Group, Line } from 'react-konva';
+import { NativeScrollEvent, NativeSyntheticEvent, ViewStyle, ScrollView, View } from 'react-native';
+import { Stage, Layer, Group } from 'react-konva';
 import type Konva from 'konva';
-import type { ShapeConfig } from 'konva/lib/Shape';
 
 import {
     getRowStartIndexForOffset,
@@ -40,457 +35,49 @@ import {
     Align,
     clampIndex,
     canUseDOM,
-    getBoundedCells,
-    cellIdentifier,
 } from './helpers';
-import { CellRenderer as defaultItemRenderer } from './Cell';
-import { CellRenderer as defaultOverlayRenderer } from './CellOverlay';
+// import { CellRenderer as defaultItemRenderer } from './Cell';
 import Selection from './Selection';
 import FillHandle from './FillHandle';
-import GridLine from './GridLine';
 import { createHTMLBox } from './utils';
 import invariant from 'tiny-invariant';
-import type { StageConfig } from 'konva/lib/Stage';
-import { Direction } from './types';
-import { useMolecules } from '@bambooapp/bamboo-molecules';
+import {
+    AreaProps,
+    CellInterface,
+    CellPosition,
+    Direction,
+    GridProps,
+    GridRef,
+    InstanceInterface,
+    OptionalCellInterface,
+    OptionalScrollCoords,
+    PosXY,
+    PosXYRequired,
+    RefAttribute,
+    ScrollSnapRef,
+    ScrollState,
+    SelectionArea,
+    SelectionProps,
+    SnapColumnProps,
+    SnapRowProps,
+    StylingProps,
+    ViewPortProps,
+} from './types';
 import { StyleSheet } from 'react-native';
-
-export interface GridProps
-    extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onScroll' | 'children'> {
-    /**
-     * Width of the grid
-     */
-    width: number;
-    /**
-     * Height of the grid
-     */
-    height: number;
-    /**
-     * No of columns in the grid
-     */
-    columnCount: number;
-    /**
-     * No of rows in the grid
-     */
-    rowCount: number;
-    /**
-     * Should return height of a row at an index
-     */
-    rowHeight?: ItemSizer;
-    /**
-     * Should return width of a column at an index
-     */
-    columnWidth?: ItemSizer;
-    /**
-     * Size of the scrollbar. Default is 13
-     */
-    scrollbarSize?: number;
-    /**
-     * Helps in lazy grid width calculation
-     */
-    estimatedColumnWidth?: number;
-    /**
-     * Helps in lazy grid height calculation
-     */
-    estimatedRowHeight?: number;
-    /**
-     * Called when user scrolls the grid
-     */
-    onScroll?: ({ scrollLeft, scrollTop }: ScrollCoords) => void;
-    /**
-     * Called immediately on scroll
-     */
-    onImmediateScroll?: ({ scrollLeft, scrollTop }: ScrollCoords) => void;
-    /**
-     * Show scrollbars on the left and right of the grid
-     */
-    showScrollbar?: boolean;
-    /**
-     * Currently active cell
-     */
-    activeCell?: CellInterface | null;
-    /**
-     * Background of selection
-     */
-    selectionBackgroundColor?: string;
-    /**
-     * Border color of selected area
-     */
-    selectionBorderColor?: string;
-    /**
-     * Stroke width of the selection
-     */
-    selectionStrokeWidth?: number;
-    /**
-     * Active Cell Stroke width
-     */
-    activeCellStrokeWidth?: number;
-    /**
-     * Array of selected cell areas
-     */
-    selections?: SelectionArea[];
-    /**
-     * Fill selection
-     */
-    fillSelection?: SelectionArea | null;
-    /**
-     * Array of merged cells
-     */
-    mergedCells?: AreaProps[];
-    /**
-     * Number of frozen rows
-     */
-    frozenRows?: number;
-    /**
-     * Number of frozen columns
-     */
-    frozenColumns?: number;
-    /**
-     * Snap to row and column when scrolling
-     */
-    snap?: boolean;
-    /**
-     * Show shadow as you scroll for frozen rows and columns
-     */
-    showFrozenShadow?: boolean;
-    /**
-     * Shadow settings
-     */
-    shadowSettings?: ShapeConfig;
-    /**
-     * Scroll throttle wait timeout
-     */
-    scrollThrottleTimeout?: number;
-    /**
-     * Cell styles for border
-     */
-    borderStyles?: StylingProps;
-    /**
-     * Extend certains to coords
-     */
-    cellAreas?: CellRangeArea[];
-    /**
-     * Cell renderer. Must be a Konva Component eg: Group, Rect etc
-     */
-    itemRenderer?: (props: RendererProps) => React.ReactNode;
-    /**
-     * Render custom overlays like stroke on top of cell
-     */
-    overlayRenderer?: (props: RendererProps) => React.ReactNode;
-    /**
-     * Allow users to customize selected cells design
-     */
-    selectionRenderer?: (props: SelectionProps) => React.ReactNode;
-    /**
-     * Bind to fill handle
-     */
-    fillHandleProps?: Record<string, (e: any) => void>;
-    /**
-     * Fired when scroll viewport changes
-     */
-    onViewChange?: (view: ViewPortProps) => void;
-    /**
-     * Called right before a row is being rendered.
-     * Will be called for frozen cells and merged cells
-     */
-    onBeforeRenderRow?: (rowIndex: number) => void;
-    /**
-     * Custom grid overlays
-     */
-    children?: (props: ScrollCoords) => React.ReactNode;
-    /**
-     * Allows users to Wrap stage children in Top level Context
-     */
-    wrapper?: (children: React.ReactNode) => React.ReactNode;
-    /**
-     * Props that can be injected to Konva stage
-     */
-    stageProps?: Omit<StageConfig, 'container'>;
-    /**
-     * Show fillhandle
-     */
-    showFillHandle?: boolean;
-    /**
-     * Overscan row and columns
-     */
-    overscanCount?: number;
-    /**
-     * Border color of fill handle
-     */
-    fillhandleBorderColor?: string;
-    /**
-     * Show grid lines.
-     * Useful for spreadsheets
-     */
-    showGridLines?: boolean;
-    /**
-     * Customize grid line color
-     */
-    gridLineColor?: string;
-    /**
-     * Width of the grid line
-     */
-    gridLineWidth?: number;
-    /**
-     * Gridline component
-     */
-    gridLineRenderer?: (props: ShapeConfig) => React.ReactNode;
-    /**
-     * Shadow stroke color
-     */
-    shadowStroke?: string;
-    /**
-     * Draw overlay for each cell.
-     * Can be used to apply stroke or draw on top of a cell
-     */
-    enableCellOverlay?: boolean;
-    /**
-     * Check if its hidden row
-     */
-    isHiddenRow?: (rowIndex: number) => boolean;
-    /**
-     * Check if its a hidden column. Skip rendering hidden
-     */
-    isHiddenColumn?: (columnIndex: number) => boolean;
-    /**
-     * Is Hidden cell
-     */
-    isHiddenCell?: (rowIndex: number, columnIndex: number) => boolean;
-    /**
-     * Scale
-     */
-    scale?: number;
-    /**
-     * Enable draging active cell and selections
-     */
-    enableSelectionDrag?: boolean;
-    /**
-     * Is user currently dragging a selection
-     */
-    isDraggingSelection?: boolean;
-    verticalScrollRef?:
-        | RefObject<ScrollView>
-        | RefCallback<ScrollView>
-        | MutableRefObject<ScrollView>;
-    containerStyle?: ViewStyle;
-    overshootScrollWidth?: number;
-    overshootScrollHeight?: number;
-}
-
-export interface CellRangeArea extends CellInterface {
-    toColumnIndex: number;
-}
-
-export type RefAttribute = {
-    ref?: React.Ref<GridRef>;
-};
-
-export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
-export interface SelectionProps
-    extends AreaMeta,
-        ShapeConfig,
-        Omit<React.HTMLAttributes<HTMLDivElement>, 'draggable'> {
-    fillHandleProps?: Record<string, (e: any) => void>;
-    type: 'fill' | 'activeCell' | 'selection' | 'border';
-    isDragging?: boolean;
-    inProgress?: boolean;
-    activeCell?: CellInterface;
-    selection?: SelectionArea;
-    key: number;
-    draggable?: boolean;
-    bounds?: AreaProps;
-    borderCoverWidth?: number;
-}
-
-export type ScrollCoords = {
-    scrollTop: number;
-    scrollLeft: number;
-};
-
-export type OptionalScrollCoords = {
-    scrollTop?: number;
-    scrollLeft?: number;
-};
-
-export interface ScrollState extends ScrollCoords {
-    isScrolling: boolean;
-    verticalScrollDirection: Direction;
-    horizontalScrollDirection: Direction;
-}
-
-export type RenderComponent = React.FC<RendererProps>;
-
-export interface CellPosition extends Pick<ShapeConfig, 'x' | 'y'> {
-    width?: ShapeConfig['width'];
-    height?: ShapeConfig['height'];
-}
-export interface RendererProps extends CellInterface, CellPosition, Omit<ShapeConfig, 'scale'> {
-    key: Key;
-    isMergedCell?: boolean;
-    isOverlay?: boolean;
-}
-
-export type ItemSizer = (index: number) => number;
-
-export interface SelectionArea extends AreaStyle {
-    bounds: AreaProps;
-    inProgress?: boolean;
-    /**
-     * When user drags the fill handle
-     */
-    isFilling?: boolean;
-}
-export interface AreaProps {
-    top: number;
-    bottom: number;
-    left: number;
-    right: number;
-}
-
-export interface CellInterface {
-    rowIndex: number;
-    columnIndex: number;
-}
-
-export interface OptionalCellInterface {
-    rowIndex?: number;
-    columnIndex?: number;
-}
-
-export interface ViewPortProps {
-    rowStartIndex: number;
-    rowStopIndex: number;
-    columnStartIndex: number;
-    columnStopIndex: number;
-    visibleRowStartIndex: number;
-    visibleRowStopIndex: number;
-    visibleColumnStartIndex: number;
-    visibleColumnStopIndex: number;
-}
-
-export interface InstanceInterface {
-    columnMetadataMap: CellMetaDataMap;
-    rowMetadataMap: CellMetaDataMap;
-    lastMeasuredColumnIndex: number;
-    lastMeasuredRowIndex: number;
-    estimatedRowHeight: number;
-    estimatedColumnWidth: number;
-    recalcColumnIndices: number[];
-    recalcRowIndices: number[];
-}
-
-export type CellMetaDataMap = Record<number, CellMetaData>;
-export type CellMetaData = {
-    offset: number;
-    size: number;
-};
-
-export interface SnapRowProps {
-    deltaY: number;
-}
-
-export interface SnapColumnProps {
-    deltaX: number;
-}
-
-export interface PosXY {
-    x?: number;
-    y?: number;
-}
-
-export interface PosXYRequired {
-    x: number;
-    y: number;
-}
-
-export type GridRef = {
-    scrollTo: (scrollPosition: OptionalScrollCoords) => void;
-    scrollBy: (pos: PosXY) => void;
-    stage: Konva.Stage | null;
-    container: HTMLDivElement | null;
-    resetAfterIndices: (coords: OptionalCellInterface, shouldForceUpdate?: boolean) => void;
-    getScrollPosition: () => ScrollCoords;
-    isMergedCell: (coords: CellInterface) => boolean;
-    getCellBounds: (coords: CellInterface) => AreaProps;
-    getCellCoordsFromOffset: (
-        x: number,
-        y: number,
-        includeFrozen?: boolean,
-    ) => CellInterface | null;
-    getCellOffsetFromCoords: (coords: CellInterface) => CellPosition;
-    getActualCellCoords: (coords: CellInterface) => CellInterface;
-    scrollToItem: (coords: OptionalCellInterface, align?: Align) => void;
-    focus: () => void;
-    resizeColumns: (indices: number[]) => void;
-    resizeRows: (indices: number[]) => void;
-    getViewPort: () => ViewPortProps;
-    getRelativePositionFromOffset: (x: number, y: number) => PosXYRequired | null;
-    scrollToTop: () => void;
-    scrollToBottom: () => void;
-    getDimensions: () => {
-        containerWidth: number;
-        containerHeight: number;
-        estimatedTotalWidth: number;
-        estimatedTotalHeight: number;
-    };
-    getRowOffset: (index: number) => number;
-    getColumnOffset: (index: number) => number;
-    horizontalScrollRef: RefObject<ScrollView>;
-};
-
-export type MergedCellMap = Map<string, AreaProps>;
-
-export type StylingProps = AreaStyle[];
-
-export interface AreaStyle extends AreaMeta {
-    bounds: AreaProps;
-    style?: Style;
-    strokeStyle?: 'dashed' | 'solid' | 'dotted';
-}
-export interface AreaMeta {
-    title?: string;
-    [key: string]: any;
-}
-
-export interface Style {
-    stroke?: string;
-    strokeLeftColor?: string;
-    strokeTopColor?: string;
-    strokeRightColor?: string;
-    strokeBottomColor?: string;
-    strokeWidth?: number;
-    strokeTopWidth?: number;
-    strokeRightWidth?: number;
-    strokeBottomWidth?: number;
-    strokeLeftWidth?: number;
-    strokeStyle?: string;
-}
-
-interface ScrollSnapRef {
-    visibleRowStartIndex: number;
-    rowCount: number;
-    frozenRows: number;
-    visibleColumnStartIndex: number;
-    columnCount: number;
-    frozenColumns: number;
-    isHiddenRow?: (rowIndex: number) => boolean;
-    isHiddenColumn?: (columnIndex: number) => boolean;
-}
+import useGrid from '../../hooks/useGrid';
+import { cellsDrawer } from './utils';
 
 const DEFAULT_ESTIMATED_COLUMN_SIZE = 100;
 const DEFAULT_ESTIMATED_ROW_SIZE = 50;
 
-const defaultShadowSettings: ShapeConfig = {
-    strokeWidth: 1,
-};
 const defaultRowHeight = () => 20;
 const defaultColumnWidth = () => 60;
 const defaultSelectionRenderer = (props: SelectionProps) => {
     return <Selection {...props} />;
 };
-const defaultGridLineRenderer = (props: ShapeConfig) => {
-    return <GridLine {...props} />;
-};
+// const defaultGridLineRenderer = (props: ShapeConfig) => {
+//     return <GridLine {...props} />;
+// };
 export const RESET_SCROLL_EVENTS_DEBOUNCE_INTERVAL = 100;
 /* Placeholder for empty array -> Prevents re-render */
 const EMPTY_ARRAY: any = [];
@@ -525,32 +112,25 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             activeCell,
             selections = EMPTY_ARRAY as SelectionArea[],
             frozenRows = 0,
-            frozenColumns = 0,
-            itemRenderer = defaultItemRenderer,
-            enableCellOverlay = false,
-            overlayRenderer = defaultOverlayRenderer,
-            mergedCells = EMPTY_ARRAY as AreaProps[],
+            frozenColumns = 1,
+            // itemRenderer = defaultItemRenderer,
             snap = false,
             scrollThrottleTimeout = 80,
             onViewChange,
             selectionRenderer = defaultSelectionRenderer,
-            onBeforeRenderRow,
-            showFrozenShadow = false,
-            shadowSettings = defaultShadowSettings,
+            // onBeforeRenderRow,
             borderStyles = EMPTY_ARRAY as StylingProps,
             children,
             stageProps,
             wrapper = defaultWrapper,
-            cellAreas = EMPTY_ARRAY,
             showFillHandle = false,
             fillSelection,
             overscanCount = 1,
             fillHandleProps,
             fillhandleBorderColor = '#5c6ae7',
-            showGridLines = false,
-            gridLineColor = '#E3E2E2',
-            gridLineWidth = 1,
-            gridLineRenderer = defaultGridLineRenderer,
+            // gridLineColor = '#E3E2E2',
+            // gridLineWidth = 1,
+            // gridLineRenderer = defaultGridLineRenderer,
             isHiddenRow,
             isHiddenColumn,
             isHiddenCell,
@@ -562,6 +142,14 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             containerStyle: containerStyleProp,
             overshootScrollHeight,
             overshootScrollWidth,
+            headerCellRenderer,
+            headerHeight = 40,
+            rowHeadCellRenderer,
+            rowHeadColumnWidth = 60,
+            getCellValue,
+            getRecordInfo,
+            groupingLevel,
+            getField,
             ...rest
         } = props;
 
@@ -575,9 +163,12 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const verticalScrollRef = useRef<any>(null);
         const wheelingRef = useRef<number | null>(null);
         const horizontalScrollRef = useRef<any>(null);
+        const gridRef = useRef<GridRef | null>(null);
+
+        const hasHeader = !!headerCellRenderer;
 
         /* Expose some methods in ref */
-        useImperativeHandle(forwardedRef, () => {
+        useImperativeHandle(gridRef, () => {
             return {
                 scrollTo,
                 scrollBy,
@@ -586,7 +177,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 container: containerRef.current,
                 resetAfterIndices,
                 getScrollPosition,
-                isMergedCell,
                 getCellBounds,
                 getCellCoordsFromOffset,
                 getCellOffsetFromCoords,
@@ -603,8 +193,15 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 getColumnOffset,
                 verticalScrollRef,
                 horizontalScrollRef,
+                getRowHeight,
+                getColumnWidth,
+                getCellValue,
+                getRecordInfo,
+                getField,
             };
         });
+
+        useImperativeHandle(forwardedRef, () => gridRef.current as GridRef);
 
         const instanceProps = useRef<InstanceInterface>({
             columnMetadataMap: {},
@@ -740,66 +337,63 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          * Create a map of merged cells
          * [rowIndex, columnindex] => [parentRowIndex, parentColumnIndex]
          */
-        const mergedCellMap = useMemo((): MergedCellMap => {
-            const mergedCellMap = new Map();
-            for (let i = 0; i < mergedCells.length; i++) {
-                const bounds = mergedCells[i];
-                for (const cell of getBoundedCells(bounds)) {
-                    mergedCellMap.set(cell, bounds);
-                }
-            }
-            return mergedCellMap;
-        }, [mergedCells]);
+        // const mergedCellMap = useMemo((): MergedCellMap => {
+        //     const mergedCellMap = new Map();
+        //     for (let i = 0; i < mergedCells.length; i++) {
+        //         const bounds = mergedCells[i];
+        //         for (const cell of getBoundedCells(bounds)) {
+        //             mergedCellMap.set(cell, bounds);
+        //         }
+        //     }
+        //     return mergedCellMap;
+        // }, [mergedCells]);
 
         /* Check if a cell is part of a merged cell */
-        const isMergedCell = useCallback(
-            ({ rowIndex, columnIndex }: CellInterface) => {
-                return mergedCellMap.has(cellIdentifier(rowIndex, columnIndex));
-            },
-            [mergedCellMap],
-        );
+        // const isMergedCell = useCallback(
+        //     ({ rowIndex, columnIndex }: CellInterface) => {
+        //         return mergedCellMap.has(cellIdentifier(rowIndex, columnIndex));
+        //     },
+        //     [mergedCellMap],
+        // );
 
         /* Get top, left bounds of a cell */
-        const getCellBounds = useCallback(
-            ({ rowIndex, columnIndex }: CellInterface, spanMerges: boolean = true): AreaProps => {
-                if (spanMerges) {
-                    const isMerged = isMergedCell({ rowIndex, columnIndex });
-                    if (isMerged)
-                        return mergedCellMap.get(
-                            cellIdentifier(rowIndex, columnIndex),
-                        ) as AreaProps;
-                }
+        const getCellBounds = useCallback(({ rowIndex, columnIndex }: CellInterface): AreaProps => {
+            // if (spanMerges) {
+            //     const isMerged = isMergedCell({ rowIndex, columnIndex });
+            //     if (isMerged)
+            //         return mergedCellMap.get(
+            //             cellIdentifier(rowIndex, columnIndex),
+            //         ) as AreaProps;
+            // }
 
-                return {
-                    top: rowIndex,
-                    left: columnIndex,
-                    right: columnIndex,
-                    bottom: rowIndex,
-                } as AreaProps;
-            },
-            [isMergedCell, mergedCellMap],
-        );
+            return {
+                top: rowIndex,
+                left: columnIndex,
+                right: columnIndex,
+                bottom: rowIndex,
+            } as AreaProps;
+        }, []);
 
         /* Get top, left bounds of a cell */
         const getActualCellCoords = useCallback(
             ({ rowIndex, columnIndex }: CellInterface): CellInterface => {
-                const isMerged = isMergedCell({ rowIndex, columnIndex });
-                if (isMerged) {
-                    const cell = mergedCellMap.get(
-                        cellIdentifier(rowIndex, columnIndex),
-                    ) as AreaProps;
-                    return {
-                        rowIndex: cell?.top,
-                        columnIndex: cell?.left,
-                    };
-                }
+                // const isMerged = isMergedCell({ rowIndex, columnIndex });
+                // if (isMerged) {
+                //     const cell = mergedCellMap.get(
+                //         cellIdentifier(rowIndex, columnIndex),
+                //     ) as AreaProps;
+                //     return {
+                //         rowIndex: cell?.top,
+                //         columnIndex: cell?.left,
+                //     };
+                // }
 
                 return {
                     rowIndex,
                     columnIndex,
                 };
             },
-            [isMergedCell, mergedCellMap],
+            [],
         );
 
         const frozenColumnWidth = getColumnOffset(frozenColumns);
@@ -1544,156 +1138,25 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             onViewChange,
         ]);
 
-        /* Draw gridlines */
-        const gridLines = [];
-        const gridLinesFrozenRow = [];
-        const gridLinesFrozenColumn = [];
-        const gridLinesFrozenIntersection = [];
+        const { headerCells, headerFrozenCells } = useMemo(() => {
+            /* Draw all cells */
+            const _headerCells: React.ReactNode[] = [];
+            /* Draw frozen columns */
+            const _headerFrozenCells = [];
 
-        if (showGridLines) {
-            // Horizontal
-            for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
-                /* Ignore frozen rows */
-                if (rowIndex < frozenRows || isHiddenRow?.(rowIndex)) continue;
-
-                const x1 = getColumnOffset(frozenColumns);
-                const x2 = getColumnOffset(Math.min(columnStopIndex + 1, columnCount));
-                const y1 = getRowOffset(Math.min(rowIndex + 1, rowCount));
-                const y2 = y1;
-
-                gridLines.push(
-                    gridLineRenderer({
-                        points: [x1, y1, x2, y2],
-                        stroke: gridLineColor,
-                        strokeWidth: gridLineWidth,
-                        offsetY: -0.5,
-                        key: itemKey({ rowIndex: rowIndex, columnIndex: y1 }),
-                    }),
-                );
-
-                gridLinesFrozenColumn.push(
-                    gridLineRenderer({
-                        points: [0, y1, x2, y2],
-                        stroke: gridLineColor,
-                        strokeWidth: gridLineWidth,
-                        offsetY: -0.5,
-                        key: itemKey({ rowIndex: rowIndex, columnIndex: y1 }),
-                    }),
-                );
-            }
-            // Vertical
-            for (
-                let columnIndex = columnStartIndex;
-                columnIndex <= columnStopIndex;
-                columnIndex++
-            ) {
-                const x1 = getColumnOffset(Math.min(columnIndex + 1, columnCount));
-                const x2 = x1;
-                const y1 = getRowOffset(frozenRows);
-                const y2 = getRowOffset(Math.min(rowStopIndex + 1, rowCount));
-
-                gridLines.push(
-                    gridLineRenderer({
-                        points: [x1, y1, x2, y2],
-                        stroke: gridLineColor,
-                        strokeWidth: gridLineWidth,
-                        offsetX: -0.5,
-                        key: itemKey({ rowIndex: x1, columnIndex: columnIndex }),
-                    }),
-                );
-
-                gridLinesFrozenRow.push(
-                    gridLineRenderer({
-                        points: [x1, 0, x2, y2],
-                        stroke: gridLineColor,
-                        strokeWidth: gridLineWidth,
-                        offsetX: -0.5,
-                        key: itemKey({ rowIndex: x1, columnIndex: columnIndex }),
-                    }),
-                );
+            if (!headerCellRenderer) {
+                return {
+                    headerCells: [],
+                    headerFrozenCells: [],
+                };
             }
 
-            for (let rowIndex = 0; rowIndex < Math.min(columnStopIndex, frozenRows); rowIndex++) {
-                if (isHiddenRow?.(rowIndex)) continue;
-
-                const x1 = 0;
-                const x2 = getColumnOffset(Math.min(columnStopIndex + 1, columnCount));
-                const y1 = getRowOffset(Math.min(rowIndex + 1, rowCount));
-                const y2 = y1;
-
-                gridLinesFrozenRow.push(
-                    gridLineRenderer({
-                        points: [x1, y1, x2, y2],
-                        stroke: gridLineColor,
-                        strokeWidth: gridLineWidth,
-                        offsetY: -0.5,
-                        key: itemKey({ rowIndex: rowIndex, columnIndex: y1 }),
-                    }),
-                );
-
-                gridLinesFrozenIntersection.push(
-                    gridLineRenderer({
-                        points: [x1, y1, x2, y2],
-                        stroke: gridLineColor,
-                        strokeWidth: gridLineWidth,
-                        offsetY: -0.5,
-                        key: itemKey({ rowIndex: rowIndex, columnIndex: y1 }),
-                    }),
-                );
-            }
-
-            for (
-                let columnIndex = 0;
-                columnIndex < Math.min(columnStopIndex, frozenColumns);
-                columnIndex++
-            ) {
-                const x1 = getColumnOffset(Math.min(columnIndex + 1, columnCount));
-                const x2 = x1;
-                const y1 = 0;
-                const y2 = getRowOffset(Math.min(rowStopIndex + 1, rowCount));
-
-                gridLinesFrozenColumn.push(
-                    gridLineRenderer({
-                        points: [x1, y1, x2, y2],
-                        stroke: gridLineColor,
-                        strokeWidth: gridLineWidth,
-                        offsetX: -0.5,
-                        key: itemKey({ rowIndex: x1, columnIndex: columnIndex }),
-                    }),
-                );
-
-                gridLinesFrozenIntersection.push(
-                    gridLineRenderer({
-                        points: [x1, y1, x2, y2],
-                        stroke: gridLineColor,
-                        strokeWidth: gridLineWidth,
-                        offsetX: -0.5,
-                        key: itemKey({ rowIndex: x1, columnIndex: columnIndex }),
-                    }),
-                );
-            }
-        }
-
-        const mergedCellRenderMap = new Set();
-
-        /* Draw all cells */
-        const cells: React.ReactNode[] = [];
-        /**
-         * Lets users draw cells on top of existing canvas
-         */
-        const cellOverlays: React.ReactNode[] = [];
-
-        if (columnCount > 0 && rowCount) {
-            for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
-                /* Skip frozen rows */
-                if (rowIndex < frozenRows || isHiddenRow?.(rowIndex)) {
-                    continue;
-                }
+            if (columnCount > 0 && rowCount) {
                 /**
                  * Do any pre-processing of the row before being renderered.
                  * Useful for `react-table` to call `prepareRow(row)`
                  */
-                onBeforeRenderRow?.(rowIndex);
+                // onBeforeRenderRow?.(rowIndex);
 
                 for (
                     let columnIndex = columnStartIndex;
@@ -1708,23 +1171,15 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         continue;
                     }
 
-                    const isMerged = isMergedCell({ rowIndex, columnIndex });
-                    const bounds = getCellBounds({ rowIndex, columnIndex });
-                    const actualRowIndex = rowIndex;
+                    // const isMerged = isMergedCell({ rowIndex, columnIndex });
+                    const bounds = getCellBounds({ rowIndex: 0, columnIndex });
+                    const actualRowIndex = 0;
                     const actualColumnIndex = columnIndex;
-                    const actualBottom = Math.max(rowIndex, bounds.bottom);
+                    const actualBottom = Math.max(0, bounds.bottom);
                     const actualRight = Math.max(columnIndex, bounds.right);
 
-                    if (!isMerged && isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
+                    if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
                         continue;
-                    }
-
-                    if (isMerged) {
-                        const cellId = cellIdentifier(bounds.top, bounds.left);
-                        if (mergedCellRenderMap.has(cellId)) {
-                            continue;
-                        }
-                        mergedCellRenderMap.add(cellId);
                     }
 
                     const y = getRowOffset(actualRowIndex);
@@ -1734,216 +1189,51 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
                     const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
 
-                    cells.push(
-                        itemRenderer({
+                    _headerCells.push(
+                        headerCellRenderer?.({
                             x,
                             y,
                             width,
                             height,
                             rowIndex: actualRowIndex,
                             columnIndex: actualColumnIndex,
-                            isMergedCell: isMerged,
                             key: itemKey({
                                 rowIndex: actualRowIndex,
                                 columnIndex: actualColumnIndex,
                             }),
                         }),
                     );
-
-                    if (enableCellOverlay) {
-                        cellOverlays.push(
-                            overlayRenderer({
-                                x,
-                                y,
-                                width,
-                                height,
-                                rowIndex: actualRowIndex,
-                                columnIndex: actualColumnIndex,
-                                isMergedCell: isMerged,
-                                key: itemKey({
-                                    rowIndex: actualRowIndex,
-                                    columnIndex: actualColumnIndex,
-                                }),
-                            }),
-                        );
-                    }
-                }
-            }
-        }
-
-        /**
-         * Extend certain cells.
-         * Mimics google sheets functionality where
-         * oevrflowed cell content can cover adjacent cells
-         */
-        const ranges = [];
-        for (const { rowIndex, columnIndex, toColumnIndex } of cellAreas) {
-            if (
-                rowIndex < frozenRows ||
-                columnIndex < frozenColumns ||
-                isMergedCell({ rowIndex, columnIndex }) ||
-                isHiddenCell?.(rowIndex, columnIndex)
-            ) {
-                continue;
-            }
-
-            const x = getColumnOffset(columnIndex);
-            const y = getRowOffset(rowIndex);
-            const height = getRowHeight(rowIndex);
-
-            const { x: offsetX = 0 } = getCellOffsetFromCoords({
-                rowIndex,
-                columnIndex: toColumnIndex + 1,
-            });
-
-            ranges.push(
-                itemRenderer({
-                    x,
-                    y,
-                    width: offsetX - x,
-                    height,
-                    rowIndex,
-                    columnIndex,
-                    key: `range:${itemKey({ rowIndex, columnIndex })}`,
-                }),
-            );
-        }
-
-        /* Draw frozen rows */
-        const frozenRowCells = [];
-        const frozenRowCellOverlays: React.ReactNode[] = [];
-        for (let rowIndex = 0; rowIndex < Math.min(rowStopIndex, frozenRows); rowIndex++) {
-            if (isHiddenRow?.(rowIndex)) continue;
-            /**
-             * Do any pre-processing of the row before being renderered.
-             * Useful for `react-table` to call `prepareRow(row)`
-             */
-            onBeforeRenderRow?.(rowIndex);
-
-            for (
-                let columnIndex = columnStartIndex;
-                columnIndex <= columnStopIndex;
-                columnIndex++
-            ) {
-                if (columnIndex < frozenColumns) {
-                    continue;
                 }
 
-                const isMerged = isMergedCell({ rowIndex, columnIndex });
-                const bounds = getCellBounds({ rowIndex, columnIndex });
-                const actualRowIndex = rowIndex;
-                const actualColumnIndex = columnIndex;
-                const actualBottom = Math.max(rowIndex, bounds.bottom);
-                const actualRight = Math.max(columnIndex, bounds.right);
+                /**
+                 * Do any pre-processing of the row before being renderered.
+                 * Useful for `react-table` to call `prepareRow(row)`
+                 */
+                // onBeforeRenderRow?.(rowIndex);
 
-                if (!isMerged && isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
-                    continue;
-                }
-
-                if (isMerged) {
-                    const cellId = cellIdentifier(bounds.top, bounds.left);
-                    if (mergedCellRenderMap.has(cellId)) {
+                for (
+                    let columnIndex = 0;
+                    columnIndex < Math.min(columnStopIndex, frozenColumns);
+                    columnIndex++
+                ) {
+                    const bounds = getCellBounds({ rowIndex: 0, columnIndex });
+                    const actualRowIndex = 0;
+                    const actualColumnIndex = columnIndex;
+                    const actualBottom = Math.max(0, bounds.bottom);
+                    const actualRight = Math.max(columnIndex, bounds.right);
+                    if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
                         continue;
                     }
-                    mergedCellRenderMap.add(cellId);
-                }
 
-                const y = getRowOffset(actualRowIndex);
-                const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
+                    const y = getRowOffset(actualRowIndex);
+                    const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
 
-                const x = getColumnOffset(actualColumnIndex);
+                    const x = getColumnOffset(actualColumnIndex);
 
-                const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
+                    const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
 
-                frozenRowCells.push(
-                    itemRenderer({
-                        x,
-                        y,
-                        width,
-                        height,
-                        rowIndex: actualRowIndex,
-                        columnIndex: actualColumnIndex,
-                        isMergedCell: isMerged,
-                        key: itemKey({
-                            rowIndex: actualRowIndex,
-                            columnIndex: actualColumnIndex,
-                        }),
-                    }),
-                );
-
-                if (enableCellOverlay) {
-                    frozenRowCellOverlays.push(
-                        overlayRenderer({
-                            x,
-                            y,
-                            width,
-                            height,
-                            rowIndex: actualRowIndex,
-                            columnIndex: actualColumnIndex,
-                            isMergedCell: isMerged,
-                            key: itemKey({
-                                rowIndex: actualRowIndex,
-                                columnIndex: actualColumnIndex,
-                            }),
-                        }),
-                    );
-                }
-            }
-        }
-
-        /* Draw frozen columns */
-        const frozenColumnCells = [];
-        const frozenColumnCellOverlays = [];
-
-        for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
-            if (rowIndex < frozenRows || isHiddenRow?.(rowIndex)) {
-                continue;
-            }
-            /**
-             * Do any pre-processing of the row before being renderered.
-             * Useful for `react-table` to call `prepareRow(row)`
-             */
-            onBeforeRenderRow?.(rowIndex);
-
-            for (
-                let columnIndex = 0;
-                columnIndex < Math.min(columnStopIndex, frozenColumns);
-                columnIndex++
-            ) {
-                const bounds = getCellBounds({ rowIndex, columnIndex });
-                const actualRowIndex = rowIndex;
-                const actualColumnIndex = columnIndex;
-                const actualBottom = Math.max(rowIndex, bounds.bottom);
-                const actualRight = Math.max(columnIndex, bounds.right);
-                if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
-                    continue;
-                }
-
-                const y = getRowOffset(actualRowIndex);
-                const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
-
-                const x = getColumnOffset(actualColumnIndex);
-
-                const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-                frozenColumnCells.push(
-                    itemRenderer({
-                        x,
-                        y,
-                        width,
-                        height,
-                        rowIndex: actualRowIndex,
-                        columnIndex: actualColumnIndex,
-                        key: itemKey({
-                            rowIndex: actualRowIndex,
-                            columnIndex: actualColumnIndex,
-                        }),
-                    }),
-                );
-
-                if (enableCellOverlay) {
-                    frozenColumnCellOverlays.push(
-                        overlayRenderer({
+                    _headerFrozenCells.push(
+                        headerCellRenderer?.({
                             x,
                             y,
                             width,
@@ -1958,133 +1248,25 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     );
                 }
             }
-        }
 
-        /**
-         * Frozen column shadow
-         */
-        const frozenColumnShadow = useMemo(() => {
-            const frozenColumnLineX = getColumnOffset(frozenColumns);
-            const frozenColumnLineY = getRowOffset(Math.min(rowStopIndex + 1, rowCount));
-
-            return (
-                <Line
-                    points={[frozenColumnLineX, 0, frozenColumnLineX, frozenColumnLineY]}
-                    offsetX={-0.5}
-                    strokeWidth={1}
-                    shadowForStrokeEnabled={false}
-                    strokeScaleEnabled={false}
-                    hitStrokeWidth={0}
-                    listening={false}
-                    perfectDrawEnabled={false}
-                    {...shadowSettings}
-                />
-            );
-        }, [getColumnOffset, frozenColumns, getRowOffset, rowStopIndex, rowCount, shadowSettings]);
-
-        /**
-         * Frozen row shadow
-         */
-        const frozenRowShadow = useMemo(() => {
-            const frozenRowLineY = getRowOffset(frozenRows);
-            const frozenRowLineX = getColumnOffset(Math.min(columnStopIndex + 1, columnCount));
-
-            return (
-                <Line
-                    points={[0, frozenRowLineY, frozenRowLineX, frozenRowLineY]}
-                    offsetY={-0.5}
-                    strokeWidth={1}
-                    shadowForStrokeEnabled={false}
-                    strokeScaleEnabled={false}
-                    hitStrokeWidth={0}
-                    listening={false}
-                    perfectDrawEnabled={false}
-                    {...shadowSettings}
-                />
-            );
+            return {
+                headerCells: _headerCells,
+                headerFrozenCells: _headerFrozenCells,
+            };
         }, [
-            getRowOffset,
-            frozenRows,
-            getColumnOffset,
-            columnStopIndex,
             columnCount,
-            shadowSettings,
+            columnStartIndex,
+            columnStopIndex,
+            frozenColumns,
+            getCellBounds,
+            getColumnOffset,
+            getColumnWidth,
+            getRowHeight,
+            getRowOffset,
+            headerCellRenderer,
+            isHiddenCell,
+            rowCount,
         ]);
-
-        /* Draw frozen intersection cells */
-        const frozenIntersectionCells = [];
-        const frozenIntersectionCellOverlays = [];
-
-        for (let rowIndex = 0; rowIndex < Math.min(rowStopIndex, frozenRows); rowIndex++) {
-            if (isHiddenRow?.(rowIndex)) continue;
-
-            for (
-                let columnIndex = 0;
-                columnIndex < Math.min(columnStopIndex, frozenColumns);
-                columnIndex++
-            ) {
-                const isMerged = isMergedCell({ rowIndex, columnIndex });
-                const bounds = getCellBounds({ rowIndex, columnIndex });
-                const actualRowIndex = rowIndex;
-                const actualColumnIndex = columnIndex;
-                const actualBottom = Math.max(rowIndex, bounds.bottom);
-                const actualRight = Math.max(columnIndex, bounds.right);
-
-                if (!isMerged && isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
-                    continue;
-                }
-
-                if (isMerged) {
-                    const cellId = cellIdentifier(bounds.top, bounds.left);
-                    if (mergedCellRenderMap.has(cellId)) {
-                        continue;
-                    }
-                    mergedCellRenderMap.add(cellId);
-                }
-
-                const y = getRowOffset(actualRowIndex);
-                const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
-
-                const x = getColumnOffset(actualColumnIndex);
-
-                const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-                frozenIntersectionCells.push(
-                    itemRenderer({
-                        x,
-                        y,
-                        width,
-                        height,
-                        rowIndex: actualRowIndex,
-                        columnIndex: actualColumnIndex,
-                        isMergedCell: isMerged,
-                        key: itemKey({
-                            rowIndex: actualRowIndex,
-                            columnIndex: actualColumnIndex,
-                        }),
-                    }),
-                );
-
-                if (enableCellOverlay) {
-                    frozenIntersectionCellOverlays.push(
-                        overlayRenderer({
-                            x,
-                            y,
-                            width,
-                            height,
-                            rowIndex: actualRowIndex,
-                            columnIndex: actualColumnIndex,
-                            isMergedCell: isMerged,
-                            key: itemKey({
-                                rowIndex: actualRowIndex,
-                                columnIndex: actualColumnIndex,
-                            }),
-                        }),
-                    );
-                }
-            }
-        }
-
         /**
          * Renders active cell
          */
@@ -2418,14 +1600,62 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          * Prevents drawing hit region when scrolling
          */
         const listenToEvents = !isScrolling;
-        /* Frozen row shadow */
-        const frozenRowShadowComponent =
-            showFrozenShadow && frozenRows !== 0 ? frozenRowShadow : null;
-        /* Frozen column shadow */
-        const frozenColumnShadowComponent =
-            showFrozenShadow && frozenColumns !== 0 ? frozenColumnShadow : null;
 
-        const { View, ScrollView } = useMolecules();
+        const { cells, frozenCells } = useGrid({
+            instance: gridRef!,
+            columnCount,
+            columnStartIndex,
+            columnStopIndex,
+            rowStartIndex,
+            rowCount,
+            rowStopIndex,
+            isHiddenColumn,
+            isHiddenRow,
+            frozenColumns,
+            cellsDrawer,
+            groupingLevel,
+        });
+
+        const rowHeadCells = useMemo(() => {
+            const _rowHeadCells: React.ReactNode[] = [];
+
+            for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
+                if (rowIndex > rowCount - 1) break;
+
+                const bounds = getCellBounds({ rowIndex, columnIndex: 0 });
+                const actualBottom = Math.max(rowIndex, bounds.bottom);
+
+                const x = 0;
+                const y = getRowOffset(rowIndex);
+                const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
+
+                _rowHeadCells.push(
+                    rowHeadCellRenderer?.({
+                        x: x,
+                        y,
+                        width: rowHeadColumnWidth,
+                        height,
+                        rowIndex,
+                        columnIndex: 0,
+                        key: itemKey({
+                            rowIndex: rowIndex,
+                            columnIndex: 0,
+                        }),
+                    }),
+                );
+            }
+
+            return _rowHeadCells;
+        }, [
+            getCellBounds,
+            getRowHeight,
+            getRowOffset,
+            rowCount,
+            rowHeadCellRenderer,
+            rowHeadColumnWidth,
+            rowStartIndex,
+            rowStopIndex,
+        ]);
 
         const stageChildren = (
             <>
@@ -2436,49 +1666,19 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         clipWidth={containerWidth - frozenColumnWidth}
                         clipHeight={containerHeight - frozenRowHeight}>
                         <Group offsetY={scrollTop} offsetX={scrollLeft}>
-                            {gridLines}
                             {cells}
-                            {cellOverlays}
-                            {ranges}
                         </Group>
                     </Group>
 
                     <Group
-                        clipX={frozenColumnWidth}
-                        clipY={0}
-                        clipWidth={containerWidth - frozenColumnWidth}
-                        clipHeight={frozenRowHeight + frozenSpacing}>
-                        <Group offsetY={0} offsetX={scrollLeft}>
-                            {gridLinesFrozenRow}
-                            {frozenRowCells}
-                            {frozenRowShadowComponent}
-                            {frozenRowCellOverlays}
-                        </Group>
-                    </Group>
-                    <Group
-                        clipX={0}
-                        clipY={frozenRowHeight}
-                        clipWidth={frozenColumnWidth + frozenSpacing}
-                        clipHeight={containerHeight - frozenRowHeight}>
-                        <Group offsetY={scrollTop} offsetX={0}>
-                            {gridLinesFrozenColumn}
-                            {frozenColumnCells}
-                            {frozenColumnShadowComponent}
-                            {frozenColumnCellOverlays}
-                        </Group>
-                    </Group>
-                    <Group
-                        offsetY={0}
-                        offsetX={0}
                         clipX={0}
                         clipY={0}
                         clipWidth={frozenColumnWidth + frozenSpacing}
-                        clipHeight={frozenRowHeight + frozenSpacing}>
-                        {gridLinesFrozenIntersection}
-                        {frozenIntersectionCells}
-                        {frozenRowShadowComponent}
-                        {frozenColumnShadowComponent}
-                        {frozenIntersectionCellOverlays}
+                        clipHeight={containerHeight}>
+                        <Group offsetY={scrollTop}>
+                            {rowHeadCells}
+                            {frozenCells}
+                        </Group>
                     </Group>
                 </Layer>
                 {children && typeof children === 'function'
@@ -2699,45 +1899,70 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         } = rest as any;
 
         return (
-            <View style={containerStyle} ref={scrollContainerRef}>
-                <div
-                    {...{ tabIndex: 0 }}
-                    ref={containerRef}
-                    style={innerContainerStyle}
-                    {...restContainerProps}>
-                    <Stage
-                        width={containerWidth}
-                        height={containerHeight}
-                        ref={stageRef}
-                        listening={listenToEvents}
-                        {...stageProps}>
-                        {wrapper(stageChildren)}
+            <View style={containerStyle}>
+                {hasHeader && (
+                    <Stage width={containerWidth} height={headerHeight} listening={listenToEvents}>
+                        <Layer>
+                            <Group
+                                clipX={frozenColumnWidth}
+                                clipY={frozenRowHeight}
+                                clipWidth={containerWidth - frozenColumnWidth}
+                                clipHeight={headerHeight}>
+                                <Group offsetY={0} offsetX={scrollLeft}>
+                                    {headerCells}
+                                </Group>
+                            </Group>
+
+                            <Group
+                                clipX={0}
+                                clipY={0}
+                                clipWidth={frozenColumnWidth + frozenSpacing}
+                                clipHeight={headerHeight}>
+                                <Group offsetY={0}>{headerFrozenCells}</Group>
+                            </Group>
+                        </Layer>
                     </Stage>
-                </div>
-                {selectionChildren}
-                {showScrollbar ? (
-                    <>
-                        <ScrollView
-                            scrollEventThrottle={16}
-                            // for typescript to stop complaining
-                            {...{ tabIndex: -1 }}
-                            style={verticalScrollbarStyle}
-                            onScroll={handleScroll}
-                            contentContainerStyle={verticalScrollbarHandleStyle}
-                            ref={verticalScrollRef}
-                        />
-                        <ScrollView
-                            horizontal
-                            scrollEventThrottle={16}
-                            // for typescript to stop complaining
-                            {...{ tabIndex: -1 }}
-                            style={horizontalScrollbarStyle}
-                            contentContainerStyle={horizontalScrollbarHandleStyle}
-                            onScroll={handleScrollLeft}
-                            ref={horizontalScrollRef}
-                        />
-                    </>
-                ) : null}
+                )}
+                <View style={containerStyle} ref={scrollContainerRef}>
+                    <div
+                        {...{ tabIndex: 0 }}
+                        ref={containerRef}
+                        style={innerContainerStyle}
+                        {...restContainerProps}>
+                        <Stage
+                            width={containerWidth}
+                            height={containerHeight}
+                            ref={stageRef}
+                            listening={listenToEvents}
+                            {...stageProps}>
+                            {wrapper(stageChildren)}
+                        </Stage>
+                    </div>
+                    {selectionChildren}
+                    {showScrollbar ? (
+                        <>
+                            <ScrollView
+                                scrollEventThrottle={16}
+                                // for typescript to stop complaining
+                                {...{ tabIndex: -1 }}
+                                style={verticalScrollbarStyle}
+                                onScroll={handleScroll}
+                                contentContainerStyle={verticalScrollbarHandleStyle}
+                                ref={verticalScrollRef}
+                            />
+                            <ScrollView
+                                horizontal
+                                scrollEventThrottle={16}
+                                // for typescript to stop complaining
+                                {...{ tabIndex: -1 }}
+                                style={horizontalScrollbarStyle}
+                                contentContainerStyle={horizontalScrollbarHandleStyle}
+                                onScroll={handleScrollLeft}
+                                ref={horizontalScrollRef}
+                            />
+                        </>
+                    ) : null}
+                </View>
             </View>
         );
     }),

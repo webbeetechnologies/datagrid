@@ -3,7 +3,7 @@ import { Group, Rect, Text } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { TextConfig } from 'konva/lib/shapes/Text';
 
-import type { RendererProps } from './Grid';
+import type { RendererProps } from './types';
 import { isNull } from './helpers';
 
 export interface CellProps extends RendererProps {

@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import type { CellProps } from './Cell';
 import { Shape } from 'react-konva';
-import type { RendererProps } from './Grid';
+import type { RendererProps } from './types';
 
 /* Array placeholder */
 const EMPTY_ARRAY: number[] = [];
