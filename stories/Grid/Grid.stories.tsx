@@ -1,5 +1,12 @@
 import { Rect, Text } from 'react-konva';
-import Grid, { CellInterface, GridRef, RendererProps } from '../../src/components/Grid/Grid';
+import type {
+    CellInterface,
+    GridProps,
+    GridRef,
+    RendererProps,
+    ViewPortProps,
+} from '../../src/components/Grid/types';
+import Grid from '../../src/components/Grid/Grid';
 import React, {
     createContext,
     Dispatch,
@@ -7,6 +14,7 @@ import React, {
     SetStateAction,
     useCallback,
     useContext,
+    useMemo,
     useRef,
     useState,
 } from 'react';
@@ -14,6 +22,9 @@ import { useWindowDimensions } from 'react-native';
 import { default as DataGridComponent, HeaderCell } from '../../src/DataGrid';
 import { records } from './mocks';
 import { Icon } from '@bambooapp/bamboo-molecules/components';
+import { GridCell } from '../../src/components/Grid';
+import { cellsDrawer } from '../../src/components/Grid/utils';
+import type { Field } from 'src/utils/types';
 
 const renderCell = ({ key, rowIndex, columnIndex, x, y, width, height }: RendererProps) => {
     const text = `${rowIndex}x${columnIndex}`;
@@ -67,6 +78,7 @@ export const LargeGrid: React.FC = () => {
             columnWidth={columnWidth}
             rowHeight={rowHeight}
             itemRenderer={renderCell}
+            {...({} as any)}
         />
     );
 };
@@ -178,7 +190,7 @@ const DataGridInner = () => {
     const getColumnWidth = useCallback(
         (index: number) => {
             if (index in columnWidthMap) return columnWidthMap[index];
-            return 100;
+            return index === 0 ? 60 : 150;
         },
         [columnWidthMap],
     );
@@ -190,15 +202,62 @@ const DataGridInner = () => {
             gridRef={gridRef}
             rowCount={records.length}
             columnCount={columnsCount}
+            frozenColumns={2}
             width={width}
             height={height}
             headerCellRenderer={renderHeaderCell}
             columnWidth={getColumnWidth}
             useCellValue={useCellValue as any}
             headerHeight={30}
+            rowHeadCellRenderer={rowHeadCellRenderer}
+            rowHeadColumnWidth={60}
+            gridProps={gridProps}
+            cellsDrawer={cellsDrawer}
+            useRecords={useRecords}
+            useFields={useFields}
+            // cellRenderer={renderCell}
         />
     );
 };
+
+const useFields = () =>
+    useMemo(() => new Array(columnsCount).fill(' ').map(_ => ({ slug: 'slug' } as Field)), []);
+
+const useRecords = ({}: Pick<
+    ViewPortProps,
+    'rowStartIndex' | 'rowStopIndex' | 'columnStartIndex' | 'columnStopIndex'
+>) => {
+    return useMemo(
+        () =>
+            new Array(records.length).fill(' ').map(
+                (_, rowIndex) =>
+                    ({
+                        fieldData: { slug: 'slug' } as Field,
+                        rowType: 'data',
+                        slug: `row-${rowIndex}`,
+                    } as any),
+            ),
+        [],
+    );
+};
+
+const rowHeadCellRenderer = ({ x, y, width, height, rowIndex, columnIndex }: RendererProps) => (
+    <GridCell
+        key={`${rowIndex}-${columnIndex}`}
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        value={`${rowIndex}`}
+        rowIndex={rowIndex}
+        columnIndex={columnIndex}
+        textProps={{ padding: 8, align: 'center' }}
+    />
+);
+
+const gridProps = {
+    isHiddenColumn: (index: number) => index === 0,
+} as GridProps;
 
 export const DataGrid = () => {
     const [data, setData] = useState(records);
@@ -206,7 +265,52 @@ export const DataGrid = () => {
     return (
         <CellValuesContext.Provider value={{ data, setData }}>
             <DataGridInner />
+            {/* <Table /> */}
             <Icon name="star-outline" size={12} />
         </CellValuesContext.Provider>
     );
 };
+// class Table extends Component {
+//     render() {
+//         return (
+//             <Stage width={400} height={300}>
+//                 <Layer>
+//                     {/* Table */}
+//                     <Shape
+//                         sceneFunc={context => {
+//                             // Table
+//                             context.beginPath();
+//                             context.moveTo(50, 50);
+//                             context.lineTo(350, 50);
+//                             context.lineTo(350, 250);
+//                             context.lineTo(50, 250);
+//                             context.closePath();
+
+//                             // Rows
+//                             context.moveTo(50, 90);
+//                             context.lineTo(350, 90);
+
+//                             context.moveTo(50, 130);
+//                             context.lineTo(350, 130);
+
+//                             // Columns
+//                             context.moveTo(150, 50);
+//                             context.lineTo(150, 250);
+
+//                             context.moveTo(250, 50);
+//                             context.lineTo(250, 250);
+
+//                             // Fill and stroke settings
+//                             context.fillStyle = 'lightblue';
+//                             context.fill();
+
+//                             context.lineWidth = 2;
+//                             context.strokeStyle = 'black';
+//                             context.stroke();
+//                         }}
+//                     />
+//                 </Layer>
+//             </Stage>
+//         );
+//     }
+// }
