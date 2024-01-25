@@ -65,7 +65,6 @@ import {
 } from './types';
 import { StyleSheet } from 'react-native';
 import useGrid from '../../hooks/useGrid';
-import { cellsDrawer } from './utils';
 
 const DEFAULT_ESTIMATED_COLUMN_SIZE = 100;
 const DEFAULT_ESTIMATED_ROW_SIZE = 50;
@@ -146,10 +145,12 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             headerHeight = 40,
             rowHeadCellRenderer,
             rowHeadColumnWidth = 60,
-            getCellValue,
-            getRecordInfo,
             groupingLevel,
-            getField,
+            useRecords,
+            useFields,
+            cellsDrawer,
+            themeColors,
+            renderActiveCell,
             ...rest
         } = props;
 
@@ -195,9 +196,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 horizontalScrollRef,
                 getRowHeight,
                 getColumnWidth,
-                getCellValue,
-                getRecordInfo,
-                getField,
             };
         });
 
@@ -1138,19 +1136,12 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             onViewChange,
         ]);
 
-        const { headerCells, headerFrozenCells } = useMemo(() => {
-            /* Draw all cells */
-            const _headerCells: React.ReactNode[] = [];
-            /* Draw frozen columns */
-            const _headerFrozenCells = [];
+        /* Draw all cells */
+        const headerCells: React.ReactNode[] = [];
+        /* Draw frozen columns */
+        const headerFrozenCells: React.ReactNode[] = [];
 
-            if (!headerCellRenderer) {
-                return {
-                    headerCells: [],
-                    headerFrozenCells: [],
-                };
-            }
-
+        if (headerCellRenderer) {
             if (columnCount > 0 && rowCount) {
                 /**
                  * Do any pre-processing of the row before being renderered.
@@ -1175,7 +1166,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     const bounds = getCellBounds({ rowIndex: 0, columnIndex });
                     const actualRowIndex = 0;
                     const actualColumnIndex = columnIndex;
-                    const actualBottom = Math.max(0, bounds.bottom);
                     const actualRight = Math.max(columnIndex, bounds.right);
 
                     if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
@@ -1183,18 +1173,16 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     }
 
                     const y = getRowOffset(actualRowIndex);
-                    const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
-
                     const x = getColumnOffset(actualColumnIndex);
 
                     const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
 
-                    _headerCells.push(
+                    headerCells.push(
                         headerCellRenderer?.({
                             x,
                             y,
                             width,
-                            height,
+                            height: headerHeight,
                             rowIndex: actualRowIndex,
                             columnIndex: actualColumnIndex,
                             key: itemKey({
@@ -1219,25 +1207,22 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     const bounds = getCellBounds({ rowIndex: 0, columnIndex });
                     const actualRowIndex = 0;
                     const actualColumnIndex = columnIndex;
-                    const actualBottom = Math.max(0, bounds.bottom);
                     const actualRight = Math.max(columnIndex, bounds.right);
                     if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
                         continue;
                     }
 
                     const y = getRowOffset(actualRowIndex);
-                    const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
-
                     const x = getColumnOffset(actualColumnIndex);
 
                     const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
 
-                    _headerFrozenCells.push(
+                    headerFrozenCells.push(
                         headerCellRenderer?.({
                             x,
                             y,
                             width,
-                            height,
+                            height: headerHeight,
                             rowIndex: actualRowIndex,
                             columnIndex: actualColumnIndex,
                             key: itemKey({
@@ -1248,25 +1233,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     );
                 }
             }
+        }
 
-            return {
-                headerCells: _headerCells,
-                headerFrozenCells: _headerFrozenCells,
-            };
-        }, [
-            columnCount,
-            columnStartIndex,
-            columnStopIndex,
-            frozenColumns,
-            getCellBounds,
-            getColumnOffset,
-            getColumnWidth,
-            getRowHeight,
-            getRowOffset,
-            headerCellRenderer,
-            isHiddenCell,
-            rowCount,
-        ]);
         /**
          * Renders active cell
          */
@@ -1275,6 +1243,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         let activeCellSelectionFrozenColumn = null;
         let activeCellSelectionFrozenRow = null;
         let activeCellSelectionFrozenIntersection = null;
+        let activeCellComponent: React.ReactNode = null;
+
         if (activeCell) {
             const bounds = getCellBounds(activeCell);
             const { top, left, right, bottom } = bounds;
@@ -1289,6 +1259,14 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             const x = getColumnOffset(left);
 
             const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
+
+            activeCellComponent = renderActiveCell?.({
+                x: x,
+                y: y,
+                width: width,
+                height: height,
+                activeCell,
+            });
 
             const cell = selectionRenderer({
                 stroke: selectionBorderColor,
@@ -1320,6 +1298,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 x: x + width,
                 y: y + height,
             };
+        } else {
+            activeCellComponent = renderActiveCell?.({
+                activeCell: null,
+            });
         }
 
         /**
@@ -1614,48 +1596,40 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             frozenColumns,
             cellsDrawer,
             groupingLevel,
+            useRecords,
+            useFields,
+            themeColors,
         });
 
-        const rowHeadCells = useMemo(() => {
-            const _rowHeadCells: React.ReactNode[] = [];
+        const rowEndCells: React.ReactNode[] = [];
 
+        if (rowHeadCellRenderer) {
             for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
                 if (rowIndex > rowCount - 1) break;
 
-                const bounds = getCellBounds({ rowIndex, columnIndex: 0 });
+                const bounds = getCellBounds({ rowIndex, columnIndex: columnCount - 1 });
                 const actualBottom = Math.max(rowIndex, bounds.bottom);
 
                 const x = 0;
                 const y = getRowOffset(rowIndex);
                 const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
 
-                _rowHeadCells.push(
+                rowEndCells.push(
                     rowHeadCellRenderer?.({
                         x: x,
                         y,
                         width: rowHeadColumnWidth,
                         height,
                         rowIndex,
-                        columnIndex: 0,
+                        columnIndex: columnCount - 1,
                         key: itemKey({
                             rowIndex: rowIndex,
-                            columnIndex: 0,
+                            columnIndex: columnCount - 1,
                         }),
                     }),
                 );
             }
-
-            return _rowHeadCells;
-        }, [
-            getCellBounds,
-            getRowHeight,
-            getRowOffset,
-            rowCount,
-            rowHeadCellRenderer,
-            rowHeadColumnWidth,
-            rowStartIndex,
-            rowStopIndex,
-        ]);
+        }
 
         const stageChildren = (
             <>
@@ -1669,16 +1643,15 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             {cells}
                         </Group>
                     </Group>
-
+                    <Group offsetY={scrollTop} offsetX={scrollLeft}>
+                        {activeCellComponent}
+                    </Group>
                     <Group
                         clipX={0}
                         clipY={0}
                         clipWidth={frozenColumnWidth + frozenSpacing}
                         clipHeight={containerHeight}>
-                        <Group offsetY={scrollTop}>
-                            {rowHeadCells}
-                            {frozenCells}
-                        </Group>
+                        <Group offsetY={scrollTop}>{frozenCells}</Group>
                     </Group>
                 </Layer>
                 {children && typeof children === 'function'

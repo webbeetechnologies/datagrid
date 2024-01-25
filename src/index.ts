@@ -16,3 +16,4 @@ export {
     UseSelectionOptions,
     SelectionResults,
 } from './hooks';
+export * from './utils';

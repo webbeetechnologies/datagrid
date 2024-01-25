@@ -1,6 +1,6 @@
 import { DEFAULT_NESTED_GROUP_GAP, SELECTION_COL_WIDTH } from './constants';
 import { GridLayout } from './grid-layout';
-import type { GroupRecord } from './grouping-types';
+import type { Row } from './types';
 
 interface ICell {
     row: any;
@@ -11,7 +11,7 @@ interface ICell {
 }
 
 export class AddRowLayout extends GridLayout {
-    override renderAddFieldBlank(row: GroupRecord) {
+    override renderAddFieldBlank(row: Row) {
         super.renderAddFieldBlank(row);
         const { level } = row;
         const width = this.addBtnWidth;
@@ -58,12 +58,12 @@ export class AddRowLayout extends GridLayout {
         rowCreatable,
     }: Pick<ICell, 'row' | 'isHoverRow' | 'isHoverColumn' | 'rowCreatable'>) {
         if (!this.isFirst) return;
-        const { depth } = row;
+        const { level } = row;
         const y = this.y;
         const rowHeight = this.rowHeight;
         const columnWidth = this.columnWidth;
-        if (depth) this.renderIndentFront(depth - 1);
-        const frozenOffset = !depth ? 0.5 : (depth - 1) * DEFAULT_NESTED_GROUP_GAP + 0.5;
+        if (level) this.renderIndentFront(level - 1);
+        const frozenOffset = !level ? 0.5 : (level - 1) * DEFAULT_NESTED_GROUP_GAP + 0.5;
         const fill =
             isHoverRow && rowCreatable ? this.colors.rowSelectedBg : this.colors.backgroundColor;
         this.rect({

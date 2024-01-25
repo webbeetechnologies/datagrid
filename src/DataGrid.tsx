@@ -86,13 +86,15 @@ export type Props = Pick<
         | 'onViewChange'
         | 'onContextMenu'
         | 'onScroll'
-        | 'getCellValue'
-        | 'getField'
-        | 'getRecordInfo'
         | 'groupingLevel'
         | 'headerHeight'
         | 'rowHeadCellRenderer'
         | 'rowHeadColumnWidth'
+        | 'cellsDrawer'
+        | 'useRecords'
+        | 'useFields'
+        | 'themeColors'
+        | 'renderActiveCell'
     > &
     ViewProps & {
         width?: number;
@@ -143,20 +145,20 @@ export type Props = Pick<
             | 'itemRenderer'
             | 'containerStyle'
             | 'columnCount'
-            | 'height'
-            | 'width'
             | 'rowCount'
             | 'frozenColumns'
             | 'columnWidth'
             | 'rowHeight'
             | 'showScrollbar'
-            | 'getCellValue'
-            | 'getField'
-            | 'getRecordInfo'
             | 'groupingLevel'
             | 'rowHeadCellRenderer'
             | 'rowHeadColumnWidth'
-        >;
+            | 'cellsDrawer'
+            | 'useRecords'
+            | 'useFields'
+            | 'themeColors'
+            | 'renderActiveCell'
+        > & { width?: number; height?: number };
     };
 
 export type DataGridRef = Pick<
@@ -356,12 +358,14 @@ const DataGrid = (
         onBeforeFill,
         gridProps,
         onScroll: onScrollProp,
-        getCellValue,
-        getField,
-        getRecordInfo,
+        useRecords,
+        useFields,
         groupingLevel,
         rowHeadCellRenderer,
         rowHeadColumnWidth,
+        cellsDrawer,
+        themeColors,
+        renderActiveCell,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -570,9 +574,7 @@ const DataGrid = (
                         headerCellRenderer={headerCellRenderer}
                         {...gridProps}
                         {...selectionProps}
-                        getCellValue={getCellValue}
-                        getField={getField}
-                        getRecordInfo={getRecordInfo}
+                        useRecords={useRecords}
                         groupingLevel={groupingLevel}
                         onDoubleClick={onDoubleClick}
                         onKeyDown={onKeyDown}
@@ -583,6 +585,10 @@ const DataGrid = (
                         headerHeight={headerHeight}
                         rowHeadCellRenderer={rowHeadCellRenderer}
                         rowHeadColumnWidth={rowHeadColumnWidth}
+                        cellsDrawer={cellsDrawer}
+                        useFields={useFields}
+                        themeColors={themeColors}
+                        renderActiveCell={renderActiveCell}
                     />
                 </InfiniteLoader>
                 {editorComponent}

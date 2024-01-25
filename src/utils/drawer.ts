@@ -16,8 +16,10 @@ import {
     type ISegment,
     type IHyperlinkSegment,
     SegmentType,
+    GridColors,
 } from './types';
 import type { Context } from 'konva/lib/Context';
+import { IconPacks } from '../components/Grid/CanvasIcon';
 
 const extractFirstAndSecondWordArrays = (text: string) => {
     const [firstWord, secondWord = []] = text
@@ -50,37 +52,45 @@ const DEFAULT_FONT_FAMILY = `Roboto, "Helvetica Neue", Arial,
 export class KonvaDrawer {
     ctx: Context = autoSizerCanvas.context! as unknown as Context;
     needDraw = false;
-    colors = {
+    colors: GridColors = {
         textColor: '#1b1b1f',
         avatarLabelColor: '#fff',
         avatarBg: '#5c6ae7',
-        backgroundColor: '',
+        backgroundColor: '#fff',
         lines: '#c7c5d0',
         white: '#fff',
         lowestBg: '',
         rowSelectedBg: '',
         warnLight: '',
         cellSelectedColorSolid: '',
+        textColorLight: '#fff',
+        textColorDark: '#000',
     };
 
-    public initCtx(ctx: Context) {
+    public initCtx(ctx: Context, colors?: Partial<GridColors> & Record<string, any>) {
         this.needDraw = Boolean(ctx);
         this.ctx = ctx || autoSizerCanvas.context!;
         /**
          * textBaseline is specified as middle, compatible with browser differences
          */
         this.ctx.textBaseline = 'middle';
+        if (colors) this.setColors(colors);
     }
 
-    public setColors(colors: typeof this.colors) {
-        this.colors = colors;
+    public setColors(colors: Partial<GridColors> & Record<string, any>) {
+        this.colors = {
+            ...this.colors,
+            ...colors,
+        };
     }
 
     public setStyle(props: ICtxStyleProps) {
-        const { fontSize, fontWeight, fillStyle, strokeStyle } = props;
+        const { fontSize, fontWeight, fillStyle, strokeStyle, fontFamily } = props;
 
         if (fontSize || fontWeight) {
-            this.ctx.font = `${fontWeight || 'normal'} ${fontSize || 13}px ${DEFAULT_FONT_FAMILY}`;
+            this.ctx.font = `${fontWeight || 'normal'} ${fontSize || 13}px ${
+                fontFamily || DEFAULT_FONT_FAMILY
+            }`;
         }
 
         if (fillStyle) {
@@ -449,6 +459,7 @@ export class KonvaDrawer {
             y,
             text,
             fontSize = 14,
+            fontFamily = DEFAULT_FONT_FAMILY,
             fillStyle = this.colors.textColor,
             textAlign = 'left',
             verticalAlign = 'top',
@@ -456,7 +467,7 @@ export class KonvaDrawer {
             textDecoration = 'none',
         } = props;
 
-        const fontStyle = `${fontWeight} ${fontSize}px ${DEFAULT_FONT_FAMILY}`;
+        const fontStyle = `${fontWeight} ${fontSize}px ${fontFamily}`;
 
         if (textDecoration === 'underline') {
             const textWidth = getTextWidth(this.ctx, text, fontStyle);
@@ -469,8 +480,11 @@ export class KonvaDrawer {
         }
 
         const baselineOffset = verticalAlign === 'top' ? fontSize / 2 : 0;
-        // this.ctx.font = fontStyle;
+
+        this.ctx.font = fontStyle;
+
         if (fillStyle) this.setStyle({ fillStyle });
+
         this.ctx.textAlign = textAlign;
 
         this.ctx.fillText(text, x, y + baselineOffset);
@@ -658,7 +672,9 @@ export class KonvaDrawer {
                 textAlign: 'center',
                 verticalAlign: 'middle',
                 text: avatarName,
-                fillStyle: this.colors.avatarBg,
+                // TODO - remove hardcoded logics
+                fillStyle: this.colors.textColorDark,
+                fontSize: 10,
             });
         }
         return this.image({
@@ -676,6 +692,35 @@ export class KonvaDrawer {
         });
         // }
         // }
+    }
+
+    public fontIcon({
+        size = 24,
+        type = IconPacks.MaterialCommunity,
+        x,
+        y,
+        text,
+        color = this.colors.textColor,
+        textAlign = 'left',
+        verticalAlign = 'top',
+        fontWeight = 'normal',
+    }: Omit<ITextProps, 'fillStyle' | 'fontFamily'> & {
+        color?: string;
+        size?: number;
+        // name,
+        type?: string;
+    }) {
+        this.text({
+            x,
+            y,
+            text,
+            fillStyle: color,
+            fontFamily: type,
+            fontWeight,
+            fontSize: size,
+            textAlign,
+            verticalAlign,
+        });
     }
 
     private convertEndpointToCenterParameterization(

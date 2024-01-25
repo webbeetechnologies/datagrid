@@ -1,12 +1,14 @@
 import type { Context } from 'konva/lib/Context';
-import { RefObject, useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Shape } from 'react-konva';
-import type { GridRef } from '../components';
+import type { GridProps, GridRef } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
 import { recordRowLayout } from '../utils/record-row-layout';
+import keyBy from 'lodash/keyBy';
+import type { GroupConstantValues } from '../utils/types';
 
-export type UseGridProps = {
-    instance: RefObject<GridRef>;
+export type UseGridProps = Pick<GridProps, 'useRecords' | 'useFields' | 'themeColors'> & {
+    instance: React.RefObject<GridRef>;
     rowStartIndex: number;
     rowStopIndex: number;
     columnStartIndex: number;
@@ -20,6 +22,8 @@ export type UseGridProps = {
     groupingLevel?: number;
 };
 
+const emptyObj = {};
+
 const useGrid = ({
     instance,
     columnCount,
@@ -32,22 +36,24 @@ const useGrid = ({
     isHiddenRow,
     frozenColumns = 0,
     cellsDrawer,
-}: // groupingLevel,
-UseGridProps) => {
+    groupingLevel = 0,
+    useRecords,
+    useFields,
+    themeColors = emptyObj,
+}: UseGridProps) => {
+    const records = useRecords({
+        columnStartIndex,
+        columnStopIndex,
+        rowStartIndex,
+        rowStopIndex,
+    });
+    const fields = useFields(columnStartIndex, columnStopIndex);
+    const fieldMapBySlug = useMemo(() => keyBy(fields, 'slug'), [fields]);
+
     const drawCells = useCallback(
         (ctx: Context, columnStartIndex: number, columnStopIndex: number) => {
-            cellsDrawer.initCtx(ctx);
-            recordRowLayout.initCtx(ctx);
-
-            // recordRowLayout.setStyle({
-            //     fontSize: 14,
-            //     fontWeight: 'normal',
-            // });
-
-            cellsDrawer.setStyle({
-                fontSize: 13,
-                fontWeight: 'normal',
-            });
+            cellsDrawer.initCtx(ctx, themeColors);
+            recordRowLayout.initCtx(ctx, themeColors);
 
             if (!instance.current) return;
 
@@ -62,6 +68,8 @@ UseGridProps) => {
                     continue;
                 }
 
+                const field = fields[columnIndex] || {};
+
                 // const isFirstColumn = columnIndex === 0;
 
                 for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
@@ -70,6 +78,10 @@ UseGridProps) => {
                     if (isHiddenRow?.(rowIndex)) {
                         continue;
                     }
+
+                    const { data, ...rowInfo } = records[rowIndex];
+                    const { data: _a, ...aboveRowInfo } = records[rowIndex - 1] || {};
+                    const { data: _b, ...belowRowInfo } = records[rowIndex + 1] || {};
 
                     const bounds = instance.current.getCellBounds({ rowIndex, columnIndex });
                     const actualRowIndex = rowIndex;
@@ -82,30 +94,25 @@ UseGridProps) => {
                     const x = instance.current.getColumnOffset(actualColumnIndex);
                     const width = instance.current.getColumnWidth(actualRight);
 
-                    // const { rowType } = instance.current.getRecordInfo(rowIndex);
+                    const cellValue = (data as Record<string, any>)?.[field.slug] || null;
+                    const recordId = rowInfo.id;
 
-                    // const [cellValue, { recordId, fieldId }] = instance.current.getCellValue({
-                    //     rowIndex,
-                    //     columnIndex,
-                    // });
-                    // const field = instance.current.getField();
+                    if (rowInfo.rowType === 'data') {
+                        recordRowLayout.init({
+                            x,
+                            y,
+                            rowIndex,
+                            columnIndex,
+                            columnWidth: width,
+                            rowHeight: height,
+                            columnCount,
+                            groupCount: groupingLevel,
+                            // viewType,
+                        });
+                    }
 
-                    // const style = { fontWeight: 'normal', fontSize: 14 };
-
-                    recordRowLayout.init({
-                        x,
-                        y,
-                        rowIndex,
-                        columnIndex,
-                        columnWidth: width,
-                        rowHeight: height,
-                        columnCount,
-                        groupCount: 0,
-                        // viewType,
-                    });
                     recordRowLayout.render({
-                        row: { level: 0, realIndex: rowIndex } as any,
-                        style: { fill: '#fff' },
+                        row: rowInfo,
                         isHoverRow: false,
                         isCheckedRow: false,
                         isActiveRow: false,
@@ -118,51 +125,79 @@ UseGridProps) => {
                     const renderProps = {
                         x,
                         y,
+                        columnIndex,
+                        rowIndex,
                         columnWidth: width,
                         rowHeight: height,
-                        recordId: '',
-                        field: {},
-                        cellValue: `column-${columnIndex} row-${rowIndex} `,
+                        recordId,
+                        row: rowInfo,
+                        groupCount: groupingLevel,
+                        field,
+                        cellValue,
                         isActive: false,
                         editable: true,
-                        // style,
-                        colors: {},
+                        ...(rowInfo.rowType === 'header' || rowInfo.rowType === 'footer'
+                            ? {
+                                  aboveRow: aboveRowInfo,
+                                  belowRow: belowRowInfo,
+                                  groupField:
+                                      fieldMapBySlug[
+                                          // @ts-ignore
+                                          (
+                                              (rowInfo?.groupConstants ||
+                                                  []) as GroupConstantValues[]
+                                          ).at(-1)?.field
+                                      ],
+                                  groupValue: (rowInfo?.groupConstants || []).at(-1)?.value,
+                              }
+                            : {}),
                     };
 
-                    cellsDrawer.renderCellValue(renderProps as any, ctx);
+                    cellsDrawer.renderCell(renderProps as any, ctx);
                 }
             }
         },
         [
-            columnCount,
+            cellsDrawer,
+            themeColors,
             instance,
+            columnCount,
             isHiddenColumn,
-            isHiddenRow,
-            rowCount,
+            fields,
             rowStartIndex,
             rowStopIndex,
-            cellsDrawer,
+            rowCount,
+            isHiddenRow,
+            records,
+            groupingLevel,
+            fieldMapBySlug,
         ],
     );
 
     // Freeze column cells
-    const frozenCells = (
-        <Shape
-            listening={false}
-            perfectDrawEnabled={false}
-            sceneFunc={ctx => drawCells(ctx, 0, frozenColumns - 1)}
-        />
+    const frozenCells = useMemo(
+        () => (
+            <Shape
+                listening={false}
+                perfectDrawEnabled={false}
+                sceneFunc={ctx => drawCells(ctx, 0, frozenColumns - 1)}
+            />
+        ),
+        [drawCells, frozenColumns],
     );
 
     // Other column cells
-    const cells = (
-        <Shape
-            listening={false}
-            perfectDrawEnabled={false}
-            sceneFunc={ctx =>
-                drawCells(ctx, Math.max(columnStartIndex, frozenColumns), columnStopIndex)
-            }
-        />
+    const cells = useMemo(
+        () => (
+            <Shape
+                listening={false}
+                perfectDrawEnabled={false}
+                sceneFunc={ctx =>
+                    drawCells(ctx, Math.max(columnStartIndex, frozenColumns), columnStopIndex)
+                }
+            />
+        ),
+        [columnStartIndex, columnStopIndex, drawCells, frozenColumns],
     );
 
     return {

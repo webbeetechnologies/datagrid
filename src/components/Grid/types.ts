@@ -3,8 +3,8 @@ import type { StageConfig, Stage } from 'konva/lib/Stage';
 import type { Key, RefObject, RefCallback, MutableRefObject } from 'react';
 import type { ScrollView, ViewStyle } from 'react-native';
 import type { Align } from './helpers';
-import type { GroupRecord } from 'src/utils/grouping-types';
-import type { Field } from '../../utils/types';
+import type { Field, GridColors, IRecord } from '../../utils/types';
+import type { CellsDrawer } from './utils';
 
 export enum KeyCodes {
     Right = 39,
@@ -195,9 +195,20 @@ export interface GridProps
     rowHeadCellRenderer?: (props: RendererProps) => React.ReactNode;
     rowHeadColumnWidth?: number;
     groupingLevel?: number;
-    getRecordInfo: (rowIndex: number) => GroupRecord;
-    getCellValue: (cell: CellInterface) => [any, { recordId: string; fieldId: string }];
-    getField: (fieldId: string) => Field;
+    useRecords: (props: {
+        columnStartIndex: number;
+        columnStopIndex: number;
+        rowStartIndex: number;
+        rowStopIndex: number;
+    }) => IRecord[];
+    useFields: (columnStartIndex: number, columnStopIndex: number) => Field[];
+    cellsDrawer: CellsDrawer;
+    themeColors?: Partial<GridColors> & Record<string, any>;
+    renderActiveCell?: (
+        props: Omit<RendererProps, 'key' | 'columnIndex' | 'rowIndex'> & {
+            activeCell: CellInterface | null;
+        },
+    ) => React.ReactNode;
     /**
      * Allow users to customize selected cells design
      */
@@ -413,7 +424,7 @@ export interface PosXYRequired {
     y: number;
 }
 
-export type GridRef = Pick<GridProps, 'getCellValue' | 'getField' | 'getRecordInfo'> & {
+export type GridRef = {
     scrollTo: (scrollPosition: OptionalScrollCoords) => void;
     scrollBy: (pos: PosXY) => void;
     stage: Stage | null;

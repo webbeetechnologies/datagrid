@@ -334,7 +334,7 @@ export class CellsDrawer extends KonvaDrawer {
         });
     }
 
-    public renderCellValue(renderProps: IRenderProps, ctx?: Context | undefined) {
+    public renderCell(renderProps: IRenderProps, ctx?: Context | undefined) {
         // const { field } = renderProps;
         // const fieldType = field.type;
 

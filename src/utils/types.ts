@@ -23,6 +23,7 @@ export interface ITextProps extends IGraphProps {
     text: string;
     fillStyle?: string;
     fontSize?: number;
+    fontFamily?: string;
     textAlign?: 'left' | 'right' | 'center' | 'start' | 'end';
     verticalAlign?: 'top' | 'middle' | 'bottom';
     fontWeight?: IFontWeight;
@@ -64,6 +65,7 @@ export interface ICtxStyleProps {
     fontWeight?: IFontWeight;
     fillStyle?: string;
     strokeStyle?: string;
+    fontFamily?: string;
 }
 
 export interface ITextEllipsisProps {
@@ -139,15 +141,23 @@ export type Field<C extends Object = Record<string, any>> = {
 export interface IRenderProps {
     x: number;
     y: number;
+    columnIndex: number;
+    rowIndex: number;
     columnWidth: any;
     rowHeight: number;
     recordId?: string;
+    row?: Row;
+    aboveRow?: Row;
+    belowRow?: Row;
     field: Field;
     cellValue: any;
     isActive?: boolean;
     editable?: boolean;
+    groupCount?: number;
     // rowHeightLevel: RowHeightLevel;
     style: IRenderStyleProps;
+    groupField?: Field;
+    groupValue?: any;
 }
 export interface IRenderStyleProps {
     color?: string;
@@ -155,3 +165,40 @@ export interface IRenderStyleProps {
     textAlign?: 'left' | 'right' | 'center' | 'start' | 'end';
     fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter';
 }
+
+export type GridColors = {
+    textColor: string;
+    avatarLabelColor: string;
+    avatarBg: string;
+    backgroundColor: string;
+    lines: string;
+    white: string;
+    lowestBg: string;
+    rowSelectedBg: string;
+    warnLight: string;
+    cellSelectedColorSolid: string;
+    textColorLight: string;
+    textColorDark: string;
+    [key: string]: any;
+};
+
+enum RowType {
+    HEADER = 'header',
+    FOOTER = 'footer',
+    DATA = 'data',
+}
+
+export type IRecord = {
+    rowType: `${RowType}`;
+    index: number;
+    data?: Record<string, any>;
+    groupConstants?: GroupConstantValues[];
+    [key: string]: any;
+};
+
+export type GroupConstantValues = {
+    field: string;
+    value: any;
+};
+
+export type Row = Omit<IRecord, 'data'>;

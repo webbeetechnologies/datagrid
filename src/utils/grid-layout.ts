@@ -1,7 +1,7 @@
 import range from 'lodash/range';
 import { ADD_FIELD_COL_WIDTH, DEFAULT_NESTED_GROUP_GAP } from './constants';
 import { KonvaDrawer } from './drawer';
-import type { GroupRecord } from './grouping-types';
+import type { Row } from './types';
 
 interface ILayout {
     x: number;
@@ -81,7 +81,7 @@ export class GridLayout extends KonvaDrawer {
         return backgrounds[depth];
     }
 
-    protected renderAddFieldBlank(_row: GroupRecord) {
+    protected renderAddFieldBlank(_row: Row) {
         const width = this.addBtnWidth;
         const background = this.getGroupBackgroundByDepth(0);
         const x = this.x + this.columnWidth;
@@ -126,25 +126,20 @@ export class GridLayout extends KonvaDrawer {
     /**
      * Render row end indent area
      */
-    protected renderIndentEnd(depth: number) {
+    protected renderIndentEnd(depth: number, width?: number) {
         const x = this.x;
         const y = this.y;
         const rowHeight = this.rowHeight;
-        const columnWidth = this.columnWidth;
-        const tabSizeList = [40, DEFAULT_NESTED_GROUP_GAP, 0];
         range(depth).forEach(i => {
-            const isFirstGroup = i === 0;
-            const rectOffsetX = isFirstGroup ? 0 : -DEFAULT_NESTED_GROUP_GAP;
-            const lineOffsetX = isFirstGroup ? 40 : 0;
             this.rect({
-                x: x + columnWidth + rectOffsetX + 0.5,
+                x: x + (width || this.columnWidth) + i * DEFAULT_NESTED_GROUP_GAP + 0.5,
                 y: y - 0.5,
-                width: tabSizeList[i],
+                width: (i + 1) * DEFAULT_NESTED_GROUP_GAP,
                 height: rowHeight,
                 fill: this.getGroupBackgroundByDepth(i),
             });
             this.line({
-                x: x + columnWidth + lineOffsetX,
+                x: x + (width || this.columnWidth) + i * DEFAULT_NESTED_GROUP_GAP,
                 y,
                 points: [0, 0, 0, rowHeight],
                 stroke: this.colors.lines,

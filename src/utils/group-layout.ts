@@ -1,17 +1,17 @@
 import { DEFAULT_NESTED_GROUP_GAP, SELECTION_COL_WIDTH } from './constants';
 import { cellsDrawer } from '../components/Grid/utils';
 import { GridLayout } from './grid-layout';
-import type { GroupRecord } from './grouping-types';
+import type { Row } from './types';
 import type { Field, IRenderStyleProps } from './types';
 
 interface ICell {
-    row: GroupRecord;
+    row: Row;
     cellValue: any;
     groupField: Field;
 }
 
 export class GroupTabLayout extends GridLayout {
-    protected override renderAddFieldBlank(row: GroupRecord) {
+    protected override renderAddFieldBlank(row: Row) {
         super.renderAddFieldBlank(row);
         const { level } = row;
         if (level === 0) {
@@ -37,7 +37,7 @@ export class GroupTabLayout extends GridLayout {
         this.rect({
             x: groupOffset,
             y,
-            width: columnWidth - groupOffset + SELECTION_COL_WIDTH + 0.5,
+            width: columnWidth + SELECTION_COL_WIDTH + 0.5,
             height: rowHeight,
             fill,
             stroke: this.colors.lines,
@@ -81,19 +81,19 @@ export class GroupTabLayout extends GridLayout {
                 isActive: false,
                 style: { textAlign: 'left' } as IRenderStyleProps,
             };
-            return cellsDrawer.renderCellValue(renderProps, this.ctx);
+            return cellsDrawer.renderCell(renderProps as any, this.ctx);
         }
         this.setStyle({ fontSize: 14 });
         this.text({
             x: groupOffset + 36,
             y: y + 24,
-            text: `(${cellValue == null ? '(Empty)' : 'Error'})`,
+            text: `(${cellValue == null ? 'Empty' : 'Error'})`,
             fillStyle: this.colors.textColor,
             fontSize: 14,
         });
     }
 
-    private renderLastCell(row: GroupRecord) {
+    private renderLastCell(row: Row) {
         if (!this.isLast) return;
         this.renderAddFieldBlank(row);
         if (this.isFirst) return;
@@ -123,7 +123,7 @@ export class GroupTabLayout extends GridLayout {
         });
     }
 
-    private renderCommonCell(row: GroupRecord) {
+    private renderCommonCell(row: Row) {
         if (this.isFirst || this.isLast) return;
         const x = this.x;
         const y = this.y;
