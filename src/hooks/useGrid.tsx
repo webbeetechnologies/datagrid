@@ -121,6 +121,7 @@ const useGrid = ({
                     cellsDrawer.setState({
                         hoveredCell,
                         isHoverRow,
+                        isActiveRow,
                     });
 
                     if (rowInfo.rowType === 'data' && columnIndex + 1 !== columnCount) {
@@ -139,7 +140,7 @@ const useGrid = ({
                         recordRowLayout.render({
                             row: rowInfo,
                             isHoverRow,
-                            isCheckedRow: false,
+                            isCheckedRow: isActiveRow,
                             isActiveRow: false,
                             isDraggingRow: false,
                             isThisCellWillMove: false,

@@ -312,12 +312,17 @@ export const createHTMLBox = ({
     );
 };
 
-export type CellsDrawerState = { hoveredCell: CellInterface | null; isHoverRow: boolean };
+export type CellsDrawerState = {
+    hoveredCell: CellInterface | null;
+    isHoverRow: boolean;
+    isActiveRow: boolean;
+};
 
 export class CellsDrawer extends KonvaDrawer {
     state: CellsDrawerState = {
         hoveredCell: null,
         isHoverRow: false,
+        isActiveRow: false,
     };
 
     public setState(state: CellsDrawerState) {

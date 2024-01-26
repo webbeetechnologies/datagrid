@@ -1591,6 +1591,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     rowIndex,
                     key: itemKey({ rowIndex, columnIndex }),
                     isHoverRow: datagridStoreRef.current.hoveredCell?.rowIndex === rowIndex,
+                    isActiveRow: !!isActiveRow?.({ rowIndex }),
                 });
 
                 if (_cell) {
@@ -1635,6 +1636,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     columnIndex,
                     rowIndex,
                     key: itemKey({ rowIndex, columnIndex }),
+                    isHoverRow: datagridStoreRef.current.hoveredCell?.rowIndex === rowIndex,
+                    isActiveRow: !!isActiveRow?.({ rowIndex }),
                 });
 
                 if (_cell) {

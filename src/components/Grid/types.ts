@@ -304,9 +304,11 @@ export interface GridProps
         props: IRenderProps,
         otherProps: { fieldsMap: Record<string, Field>; records: IRecord[] },
     ) => IRenderProps & { [key: string]: any };
-    isActiveRow?: (arg: { rowIndex: number; recordId: TDataTableRow }) => boolean;
+    isActiveRow?: (arg: { rowIndex: number; recordId?: TDataTableRow }) => boolean;
     isActiveColumn?: (arg: { columnIndex: number; columnId: TDataTableRow }) => boolean;
-    renderDynamicCell?: (props: RendererProps) => React.ReactNode;
+    renderDynamicCell?: (
+        props: RendererProps & Pick<IRenderProps, 'isActiveRow' | 'isHoverRow'>,
+    ) => React.ReactNode;
 }
 
 export interface CellRangeArea extends CellInterface {
