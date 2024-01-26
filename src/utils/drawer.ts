@@ -60,7 +60,7 @@ export class KonvaDrawer {
         lines: '#c7c5d0',
         white: '#fff',
         lowestBg: '',
-        rowSelectedBg: '',
+        rowSelectedBg: '#f5f5f5',
         warnLight: '',
         cellSelectedColorSolid: '',
         textColorLight: '#fff',

@@ -15,7 +15,8 @@ import React, {
 import { LayoutChangeEvent, StyleSheet } from 'react-native';
 import { Rect, Text, Group } from 'react-konva';
 import type { ViewProps } from '@bambooapp/bamboo-atoms';
-import { useMergedRefs, useMolecules } from '@bambooapp/bamboo-molecules';
+import { useLatest, useMergedRefs, useMolecules } from '@bambooapp/bamboo-molecules';
+import { createFastContext } from '@bambooapp/bamboo-molecules/fast-context';
 import type { Vector2d } from 'konva/lib/types';
 import type { RectConfig } from 'konva/lib/shapes/Rect';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -95,6 +96,10 @@ export type Props = Pick<
         | 'useFields'
         | 'themeColors'
         | 'renderActiveCell'
+        | 'useProcessRenderProps'
+        | 'isActiveColumn'
+        | 'isActiveRow'
+        | 'renderDynamicCell'
     > &
     ViewProps & {
         width?: number;
@@ -158,7 +163,10 @@ export type Props = Pick<
             | 'useFields'
             | 'themeColors'
             | 'renderActiveCell'
+            | 'useProcessRenderProps'
         > & { width?: number; height?: number };
+
+        onMouseDown?: (e: MouseEvent<HTMLDivElement>, cell: CellInterface | null) => void;
     };
 
 export type DataGridRef = Pick<
@@ -366,13 +374,21 @@ const DataGrid = (
         cellsDrawer,
         themeColors,
         renderActiveCell,
+        useProcessRenderProps,
+        onMouseDown: onMouseDownProp,
+        isActiveColumn,
+        isActiveRow,
+        renderDynamicCell,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
 ) => {
     const { View } = useMolecules();
 
+    const [hoveredCell, setHoveredCell] = useState<CellInterface | null>(null);
     const [layout, setLayout] = useState({ width: 0, height: 0 });
+
+    const hoveredCellRef = useLatest(hoveredCell);
 
     const width = widthProp || layout.width;
     const height = heightProp || layout.height;
@@ -381,6 +397,7 @@ const DataGrid = (
     const gridRef = useRef<GridRef>(null);
     const currentViewPort = useRef<ViewPortProps>();
     const infiniteLoaderRef = useRef(null);
+    const wheelingRef = useRef<number | null>(null); // Storage timer to ensure smooth operation
 
     useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
     useImperativeHandle(headerGridRefProp, () => headerGridRef.current as GridRef);
@@ -478,10 +495,71 @@ const DataGrid = (
 
     const onMouseDown = useCallback(
         (e: MouseEvent<HTMLDivElement>) => {
+            onMouseDownProp?.(
+                e,
+                gridRef.current?.getCellCoordsFromOffset(
+                    e.nativeEvent.clientX,
+                    e.nativeEvent.clientY,
+                ) || null,
+            );
+
             onSelectionMouseDown(e);
             onEditorMouseDown(e);
         },
-        [onEditorMouseDown, onSelectionMouseDown],
+        [onEditorMouseDown, onMouseDownProp, onSelectionMouseDown],
+    );
+
+    const onMouseMove = useCallback(
+        (e: KonvaEventObject<MouseEvent>) => {
+            stageProps?.onMouseMoveProp?.(e);
+
+            if (wheelingRef.current) return;
+
+            wheelingRef.current = requestAnimationFrame(() => {
+                const coords = gridRef.current?.getCellCoordsFromOffset(
+                    e.evt.clientX,
+                    e.evt.clientY,
+                );
+
+                if (
+                    hoveredCellRef.current === coords ||
+                    (hoveredCellRef.current?.columnIndex === coords?.columnIndex &&
+                        hoveredCellRef.current?.rowIndex === coords?.rowIndex)
+                ) {
+                    wheelingRef.current = null;
+
+                    return;
+                }
+
+                setHoveredCell(coords || null);
+                wheelingRef.current = null;
+            });
+        },
+        [hoveredCellRef, stageProps],
+    );
+
+    const onMouseLeave = useCallback(
+        (e: MouseEvent<HTMLDivElement>) => {
+            stageProps?.oonMouseLeaveProp?.(e);
+
+            if (!hoveredCellRef.current) {
+                wheelingRef.current = null;
+
+                return;
+            }
+
+            setHoveredCell(null);
+        },
+        [hoveredCellRef, stageProps],
+    );
+
+    const _stagedProps = useMemo(
+        () => ({
+            ...stageProps,
+            onMouseMove,
+            onMouseLeave,
+        }),
+        [onMouseLeave, onMouseMove, stageProps],
     );
 
     const renderCell = useCallback(
@@ -522,6 +600,13 @@ const DataGrid = (
         [innerContainerProps?.style],
     );
 
+    const contextValue = useMemo(
+        () => ({
+            hoveredCell,
+        }),
+        [hoveredCell],
+    );
+
     useImperativeHandle(ref, () => ({
         selections,
         activeCell,
@@ -534,20 +619,6 @@ const DataGrid = (
 
     return (
         <View style={styles.innerContainer} {...rest}>
-            {/* <Grid
-                containerStyle={styles.header}
-                columnCount={columnCount}
-                height={headerHeight}
-                rowCount={1}
-                frozenColumns={frozenColumns}
-                ref={headerGridRef}
-                width={width}
-                columnWidth={columnWidth}
-                rowHeight={headerGridRowHeight}
-                showScrollbar={false}
-                itemRenderer={headerCellRenderer}
-                {...headerGridProps}
-            /> */}
             <View {...innerContainerProps} style={tableContainerStyle} onLayout={onLayout}>
                 <InfiniteLoader
                     ref={infiniteLoaderRef}
@@ -556,40 +627,46 @@ const DataGrid = (
                     loadMoreItems={loadMoreRows}
                     threshold={rowsLoadingThreshold}
                     minimumBatchSize={rowsMinimumBatchSize}>
-                    <BodyGrid
-                        ref={gridRef}
-                        onViewChange={_onViewChange}
-                        showScrollbar={showScrollbar}
-                        columnCount={columnCount}
-                        rowCount={rowCount}
-                        frozenColumns={frozenColumns}
-                        height={height}
-                        width={width}
-                        columnWidth={columnWidth}
-                        rowHeight={rowHeight}
-                        itemRenderer={renderCell}
-                        selections={selections}
-                        activeCell={activeCell}
-                        showFillHandle={!isEditInProgress}
-                        headerCellRenderer={headerCellRenderer}
-                        {...gridProps}
-                        {...selectionProps}
-                        useRecords={useRecords}
-                        groupingLevel={groupingLevel}
-                        onDoubleClick={onDoubleClick}
-                        onKeyDown={onKeyDown}
-                        onMouseDown={onMouseDown}
-                        onScroll={onScroll}
-                        stageProps={stageProps}
-                        onContextMenu={onContextMenu}
-                        headerHeight={headerHeight}
-                        rowHeadCellRenderer={rowHeadCellRenderer}
-                        rowHeadColumnWidth={rowHeadColumnWidth}
-                        cellsDrawer={cellsDrawer}
-                        useFields={useFields}
-                        themeColors={themeColors}
-                        renderActiveCell={renderActiveCell}
-                    />
+                    <DataGridStateProvider value={contextValue}>
+                        <BodyGrid
+                            ref={gridRef}
+                            onViewChange={_onViewChange}
+                            showScrollbar={showScrollbar}
+                            columnCount={columnCount}
+                            rowCount={rowCount}
+                            frozenColumns={frozenColumns}
+                            height={height}
+                            width={width}
+                            columnWidth={columnWidth}
+                            rowHeight={rowHeight}
+                            itemRenderer={renderCell}
+                            selections={selections}
+                            activeCell={activeCell}
+                            showFillHandle={!isEditInProgress}
+                            headerCellRenderer={headerCellRenderer}
+                            {...gridProps}
+                            {...selectionProps}
+                            useRecords={useRecords}
+                            groupingLevel={groupingLevel}
+                            onDoubleClick={onDoubleClick}
+                            onKeyDown={onKeyDown}
+                            onMouseDown={onMouseDown}
+                            onScroll={onScroll}
+                            stageProps={_stagedProps}
+                            onContextMenu={onContextMenu}
+                            headerHeight={headerHeight}
+                            rowHeadCellRenderer={rowHeadCellRenderer}
+                            rowHeadColumnWidth={rowHeadColumnWidth}
+                            cellsDrawer={cellsDrawer}
+                            useFields={useFields}
+                            themeColors={themeColors}
+                            renderActiveCell={renderActiveCell}
+                            useProcessRenderProps={useProcessRenderProps}
+                            isActiveColumn={isActiveColumn}
+                            isActiveRow={isActiveRow}
+                            renderDynamicCell={renderDynamicCell}
+                        />
+                    </DataGridStateProvider>
                 </InfiniteLoader>
                 {editorComponent}
                 {children}
@@ -598,6 +675,17 @@ const DataGrid = (
         // </View>
     );
 };
+
+export const {
+    useContextValue: useDataGridState,
+    useStoreRef: useDataGridStateStoreRef,
+    Provider: DataGridStateProvider,
+} = createFastContext<{ hoveredCell: CellInterface | null }>(
+    {
+        hoveredCell: null,
+    },
+    true,
+);
 
 const BodyGrid = memo(
     forwardRef(({ onViewChange, ...rest }: GridProps, ref: any) => {

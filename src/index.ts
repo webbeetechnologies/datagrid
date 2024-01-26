@@ -5,6 +5,8 @@ export {
     CellRendererProps,
     HeaderCell,
     RowCountCell,
+    useDataGridState,
+    useDataGridStateStoreRef,
 } from './DataGrid';
 export * from './components/Grid';
 export {

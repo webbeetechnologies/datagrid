@@ -5,9 +5,18 @@ import type { GridProps, GridRef } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
 import { recordRowLayout } from '../utils/record-row-layout';
 import keyBy from 'lodash/keyBy';
-import type { GroupConstantValues } from '../utils/types';
+import { useLatest } from '@bambooapp/bamboo-molecules';
+import { useDataGridState } from '../DataGrid';
 
-export type UseGridProps = Pick<GridProps, 'useRecords' | 'useFields' | 'themeColors'> & {
+export type UseGridProps = Pick<
+    GridProps,
+    | 'useRecords'
+    | 'useFields'
+    | 'useProcessRenderProps'
+    | 'themeColors'
+    | 'isActiveColumn'
+    | 'isActiveRow'
+> & {
     instance: React.RefObject<GridRef>;
     rowStartIndex: number;
     rowStopIndex: number;
@@ -23,6 +32,10 @@ export type UseGridProps = Pick<GridProps, 'useRecords' | 'useFields' | 'themeCo
 };
 
 const emptyObj = {};
+
+const returnSame = (props: any) => props;
+
+const useProcessRenderPropsDefault = () => returnSame;
 
 const useGrid = ({
     instance,
@@ -40,6 +53,7 @@ const useGrid = ({
     useRecords,
     useFields,
     themeColors = emptyObj,
+    useProcessRenderProps = useProcessRenderPropsDefault,
 }: UseGridProps) => {
     const records = useRecords({
         columnStartIndex,
@@ -49,6 +63,11 @@ const useGrid = ({
     });
     const fields = useFields(columnStartIndex, columnStopIndex);
     const fieldMapBySlug = useMemo(() => keyBy(fields, 'slug'), [fields]);
+
+    const processRenderProps = useProcessRenderProps();
+    const processRenderPropsRef = useLatest(processRenderProps);
+
+    const hoveredCell = useDataGridState(store => store.hoveredCell);
 
     const drawCells = useCallback(
         (ctx: Context, columnStartIndex: number, columnStopIndex: number) => {
@@ -80,8 +99,6 @@ const useGrid = ({
                     }
 
                     const { data, ...rowInfo } = records[rowIndex];
-                    const { data: _a, ...aboveRowInfo } = records[rowIndex - 1] || {};
-                    const { data: _b, ...belowRowInfo } = records[rowIndex + 1] || {};
 
                     const bounds = instance.current.getCellBounds({ rowIndex, columnIndex });
                     const actualRowIndex = rowIndex;
@@ -97,7 +114,15 @@ const useGrid = ({
                     const cellValue = (data as Record<string, any>)?.[field.slug] || null;
                     const recordId = rowInfo.id;
 
-                    if (rowInfo.rowType === 'data') {
+                    const isHoverRow = rowIndex === hoveredCell?.rowIndex;
+                    const isActiveRow = !!instance.current.isActiveRow?.({ rowIndex, recordId });
+
+                    cellsDrawer.setState({
+                        hoveredCell,
+                        isHoverRow,
+                    });
+
+                    if (rowInfo.rowType === 'data' && columnIndex + 1 !== columnCount) {
                         recordRowLayout.init({
                             x,
                             y,
@@ -109,18 +134,18 @@ const useGrid = ({
                             groupCount: groupingLevel,
                             // viewType,
                         });
-                    }
 
-                    recordRowLayout.render({
-                        row: rowInfo,
-                        isHoverRow: false,
-                        isCheckedRow: false,
-                        isActiveRow: false,
-                        isDraggingRow: false,
-                        isThisCellWillMove: false,
-                        // commentCount,
-                        // commentVisible,
-                    });
+                        recordRowLayout.render({
+                            row: rowInfo,
+                            isHoverRow,
+                            isCheckedRow: false,
+                            isActiveRow: false,
+                            isDraggingRow: false,
+                            isThisCellWillMove: false,
+                            // commentCount,
+                            // commentVisible,
+                        });
+                    }
 
                     const renderProps = {
                         x,
@@ -134,26 +159,18 @@ const useGrid = ({
                         groupCount: groupingLevel,
                         field,
                         cellValue,
-                        isActive: false,
-                        editable: true,
-                        ...(rowInfo.rowType === 'header' || rowInfo.rowType === 'footer'
-                            ? {
-                                  aboveRow: aboveRowInfo,
-                                  belowRow: belowRowInfo,
-                                  groupField:
-                                      fieldMapBySlug[
-                                          // @ts-ignore
-                                          (
-                                              (rowInfo?.groupConstants ||
-                                                  []) as GroupConstantValues[]
-                                          ).at(-1)?.field
-                                      ],
-                                  groupValue: (rowInfo?.groupConstants || []).at(-1)?.value,
-                              }
-                            : {}),
+                        isActiveRow,
+                        isHoverRow,
+                        columnCount,
                     };
 
-                    cellsDrawer.renderCell(renderProps as any, ctx);
+                    cellsDrawer.renderCell(
+                        processRenderPropsRef.current(renderProps, {
+                            fieldsMap: fieldMapBySlug,
+                            records,
+                        }),
+                        ctx,
+                    );
                 }
             }
         },
@@ -169,7 +186,9 @@ const useGrid = ({
             rowCount,
             isHiddenRow,
             records,
+            hoveredCell,
             groupingLevel,
+            processRenderPropsRef,
             fieldMapBySlug,
         ],
     );

@@ -3,8 +3,10 @@ import type { StageConfig, Stage } from 'konva/lib/Stage';
 import type { Key, RefObject, RefCallback, MutableRefObject } from 'react';
 import type { ScrollView, ViewStyle } from 'react-native';
 import type { Align } from './helpers';
-import type { Field, GridColors, IRecord } from '../../utils/types';
+import type { Field, GridColors, IRecord, IRenderProps } from '../../utils/types';
 import type { CellsDrawer } from './utils';
+import type Konva from 'konva';
+import type { TDataTableRow } from '@bambooapp/bamboo-molecules';
 
 export enum KeyCodes {
     Right = 39,
@@ -297,6 +299,14 @@ export interface GridProps
     containerStyle?: ViewStyle;
     overshootScrollWidth?: number;
     overshootScrollHeight?: number;
+
+    useProcessRenderProps?: () => (
+        props: IRenderProps,
+        otherProps: { fieldsMap: Record<string, Field>; records: IRecord[] },
+    ) => IRenderProps & { [key: string]: any };
+    isActiveRow?: (arg: { rowIndex: number; recordId: TDataTableRow }) => boolean;
+    isActiveColumn?: (arg: { columnIndex: number; columnId: TDataTableRow }) => boolean;
+    renderDynamicCell?: (props: RendererProps) => React.ReactNode;
 }
 
 export interface CellRangeArea extends CellInterface {
@@ -424,7 +434,7 @@ export interface PosXYRequired {
     y: number;
 }
 
-export type GridRef = {
+export type GridRef = Pick<GridProps, 'isActiveRow' | 'isActiveColumn'> & {
     scrollTo: (scrollPosition: OptionalScrollCoords) => void;
     scrollBy: (pos: PosXY) => void;
     stage: Stage | null;
@@ -458,6 +468,7 @@ export type GridRef = {
     getRowHeight: (index: number) => number;
     getColumnWidth: (index: number) => number;
     horizontalScrollRef: RefObject<ScrollView>;
+    stageRef: RefObject<Konva.Stage>;
     // renderCell: (
     //     ctx: SceneContext,
     //     props: CellInterface & {

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ShapeConfig } from 'konva/lib/Shape';
 import { Line, Rect } from 'react-konva';
-import type { SelectionProps } from './types';
+import type { CellInterface, SelectionProps } from './types';
 import { View } from '@bambooapp/bamboo-atoms';
 import type { ViewStyle } from 'react-native';
 import { KonvaDrawer } from '../../utils/drawer';
@@ -312,7 +312,18 @@ export const createHTMLBox = ({
     );
 };
 
+export type CellsDrawerState = { hoveredCell: CellInterface | null; isHoverRow: boolean };
+
 export class CellsDrawer extends KonvaDrawer {
+    state: CellsDrawerState = {
+        hoveredCell: null,
+        isHoverRow: false,
+    };
+
+    public setState(state: CellsDrawerState) {
+        this.state = state;
+    }
+
     private renderCellText(renderProps: IRenderProps, _ctx?: any) {
         const { x, y, cellValue, columnWidth } = renderProps;
         // const renderX = textAlign === 'right' ? x + columnWidth - 4 : x + 4;

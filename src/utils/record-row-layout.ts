@@ -27,38 +27,31 @@ export class RecordRowLayout extends GridLayout {
 
         const { level } = row;
         const { fill } = style || {};
-        if (level) this.renderIndentFront(level - 1);
+        // if (level) this.renderIndentFront(level - 1);
+
         const y = this.y;
         const rowHeight = this.rowHeight;
         const groupOffset = level ? level * DEFAULT_NESTED_GROUP_GAP + 0.5 : 0.5;
         this.rect({
             x: groupOffset,
             y,
-            width: GRID_ROW_HEAD_WIDTH,
+            width: GRID_ROW_HEAD_WIDTH - 4,
             height: rowHeight,
             fill: isDraggingRow ? this.colors.lowestBg : this.colors.backgroundColor,
             stroke: this.colors.lines,
         });
-        this.rect({
-            x: GRID_ROW_HEAD_WIDTH + groupOffset,
-            y: y + 0.5,
-            width: GRID_ROW_HEAD_WIDTH - groupOffset,
-            height: rowHeight - 1,
-            fill: fill || 'transparent',
-        });
+        // this.rect({
+        //     x: GRID_ROW_HEAD_WIDTH + groupOffset,
+        //     y: y + 0.5,
+        //     width: GRID_ROW_HEAD_WIDTH - groupOffset,
+        //     height: rowHeight - 1,
+        //     fill: fill || 'transparent',
+        // });
         if (isHoverRow || isCheckedRow || isActiveRow || isThisCellWillMove) {
-            let fill = this.colors.rowSelectedBg;
-            if (isDraggingRow) {
-                fill = this.colors.lowestBg;
-            } else if (isThisCellWillMove) {
-                fill = this.colors.warnLight;
-            } else if (isCheckedRow) {
-                fill = this.colors.cellSelectedColorSolid;
-            }
             return this.rect({
-                x: groupOffset + 0.5,
+                x: groupOffset,
                 y: y + 0.5,
-                width: GRID_ROW_HEAD_WIDTH,
+                width: GRID_ROW_HEAD_WIDTH - 4,
                 height: rowHeight - 1,
                 fill,
             });
@@ -83,7 +76,7 @@ export class RecordRowLayout extends GridLayout {
             stroke: stroke || this.colors.lines,
         });
 
-        this.renderIndentEnd(this.groupCount);
+        // this.renderIndentEnd(this.groupCount);
     }
 
     private renderCommonCell({ style }: Pick<IFirstCell, 'style'>) {
@@ -101,19 +94,25 @@ export class RecordRowLayout extends GridLayout {
     }
 
     render(props: IFirstCell) {
-        const {
-            row,
-            style,
-            isHoverRow,
-            isCheckedRow,
-            isActiveRow,
-            isDraggingRow,
-            isThisCellWillMove,
-        } = props;
+        const { row, isHoverRow, isCheckedRow, isActiveRow, isDraggingRow, isThisCellWillMove } =
+            props;
+
+        let fill = this.colors.backgroundColor;
+
+        if (isHoverRow || isCheckedRow || isActiveRow || isThisCellWillMove) {
+            fill = this.colors.rowSelectedBg;
+            if (isDraggingRow) {
+                fill = this.colors.lowestBg;
+            } else if (isThisCellWillMove) {
+                fill = this.colors.warnLight;
+            } else if (isCheckedRow) {
+                fill = this.colors.cellSelectedColorSolid;
+            }
+        }
 
         this.renderFirstCell({
             row,
-            style,
+            style: { fill },
             isHoverRow,
             isActiveRow,
             isCheckedRow,
@@ -121,11 +120,11 @@ export class RecordRowLayout extends GridLayout {
             isThisCellWillMove,
         });
         this.renderCommonCell({
-            style,
+            style: { fill },
         });
         this.renderLastCell({
             row,
-            style,
+            style: { fill },
         });
     }
 }

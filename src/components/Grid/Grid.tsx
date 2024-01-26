@@ -151,6 +151,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             cellsDrawer,
             themeColors,
             renderActiveCell,
+            useProcessRenderProps,
+            isActiveColumn,
+            isActiveRow,
+            renderDynamicCell,
             ...rest
         } = props;
 
@@ -196,6 +200,9 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 horizontalScrollRef,
                 getRowHeight,
                 getColumnWidth,
+                stageRef,
+                isActiveColumn,
+                isActiveRow,
             };
         });
 
@@ -331,39 +338,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             [],
         );
 
-        /**
-         * Create a map of merged cells
-         * [rowIndex, columnindex] => [parentRowIndex, parentColumnIndex]
-         */
-        // const mergedCellMap = useMemo((): MergedCellMap => {
-        //     const mergedCellMap = new Map();
-        //     for (let i = 0; i < mergedCells.length; i++) {
-        //         const bounds = mergedCells[i];
-        //         for (const cell of getBoundedCells(bounds)) {
-        //             mergedCellMap.set(cell, bounds);
-        //         }
-        //     }
-        //     return mergedCellMap;
-        // }, [mergedCells]);
-
-        /* Check if a cell is part of a merged cell */
-        // const isMergedCell = useCallback(
-        //     ({ rowIndex, columnIndex }: CellInterface) => {
-        //         return mergedCellMap.has(cellIdentifier(rowIndex, columnIndex));
-        //     },
-        //     [mergedCellMap],
-        // );
-
         /* Get top, left bounds of a cell */
         const getCellBounds = useCallback(({ rowIndex, columnIndex }: CellInterface): AreaProps => {
-            // if (spanMerges) {
-            //     const isMerged = isMergedCell({ rowIndex, columnIndex });
-            //     if (isMerged)
-            //         return mergedCellMap.get(
-            //             cellIdentifier(rowIndex, columnIndex),
-            //         ) as AreaProps;
-            // }
-
             return {
                 top: rowIndex,
                 left: columnIndex,
@@ -375,17 +351,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         /* Get top, left bounds of a cell */
         const getActualCellCoords = useCallback(
             ({ rowIndex, columnIndex }: CellInterface): CellInterface => {
-                // const isMerged = isMergedCell({ rowIndex, columnIndex });
-                // if (isMerged) {
-                //     const cell = mergedCellMap.get(
-                //         cellIdentifier(rowIndex, columnIndex),
-                //     ) as AreaProps;
-                //     return {
-                //         rowIndex: cell?.top,
-                //         columnIndex: cell?.left,
-                //     };
-                // }
-
                 return {
                     rowIndex,
                     columnIndex,
@@ -1583,6 +1548,52 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         const listenToEvents = !isScrolling;
 
+        const dynamicCells: React.ReactNode[] = [];
+
+        for (let columnIndex = columnStartIndex; columnIndex <= columnStopIndex; columnIndex++) {
+            if (columnIndex > columnCount - 1) break;
+
+            if (isHiddenColumn?.(columnIndex)) {
+                continue;
+            }
+
+            // const isFirstColumn = columnIndex === 0;
+
+            for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
+                if (rowIndex > rowCount - 1) break;
+
+                if (isHiddenRow?.(rowIndex)) {
+                    continue;
+                }
+
+                const bounds = getCellBounds({ rowIndex, columnIndex });
+                const { top, left, right, bottom } = bounds;
+                const actualBottom = Math.min(rowStopIndex, bottom);
+                const actualRight = Math.min(columnStopIndex, right);
+
+                const y = getRowOffset(top);
+                const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
+
+                const x = getColumnOffset(left);
+
+                const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
+
+                const _cell = renderDynamicCell?.({
+                    x,
+                    y,
+                    width,
+                    height,
+                    columnIndex,
+                    rowIndex,
+                    key: itemKey({ rowIndex, columnIndex }),
+                });
+
+                if (_cell) {
+                    dynamicCells.push(_cell);
+                }
+            }
+        }
+
         const { cells, frozenCells } = useGrid({
             instance: gridRef!,
             columnCount,
@@ -1599,6 +1610,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             useRecords,
             useFields,
             themeColors,
+            useProcessRenderProps,
         });
 
         const rowEndCells: React.ReactNode[] = [];
@@ -1651,7 +1663,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         clipY={0}
                         clipWidth={frozenColumnWidth + frozenSpacing}
                         clipHeight={containerHeight}>
-                        <Group offsetY={scrollTop}>{frozenCells}</Group>
+                        <Group offsetY={scrollTop}>
+                            {frozenCells}
+                            {dynamicCells}
+                        </Group>
                     </Group>
                 </Layer>
                 {children && typeof children === 'function'

@@ -151,13 +151,14 @@ export interface IRenderProps {
     belowRow?: Row;
     field: Field;
     cellValue: any;
-    isActive?: boolean;
-    editable?: boolean;
+    isActiveRow: boolean;
+    isHoverRow: boolean;
     groupCount?: number;
     // rowHeightLevel: RowHeightLevel;
-    style: IRenderStyleProps;
-    groupField?: Field;
-    groupValue?: any;
+    style?: IRenderStyleProps;
+    // groupField?: Field;
+    // groupValue?: any;
+    columnCount: number;
 }
 export interface IRenderStyleProps {
     color?: string;
