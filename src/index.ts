@@ -5,8 +5,6 @@ export {
     CellRendererProps,
     HeaderCell,
     RowCountCell,
-    useDataGridState,
-    useDataGridStateStoreRef,
 } from './DataGrid';
 export * from './components/Grid';
 export {
@@ -19,3 +17,5 @@ export {
     SelectionResults,
 } from './hooks';
 export * from './utils';
+
+export { useDataGridState, useDataGridStateStoreRef } from './DataGridStateContext';

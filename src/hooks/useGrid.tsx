@@ -6,7 +6,7 @@ import type { CellsDrawer } from '../components/Grid/utils';
 import { recordRowLayout } from '../utils/record-row-layout';
 import keyBy from 'lodash/keyBy';
 import { useLatest } from '@bambooapp/bamboo-molecules';
-import { useDataGridState } from '../DataGrid';
+import { useDataGridState } from '../DataGridStateContext';
 
 export type UseGridProps = Pick<
     GridProps,
@@ -16,6 +16,7 @@ export type UseGridProps = Pick<
     | 'themeColors'
     | 'isActiveColumn'
     | 'isActiveRow'
+    | 'renderDynamicCell'
 > & {
     instance: React.RefObject<GridRef>;
     rowStartIndex: number;
@@ -220,7 +221,7 @@ const useGrid = ({
     );
 
     return {
-        cells: cells,
+        cells,
         frozenCells,
     };
 };

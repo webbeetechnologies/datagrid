@@ -20,6 +20,7 @@ import {
 } from './types';
 import type { Context } from 'konva/lib/Context';
 import { IconPacks } from '../components/Grid/CanvasIcon';
+import { resolveContrastColor } from '@bambooapp/bamboo-molecules';
 
 const extractFirstAndSecondWordArrays = (text: string) => {
     const [firstWord, secondWord = []] = text
@@ -627,6 +628,11 @@ export class KonvaDrawer {
         const avatarSrc = _url || '';
         const avatarName = getAvatarLabel(title);
         const avatarBg = bgColor || this.colors.avatarBg;
+        const labelColor = resolveContrastColor(
+            avatarBg,
+            this.colors.textColorDark,
+            this.colors.textColorLight,
+        );
 
         // switch (type) {
         //     case AvatarType.Team: {
@@ -672,8 +678,7 @@ export class KonvaDrawer {
                 textAlign: 'center',
                 verticalAlign: 'middle',
                 text: avatarName,
-                // TODO - remove hardcoded logics
-                fillStyle: this.colors.textColorDark,
+                fillStyle: labelColor,
                 fontSize: 10,
             });
         }

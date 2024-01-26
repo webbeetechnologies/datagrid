@@ -16,7 +16,6 @@ import { LayoutChangeEvent, StyleSheet } from 'react-native';
 import { Rect, Text, Group } from 'react-konva';
 import type { ViewProps } from '@bambooapp/bamboo-atoms';
 import { useLatest, useMergedRefs, useMolecules } from '@bambooapp/bamboo-molecules';
-import { createFastContext } from '@bambooapp/bamboo-molecules/fast-context';
 import type { Vector2d } from 'konva/lib/types';
 import type { RectConfig } from 'konva/lib/shapes/Rect';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -46,6 +45,7 @@ import {
     EditableResults,
     UseEditableOptions,
 } from './hooks';
+import { DataGridStateProvider } from './DataGridStateContext';
 
 export type CellRendererProps = RendererProps & { useCellValue: Props['useCellValue'] };
 
@@ -334,7 +334,7 @@ const DataGrid = (
         rowHeight = defaultRowHeight,
         headerHeight = 40,
         frozenColumns = 1,
-        cellRenderer = defaultCellRenderer,
+        cellRenderer: _ = defaultCellRenderer,
         headerCellRenderer,
         stageProps,
         innerContainerProps,
@@ -562,13 +562,13 @@ const DataGrid = (
         [onMouseLeave, onMouseMove, stageProps],
     );
 
-    const renderCell = useCallback(
-        (props: RendererProps) => {
-            return cellRenderer({ ...props, useCellValue });
-        },
-        // eslint-disable-next-line
-        [cellRenderer],
-    );
+    // const renderCell = useCallback(
+    //     (props: RendererProps) => {
+    //         return cellRenderer({ ...props, useCellValue });
+    //     },
+    //     // eslint-disable-next-line
+    //     [cellRenderer],
+    // );
 
     // const countGridRowHeight = useCallback(
     //     (index: number) => (index === 0 ? headerHeight : rowHeight(index)),
@@ -639,7 +639,7 @@ const DataGrid = (
                             width={width}
                             columnWidth={columnWidth}
                             rowHeight={rowHeight}
-                            itemRenderer={renderCell}
+                            // itemRenderer={renderCell}
                             selections={selections}
                             activeCell={activeCell}
                             showFillHandle={!isEditInProgress}
@@ -675,17 +675,6 @@ const DataGrid = (
         // </View>
     );
 };
-
-export const {
-    useContextValue: useDataGridState,
-    useStoreRef: useDataGridStateStoreRef,
-    Provider: DataGridStateProvider,
-} = createFastContext<{ hoveredCell: CellInterface | null }>(
-    {
-        hoveredCell: null,
-    },
-    true,
-);
 
 const BodyGrid = memo(
     forwardRef(({ onViewChange, ...rest }: GridProps, ref: any) => {

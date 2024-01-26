@@ -65,6 +65,7 @@ import {
 } from './types';
 import { StyleSheet } from 'react-native';
 import useGrid from '../../hooks/useGrid';
+import { useDataGridStateStoreRef } from '../../DataGridStateContext';
 
 const DEFAULT_ESTIMATED_COLUMN_SIZE = 100;
 const DEFAULT_ESTIMATED_ROW_SIZE = 50;
@@ -169,6 +170,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const wheelingRef = useRef<number | null>(null);
         const horizontalScrollRef = useRef<any>(null);
         const gridRef = useRef<GridRef | null>(null);
+
+        const datagridStoreRef = useDataGridStateStoreRef().store;
 
         const hasHeader = !!headerCellRenderer;
 
@@ -1549,6 +1552,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const listenToEvents = !isScrolling;
 
         const dynamicCells: React.ReactNode[] = [];
+        const frozenDynamicCells: React.ReactNode[] = [];
 
         for (let columnIndex = columnStartIndex; columnIndex <= columnStopIndex; columnIndex++) {
             if (columnIndex > columnCount - 1) break;
@@ -1586,10 +1590,55 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     columnIndex,
                     rowIndex,
                     key: itemKey({ rowIndex, columnIndex }),
+                    isHoverRow: datagridStoreRef.current.hoveredCell?.rowIndex === rowIndex,
                 });
 
                 if (_cell) {
                     dynamicCells.push(_cell);
+                }
+            }
+        }
+
+        for (
+            let columnIndex = 0;
+            columnIndex < Math.min(columnStopIndex, frozenColumns);
+            columnIndex++
+        ) {
+            if (isHiddenColumn?.(columnIndex)) {
+                continue;
+            }
+
+            for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
+                if (rowIndex > rowCount - 1) break;
+
+                if (isHiddenRow?.(rowIndex)) {
+                    continue;
+                }
+
+                const bounds = getCellBounds({ rowIndex, columnIndex });
+                const { top, left, right, bottom } = bounds;
+                const actualBottom = Math.min(rowStopIndex, bottom);
+                const actualRight = Math.min(columnStopIndex, right);
+
+                const y = getRowOffset(top);
+                const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
+
+                const x = getColumnOffset(left);
+
+                const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
+
+                const _cell = renderDynamicCell?.({
+                    x,
+                    y,
+                    width,
+                    height,
+                    columnIndex,
+                    rowIndex,
+                    key: itemKey({ rowIndex, columnIndex }),
+                });
+
+                if (_cell) {
+                    frozenDynamicCells.push(_cell);
                 }
             }
         }
@@ -1653,6 +1702,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         clipHeight={containerHeight - frozenRowHeight}>
                         <Group offsetY={scrollTop} offsetX={scrollLeft}>
                             {cells}
+                            {dynamicCells}
                         </Group>
                     </Group>
                     <Group offsetY={scrollTop} offsetX={scrollLeft}>
@@ -1665,7 +1715,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         clipHeight={containerHeight}>
                         <Group offsetY={scrollTop}>
                             {frozenCells}
-                            {dynamicCells}
+                            {frozenDynamicCells}
                         </Group>
                     </Group>
                 </Layer>
