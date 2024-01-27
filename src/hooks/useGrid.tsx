@@ -1,11 +1,12 @@
 import type { Context } from 'konva/lib/Context';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Shape } from 'react-konva';
 import type { GridProps, GridRef } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
 import { recordRowLayout } from '../utils/record-row-layout';
 import { useLatest } from '@bambooapp/bamboo-molecules';
 import { useDataGridState } from '../DataGridStateContext';
+import { gridEventEmitter } from '../utils/grid-eventemitter';
 
 export type UseGridProps = Pick<
     GridProps,
@@ -62,6 +63,8 @@ const useGrid = ({
         rowStopIndex,
     });
     const { visibleFields: fields, fieldsMap } = useFields(columnStartIndex, columnStopIndex);
+
+    const [_, forceRender] = useState(false);
 
     const processRenderProps = useProcessRenderProps();
     const processRenderPropsRef = useLatest(processRenderProps);
@@ -233,6 +236,16 @@ const useGrid = ({
         ),
         [columnStartIndex, columnStopIndex, drawCells, frozenColumns],
     );
+
+    const onForceRender = useCallback(() => forceRender(value => !value), []);
+
+    useEffect(() => {
+        gridEventEmitter.addListener('onForceRerender', onForceRender);
+
+        return () => {
+            gridEventEmitter.removeListener('onForceRerender', onForceRender);
+        };
+    }, [onForceRender]);
 
     return {
         cells,

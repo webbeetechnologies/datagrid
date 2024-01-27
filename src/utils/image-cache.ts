@@ -1,3 +1,5 @@
+import { gridEventEmitter } from './grid-eventemitter';
+
 interface IImageOption {
     crossOrigin?: boolean;
 }
@@ -33,6 +35,8 @@ export const imageCache = (() => {
                             img,
                             success: true,
                         };
+
+                        gridEventEmitter.emit('onForceRerender');
 
                         resolve({
                             name,
