@@ -203,7 +203,10 @@ export interface GridProps
         rowStartIndex: number;
         rowStopIndex: number;
     }) => IRecord[];
-    useFields: (columnStartIndex: number, columnStopIndex: number) => Field[];
+    useFields: (
+        columnStartIndex: number,
+        columnStopIndex: number,
+    ) => { visibleFields: Field[]; fieldsMap: Record<string, Field> };
     cellsDrawer: CellsDrawer;
     themeColors?: Partial<GridColors> & Record<string, any>;
     renderActiveCell?: (

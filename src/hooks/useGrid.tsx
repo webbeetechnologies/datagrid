@@ -4,7 +4,6 @@ import { Shape } from 'react-konva';
 import type { GridProps, GridRef } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
 import { recordRowLayout } from '../utils/record-row-layout';
-import keyBy from 'lodash/keyBy';
 import { useLatest } from '@bambooapp/bamboo-molecules';
 import { useDataGridState } from '../DataGridStateContext';
 
@@ -62,8 +61,7 @@ const useGrid = ({
         rowStartIndex,
         rowStopIndex,
     });
-    const fields = useFields(columnStartIndex, columnStopIndex);
-    const fieldMapBySlug = useMemo(() => keyBy(fields, 'slug'), [fields]);
+    const { visibleFields: fields, fieldsMap } = useFields(columnStartIndex, columnStopIndex);
 
     const processRenderProps = useProcessRenderProps();
     const processRenderPropsRef = useLatest(processRenderProps);
@@ -89,6 +87,7 @@ const useGrid = ({
                 }
 
                 const field = fields[columnIndex] || {};
+                const isLastColumn = columnIndex === fields.length - 1;
 
                 // const isFirstColumn = columnIndex === 0;
 
@@ -166,13 +165,27 @@ const useGrid = ({
                         columnCount,
                     };
 
-                    cellsDrawer.renderCell(
-                        processRenderPropsRef.current(renderProps, {
-                            fieldsMap: fieldMapBySlug,
-                            records,
-                        }),
-                        ctx,
-                    );
+                    if (isLastColumn && cellValue != null) {
+                        ctx.save();
+                        ctx.rect(x, y, width, height);
+                        ctx.clip();
+                        cellsDrawer.renderCell(
+                            processRenderPropsRef.current(renderProps, {
+                                fieldsMap: fieldsMap,
+                                records,
+                            }),
+                            ctx,
+                        );
+                        ctx.restore();
+                    } else {
+                        cellsDrawer.renderCell(
+                            processRenderPropsRef.current(renderProps, {
+                                fieldsMap: fieldsMap,
+                                records,
+                            }),
+                            ctx,
+                        );
+                    }
                 }
             }
         },
@@ -191,7 +204,7 @@ const useGrid = ({
             hoveredCell,
             groupingLevel,
             processRenderPropsRef,
-            fieldMapBySlug,
+            fieldsMap,
         ],
     );
 

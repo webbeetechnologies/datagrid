@@ -88,6 +88,13 @@ export class RecordRowLayout extends GridLayout {
             y: this.y,
             width: this.columnWidth,
             height: this.rowHeight,
+            fill: this.colors.backgroundColor,
+        });
+        this.rect({
+            x: this.x,
+            y: this.y,
+            width: this.columnWidth,
+            height: this.rowHeight,
             fill: fill || this.colors.backgroundColor,
             stroke: stroke || this.colors.lines,
         });
