@@ -11,4 +11,4 @@ export const ADD_FIELD_COL_WIDTH = 72;
 export const DEFAULT_COLUMN_WIDTH = 200;
 export const COLUMN_MIN_WIDTH = 150;
 
-export const GRID_ROW_HEAD_WIDTH = 70; // Row head width
+export const GRID_ROW_HEAD_WIDTH = 66; // Row head width

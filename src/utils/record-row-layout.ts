@@ -1,5 +1,4 @@
 import type React from 'react';
-import { DEFAULT_NESTED_GROUP_GAP, GRID_ROW_HEAD_WIDTH } from './constants';
 import { GridLayout } from './grid-layout';
 import type { Row } from './types';
 
@@ -14,48 +13,37 @@ interface IFirstCell {
 }
 
 export class RecordRowLayout extends GridLayout {
-    private renderFirstCell({
-        row,
-        style,
-        isActiveRow,
-        isCheckedRow,
-        isHoverRow,
-        isDraggingRow,
-        isThisCellWillMove,
-    }: IFirstCell) {
+    private renderFirstCell({}: IFirstCell) {
         if (!this.isFirst) return;
 
-        const { level } = row;
-        const { fill } = style || {};
+        // const { fill } = style || {};
         // if (level) this.renderIndentFront(level - 1);
 
-        const y = this.y;
-        const rowHeight = this.rowHeight;
-        const groupOffset = level ? level * DEFAULT_NESTED_GROUP_GAP + 0.5 : 0.5;
-        this.rect({
-            x: groupOffset,
-            y,
-            width: GRID_ROW_HEAD_WIDTH - 4,
-            height: rowHeight,
-            fill: isDraggingRow ? this.colors.lowestBg : this.colors.backgroundColor,
-            stroke: this.colors.lines,
-        });
+        // const y = this.y;
+        // const rowHeight = this.rowHeight;
+        // const groupOffset =
+        //     this.groupCount || 0 ? (this.groupCount || 0) * DEFAULT_NESTED_GROUP_GAP + 0.5 : 0.5;
+
+        // console.log({ groupOffset });
+
         // this.rect({
-        //     x: GRID_ROW_HEAD_WIDTH + groupOffset,
-        //     y: y + 0.5,
-        //     width: GRID_ROW_HEAD_WIDTH - groupOffset,
-        //     height: rowHeight - 1,
-        //     fill: fill || 'transparent',
+        //     x: groupOffset,
+        //     y,
+        //     width: GRID_ROW_HEAD_WIDTH - 4,
+        //     height: rowHeight,
+        //     fill: isDraggingRow ? this.colors.lowestBg : this.colors.primary,
+        //     stroke: this.colors.lines,
         // });
-        if (isHoverRow || isCheckedRow || isActiveRow || isThisCellWillMove) {
-            return this.rect({
-                x: groupOffset,
-                y: y + 0.5,
-                width: GRID_ROW_HEAD_WIDTH - 4,
-                height: rowHeight - 1,
-                fill,
-            });
-        }
+
+        // if (isHoverRow || isCheckedRow || isActiveRow || isThisCellWillMove) {
+        //     return this.rect({
+        //         x: groupOffset,
+        //         y: y + 0.5,
+        //         width: GRID_ROW_HEAD_WIDTH - 4,
+        //         height: rowHeight - 1,
+        //         fill,
+        //     });
+        // }
     }
 
     private renderLastCell({ row, style }: Pick<IFirstCell, 'row' | 'style'>) {
@@ -63,14 +51,11 @@ export class RecordRowLayout extends GridLayout {
         this.renderAddFieldBlank(row);
         if (this.isFirst) return;
 
-        const { level } = row;
         const { fill, stroke } = style || {};
-        const columnWidth = this.columnWidth;
-        const width = level === 3 ? columnWidth - DEFAULT_NESTED_GROUP_GAP : columnWidth;
         this.rect({
             x: this.x,
             y: this.y,
-            width,
+            width: this.columnWidth,
             height: this.rowHeight,
             fill: fill || this.colors.backgroundColor,
             stroke: stroke || this.colors.lines,

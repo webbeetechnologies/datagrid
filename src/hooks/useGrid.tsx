@@ -101,7 +101,7 @@ const useGrid = ({
                         continue;
                     }
 
-                    const { data, ...rowInfo } = records[rowIndex];
+                    const { data, ...rowInfo } = records[rowIndex] || {};
 
                     const bounds = instance.current.getCellBounds({ rowIndex, columnIndex });
                     const actualRowIndex = rowIndex;
