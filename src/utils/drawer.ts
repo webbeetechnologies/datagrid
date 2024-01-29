@@ -47,6 +47,29 @@ export const graphemeSplitter = new GraphemeSplitter();
 const DEFAULT_FONT_FAMILY = `Roboto, "Helvetica Neue", Arial, 
 "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"`;
 
+const binarySearchMaxTextIndex = ({
+    max,
+    getValue,
+    match,
+}: {
+    max: number;
+    getValue: (guess: number) => number;
+    match: number;
+}) => {
+    let min = 0;
+
+    while (min <= max) {
+        const guess = Math.floor((min + max) / 2);
+        const compareVal = getValue(guess);
+
+        if (compareVal === match) return guess;
+        if (compareVal < match) min = guess + 1;
+        else max = guess - 1;
+    }
+
+    return max;
+};
+
 /**
  * Some business methods based on the native canvas API wrapper
  */
@@ -123,37 +146,81 @@ export class KonvaDrawer {
         }
 
         const ellipsis = '…';
-        const textSize = text.length;
+        // const textSize = text.length;
         // Predetermine the threshold width of the incoming text
-        let guessSize = Math.ceil(maxWidth / fontSize);
-        let guessText = text.substr(0, guessSize);
-        let guessWidth = getTextWidth(this.ctx, guessText, fontStyle);
+        // const guessSize = Math.ceil(maxWidth / fontSize);
+        // const guessText = text.substr(0, guessSize);
+        // const guessWidth = getTextWidth(this.ctx, guessText, fontStyle);
 
-        while (guessWidth <= maxWidth) {
-            if (textSize <= guessSize) {
-                return {
-                    text,
-                    textWidth: guessWidth,
-                    isEllipsis: false,
-                };
-            }
-            guessSize++;
-            guessText = text.substr(0, guessSize);
-            guessWidth = getTextWidth(this.ctx, guessText, fontStyle);
-        }
-
+        const guessWidth = getTextWidth(this.ctx, text, fontStyle);
         const ellipsisWidth = getTextWidth(this.ctx, ellipsis, fontStyle);
-        while (guessSize >= 0 && guessWidth + ellipsisWidth > maxWidth) {
-            guessSize--;
-            guessText = text.substr(0, guessSize);
-            guessWidth = getTextWidth(this.ctx, guessText, fontStyle);
+
+        if (guessWidth <= maxWidth || guessWidth <= ellipsisWidth) {
+            return {
+                text,
+                textWidth: guessWidth,
+                isEllipsis: false,
+            };
         }
+
+        const index = binarySearchMaxTextIndex({
+            max: text.length,
+            getValue: guess => getTextWidth(this.ctx, text.substring(0, guess), fontStyle),
+            match: maxWidth - ellipsisWidth,
+        });
 
         return {
-            text: `${guessText || text[0]}${ellipsis}`,
+            text: text.substring(0, index) + ellipsis,
             textWidth: maxWidth,
             isEllipsis: true,
         };
+
+        // if (guessWidth <= maxWidth || guessWidth <= ellipsisWidth) {
+        //     return {
+        //         text,
+        //         textWidth: guessWidth,
+        //         isEllipsis: false,
+        //     };
+        // } else {
+        //     let len = text.length;
+        //     let _text = text;
+
+        //     while (guessWidth >= maxWidth - ellipsisWidth && len-- > 0) {
+        //         _text = _text.substring(0, len);
+        //         guessWidth = getTextWidth(this.ctx, _text, fontStyle);
+        //     }
+        //     return {
+        //         text: `${_text || text[0]}${ellipsis}`,
+        //         textWidth: maxWidth,
+        //         isEllipsis: true,
+        //     };
+        // }
+
+        // while (guessWidth <= maxWidth) {
+        //     if (textSize <= guessSize) {
+        //         return {
+        //             text,
+        //             textWidth: guessWidth,
+        //             isEllipsis: false,
+        //         };
+        //     }
+        //     guessSize++;
+        //     guessText = text.substr(0, guessSize);
+        //     guessWidth = getTextWidth(this.ctx, guessText, fontStyle);
+        // }
+
+        // const ellipsisWidth = getTextWidth(this.ctx, ellipsis, fontStyle);
+        // while (guessSize >= 0 && guessWidth + ellipsisWidth > maxWidth) {
+        //     guessSize--;
+        //     guessText = text.substr(0, guessSize);
+        //     guessWidth = getTextWidth(this.ctx, guessText, fontStyle);
+        // }
+
+        // return {
+        //     text: `${guessText || text[0]}${ellipsis}`,
+        //     textWidth: maxWidth,
+        //     isEllipsis: true,
+        // };
     }
 
     public line(props: ILineProps) {
