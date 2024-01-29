@@ -166,7 +166,7 @@ export type Props = Pick<
             | 'useProcessRenderProps'
         > & { width?: number; height?: number };
 
-        onMouseDown?: (e: MouseEvent<HTMLDivElement>, cell: CellInterface | null) => void;
+        onClick?: (e: MouseEvent<HTMLDivElement>, cell: CellInterface | null) => void;
     };
 
 export type DataGridRef = Pick<
@@ -375,7 +375,7 @@ const DataGrid = (
         themeColors,
         renderActiveCell,
         useProcessRenderProps,
-        onMouseDown: onMouseDownProp,
+        onClick: onClickProp,
         isActiveColumn,
         isActiveRow,
         renderDynamicCell,
@@ -495,18 +495,23 @@ const DataGrid = (
 
     const onMouseDown = useCallback(
         (e: MouseEvent<HTMLDivElement>) => {
-            onMouseDownProp?.(
+            onSelectionMouseDown(e);
+            onEditorMouseDown(e);
+        },
+        [onEditorMouseDown, onSelectionMouseDown],
+    );
+
+    const onClick = useCallback(
+        (e: MouseEvent<HTMLDivElement>) => {
+            onClickProp?.(
                 e,
                 gridRef.current?.getCellCoordsFromOffset(
                     e.nativeEvent.clientX,
                     e.nativeEvent.clientY,
                 ) || null,
             );
-
-            onSelectionMouseDown(e);
-            onEditorMouseDown(e);
         },
-        [onEditorMouseDown, onMouseDownProp, onSelectionMouseDown],
+        [onClickProp],
     );
 
     const onMouseMove = useCallback(
@@ -651,6 +656,7 @@ const DataGrid = (
                             onDoubleClick={onDoubleClick}
                             onKeyDown={onKeyDown}
                             onMouseDown={onMouseDown}
+                            onClick={onClick}
                             onScroll={onScroll}
                             stageProps={_stagedProps}
                             onContextMenu={onContextMenu}
