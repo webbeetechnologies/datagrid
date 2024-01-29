@@ -109,7 +109,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             selectionBorderColor = '#1a73e8',
             selectionStrokeWidth = 1,
             activeCellStrokeWidth = 2,
-            activeCell,
+            activeCell = null,
             selections = EMPTY_ARRAY as SelectionArea[],
             frozenRows = 0,
             frozenColumns = 1,
@@ -206,6 +206,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 stageRef,
                 isActiveColumn,
                 isActiveRow,
+                activeCell,
             };
         });
 

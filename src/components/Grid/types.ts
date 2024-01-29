@@ -474,6 +474,7 @@ export type GridRef = Pick<GridProps, 'isActiveRow' | 'isActiveColumn'> & {
     getColumnWidth: (index: number) => number;
     horizontalScrollRef: RefObject<ScrollView>;
     stageRef: RefObject<Konva.Stage>;
+    activeCell: CellInterface | null;
     // renderCell: (
     //     ctx: SceneContext,
     //     props: CellInterface & {
