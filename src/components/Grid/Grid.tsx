@@ -140,8 +140,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             style,
             verticalScrollRef: verticalScrollRefProp,
             containerStyle: containerStyleProp,
-            overshootScrollHeight,
-            overshootScrollWidth,
+            overshootScrollHeight = 0,
+            overshootScrollWidth = 0,
             headerCellRenderer,
             headerHeight = 40,
             rowHeadCellRenderer,
@@ -473,10 +473,9 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             ]);
 
         const estimatedTotalHeight =
-            getEstimatedTotalHeight(rowCount, instanceProps.current) + (overshootScrollHeight || 0);
+            getEstimatedTotalHeight(rowCount, instanceProps.current) + overshootScrollHeight;
         const estimatedTotalWidth =
-            getEstimatedTotalWidth(columnCount, instanceProps.current) +
-            (overshootScrollWidth || 0);
+            getEstimatedTotalWidth(columnCount, instanceProps.current) + overshootScrollWidth;
 
         /* Method to get dimensions of the grid */
         const getDimensions = useCallback(() => {
@@ -649,7 +648,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 const columnOffset =
                     includeFrozen && isWithinFrozenColumnBoundary(x) ? x : x + scrollLeft;
 
-                if (rowOffset > estimatedTotalHeight || columnOffset > estimatedTotalWidth) {
+                if (
+                    rowOffset > estimatedTotalHeight - overshootScrollHeight ||
+                    columnOffset > estimatedTotalWidth - overshootScrollWidth
+                ) {
                     return null;
                 }
 
@@ -677,6 +679,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 return { rowIndex: bounds.top, columnIndex: bounds.left };
             },
             [
+                overshootScrollWidth,
+                overshootScrollHeight,
                 getRelativePositionFromOffset,
                 isWithinFrozenRowBoundary,
                 scrollTop,
