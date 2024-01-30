@@ -114,7 +114,7 @@ const useGrid = ({
                     const x = instance.current.getColumnOffset(actualColumnIndex);
                     const width = instance.current.getColumnWidth(actualRight);
 
-                    const cellValue = (data as Record<string, any>)?.[field.slug] || null;
+                    const cellValue = (data as Record<string, any>)?.[field.slug] ?? null;
                     const recordId = rowInfo.id;
 
                     const isHoverRow = rowIndex === hoveredCell?.rowIndex;
