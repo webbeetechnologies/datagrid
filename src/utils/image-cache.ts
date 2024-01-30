@@ -4,6 +4,8 @@ interface IImageOption {
     crossOrigin?: boolean;
 }
 
+const defaultOnLoad = () => gridEventEmitter.emit('onForceRerender');
+
 export const imageCache = (() => {
     const imageMap: {
         [name: string]: {
@@ -13,7 +15,12 @@ export const imageCache = (() => {
     } = {};
     const imgPromises: any = [];
 
-    function loadImage(name: string, src: string, option?: IImageOption) {
+    function loadImage(
+        name: string,
+        src: string,
+        option?: IImageOption,
+        onLoad: () => void = defaultOnLoad,
+    ) {
         imgPromises.push(
             new Promise((resolve, reject) => {
                 const img = new Image();
@@ -35,8 +42,7 @@ export const imageCache = (() => {
                             img,
                             success: true,
                         };
-
-                        gridEventEmitter.emit('onForceRerender');
+                        onLoad();
 
                         resolve({
                             name,
