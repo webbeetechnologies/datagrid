@@ -284,6 +284,7 @@ export interface EditorProps {
      * Frozen column offset
      */
     frozenColumnOffset?: number;
+    hasInitialValue: boolean;
 }
 
 /**
@@ -476,6 +477,7 @@ const useEditable = ({
     const currentValueRef = useLatest(value);
     const initialValueRef = useRef<string>();
     const maxEditorDimensionsRef = useRef<{ height: number; width: number }>();
+    const hasInitialValue = useRef(false);
     /* To prevent stale closures data */
     // const getValueRef = useRef(getValue);
     const activeCellRef = useLatest(activeCell);
@@ -522,7 +524,12 @@ const useEditable = ({
      * @param initialValue
      */
     const makeEditable = useCallback(
-        (coords: CellInterface, initialValue?: string, autoFocus: boolean = true) => {
+        (
+            coords: CellInterface,
+            initialValue?: string,
+            autoFocus: boolean = true,
+            _hasInitialValue = false,
+        ) => {
             if (!gridRef.current) return;
             /* Get actual coords for merged cells */
             coords = gridRef.current.getActualCellCoords(coords);
@@ -568,6 +575,8 @@ const useEditable = ({
                  */
                 isDirtyRef.current = !!initialValue;
                 initialValueRef.current = initialValue;
+
+                hasInitialValue.current = _hasInitialValue;
 
                 /* Trigger onChange handlers */
                 setValueRef.current(value);
@@ -686,6 +695,8 @@ const useEditable = ({
                 editorConfigRef.current?.concatInitialValue
                     ? initialValue || currentValueRef.current
                     : undefined,
+                true,
+                !!initialValue,
             );
 
             /* Prevent the first keystroke */
@@ -960,6 +971,7 @@ const useEditable = ({
                 isFrozenColumn={isFrozenColumn}
                 frozenRowOffset={frozenRowOffset}
                 frozenColumnOffset={frozenColumnOffset}
+                hasInitialValue={hasInitialValue.current}
             />
         ) : null;
 
