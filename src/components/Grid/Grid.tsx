@@ -404,6 +404,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     startIndex,
                     stopIndex,
                 ];
+                // we require to listen to forceRender state because when that happens we want to recompute
+                // eslint-disable-next-line
             }, [
                 rowHeight,
                 columnWidth,
@@ -416,6 +418,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 isScrolling,
                 verticalScrollDirection,
                 overscanCount,
+                _,
             ]);
 
         const [columnStartIndex, columnStopIndex, visibleColumnStartIndex, visibleColumnStopIndex] =
@@ -458,6 +461,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     startIndex,
                     stopIndex,
                 ];
+                // we require to listen to forceRender state because when that happens we want to recompute
+                // eslint-disable-next-line
             }, [
                 rowHeight,
                 columnWidth,
@@ -470,6 +475,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 isScrolling,
                 horizontalScrollDirection,
                 overscanCount,
+                _,
             ]);
 
         const estimatedTotalHeight =
