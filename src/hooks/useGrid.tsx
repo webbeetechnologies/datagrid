@@ -1,5 +1,5 @@
 import type { Context } from 'konva/lib/Context';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { Shape } from 'react-konva';
 import type { GridProps, GridRef } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
@@ -64,7 +64,7 @@ const useGrid = ({
     });
     const { visibleFields: fields, fieldsMap } = useFields(columnStartIndex, columnStopIndex);
 
-    const [_, forceRender] = useState(false);
+    const [_, forceRender] = useReducer(() => ({}), {});
 
     const processRenderProps = useProcessRenderProps();
     const processRenderPropsRef = useLatest(processRenderProps);
@@ -237,7 +237,7 @@ const useGrid = ({
         [columnStartIndex, columnStopIndex, drawCells, frozenColumns],
     );
 
-    const onForceRender = useCallback(() => forceRender(value => !value), []);
+    const onForceRender = useCallback(() => forceRender(), []);
 
     useEffect(() => {
         gridEventEmitter.addListener('onForceRerender', onForceRender);

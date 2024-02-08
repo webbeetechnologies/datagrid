@@ -312,6 +312,11 @@ export interface GridProps
     renderDynamicCell?: (
         props: RendererProps & Pick<IRenderProps, 'isActiveRow' | 'isHoverRow'>,
     ) => React.ReactNode;
+
+    initialScrollPosition?: {
+        top: number;
+        left: number;
+    };
 }
 
 export interface CellRangeArea extends CellInterface {

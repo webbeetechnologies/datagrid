@@ -100,6 +100,7 @@ export type Props = Pick<
         | 'isActiveColumn'
         | 'isActiveRow'
         | 'renderDynamicCell'
+        | 'initialScrollPosition'
     > &
     ViewProps & {
         width?: number;
@@ -379,6 +380,7 @@ const DataGrid = (
         isActiveColumn,
         isActiveRow,
         renderDynamicCell,
+        initialScrollPosition,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -671,6 +673,7 @@ const DataGrid = (
                             isActiveColumn={isActiveColumn}
                             isActiveRow={isActiveRow}
                             renderDynamicCell={renderDynamicCell}
+                            initialScrollPosition={initialScrollPosition}
                         />
                     </DataGridStateProvider>
                 </InfiniteLoader>

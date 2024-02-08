@@ -156,6 +156,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             isActiveColumn,
             isActiveRow,
             renderDynamicCell,
+            initialScrollPosition,
             ...rest
         } = props;
 
@@ -228,10 +229,27 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const snapToRowThrottler = useRef<({ deltaY }: SnapRowProps) => void>();
         const snapToColumnThrottler = useRef<({ deltaX }: SnapColumnProps) => void>();
 
-        const [_, forceRender] = useReducer(s => s + 1, 0);
+        const [_, forceRender] = useReducer(() => ({}), {});
+
+        const estimatedTotalHeight =
+            getEstimatedTotalHeight(rowCount, instanceProps.current) + overshootScrollHeight;
+        const estimatedTotalWidth =
+            getEstimatedTotalWidth(columnCount, instanceProps.current) + overshootScrollWidth;
+
+        const initialScrollTop = initialScrollPosition?.top
+            ? initialScrollPosition.top > estimatedTotalHeight
+                ? estimatedTotalHeight
+                : initialScrollPosition.top
+            : 0;
+        const initialScrollLeft = initialScrollPosition?.left
+            ? initialScrollPosition.left > estimatedTotalWidth
+                ? estimatedTotalWidth
+                : initialScrollPosition.left
+            : 0;
+
         const [scrollState, setScrollState] = useState<ScrollState>({
-            scrollTop: 0,
-            scrollLeft: 0,
+            scrollTop: initialScrollTop,
+            scrollLeft: initialScrollLeft,
             isScrolling: false,
             verticalScrollDirection: Direction.Down,
             horizontalScrollDirection: Direction.Right,
@@ -477,11 +495,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 overscanCount,
                 _,
             ]);
-
-        const estimatedTotalHeight =
-            getEstimatedTotalHeight(rowCount, instanceProps.current) + overshootScrollHeight;
-        const estimatedTotalWidth =
-            getEstimatedTotalWidth(columnCount, instanceProps.current) + overshootScrollWidth;
 
         /* Method to get dimensions of the grid */
         const getDimensions = useCallback(() => {
@@ -1074,6 +1087,15 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             },
             [scrollbarSize, snap],
         );
+
+        useEffect(() => {
+            if (horizontalScrollRef.current)
+                horizontalScrollRef.current.scrollLeft = initialScrollLeft;
+
+            if (verticalScrollRef.current) verticalScrollRef.current.scrollTop = initialScrollTop;
+
+            // eslint-disable-next-line
+        }, []);
 
         /**
          * Handle mouse wheeel
