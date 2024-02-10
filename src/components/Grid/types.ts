@@ -193,9 +193,12 @@ export interface GridProps
      */
     headerCellRenderer?: (props: RendererProps) => React.ReactNode;
     headerHeight?: number;
-
+    /**
+     * RowHead Cell renderer. Must be a Konva Component eg: Group, Rect etc
+     */
     rowHeadCellRenderer?: (props: RendererProps) => React.ReactNode;
     rowHeadColumnWidth?: number;
+
     groupingLevel?: number;
     useRecords: (props: {
         columnStartIndex: number;
@@ -207,13 +210,34 @@ export interface GridProps
         columnStartIndex: number,
         columnStopIndex: number,
     ) => { visibleFields: Field[]; fieldsMap: Record<string, Field> };
-    cellsDrawer: CellsDrawer;
     themeColors?: Partial<GridColors> & Record<string, any>;
+
+    /**
+     * cellsDrawer object for the cell objects with shape
+     */
+    cellsDrawer: CellsDrawer;
+    /**
+     * ActiveCell renderer (for focused cell). Must be a Konva Component eg: Group, Rect etc
+     */
     renderActiveCell?: (
         props: Omit<RendererProps, 'key' | 'columnIndex' | 'rowIndex'> & {
             activeCell: CellInterface | null;
         },
     ) => React.ReactNode;
+    /**
+     * DynamicCell renderer (for rendering while hover). Must be a Konva Component eg: Group, Rect etc
+     */
+    renderDynamicCell?: (
+        props: RendererProps & Pick<IRenderProps, 'isActiveRow' | 'isHoverRow' | 'isHoverColumn'>,
+    ) => React.ReactNode;
+
+    /**
+     * DynamicCell renderer (for rendering while hover). Must be a React component
+     */
+    renderDynamicReactCell?: (
+        props: RendererProps & Pick<IRenderProps, 'isActiveRow' | 'isHoverRow' | 'isHoverColumn'>,
+    ) => React.ReactNode;
+
     /**
      * Allow users to customize selected cells design
      */
@@ -307,11 +331,11 @@ export interface GridProps
         props: IRenderProps,
         otherProps: { fieldsMap: Record<string, Field>; records: IRecord[] },
     ) => IRenderProps & { [key: string]: any };
+
+    // for active state of the row (selected or highlighted)
     isActiveRow?: (arg: { rowIndex: number; recordId?: TDataTableRow }) => boolean;
+    // for active state of the column (selected or highlighted)
     isActiveColumn?: (arg: { columnIndex: number; columnId: TDataTableRow }) => boolean;
-    renderDynamicCell?: (
-        props: RendererProps & Pick<IRenderProps, 'isActiveRow' | 'isHoverRow'>,
-    ) => React.ReactNode;
 
     initialScrollPosition?: {
         top: number;

@@ -118,6 +118,7 @@ const useGrid = ({
                     const recordId = rowInfo.id;
 
                     const isHoverRow = rowIndex === hoveredCell?.rowIndex;
+                    const isHoverColumn = columnIndex === hoveredCell?.columnIndex;
                     const isActiveRow = !!instance.current.isActiveRow?.({ rowIndex, recordId });
 
                     cellsDrawer.setState({
@@ -165,6 +166,7 @@ const useGrid = ({
                         cellValue,
                         isActiveRow,
                         isHoverRow,
+                        isHoverColumn,
                         columnCount,
                     };
 
