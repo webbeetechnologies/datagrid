@@ -1289,11 +1289,12 @@ export const getNextFocusableCellByDirection = ({
         case 'RIGHT':
             if (newColumnIndex >= columnCount - 1 || isLastColumn(columnIndex)) break;
 
-            newColumnIndex = scrollToEdge ? columnCount - 1 : newColumnIndex + 1;
+            // TODO - remove hardcoded logic
+            newColumnIndex = scrollToEdge ? columnCount - 2 : newColumnIndex + 1;
 
             // if it's one of the ignored columns with change the index
             while (isHiddenColumn(newColumnIndex)) {
-                newColumnIndex = scrollToEdge ? newColumnIndex - 1 : newColumnIndex - 1;
+                newColumnIndex = scrollToEdge ? newColumnIndex - 2 : newColumnIndex - 1;
             }
     }
 
