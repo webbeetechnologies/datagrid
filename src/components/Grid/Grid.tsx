@@ -10,10 +10,22 @@ import React, {
     useEffect,
     CSSProperties,
 } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, ViewStyle, ScrollView, View } from 'react-native';
+import {
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    ViewStyle,
+    ScrollView,
+    View,
+    StyleSheet,
+} from 'react-native';
 import { Stage, Layer, Group } from 'react-konva';
 import type Konva from 'konva';
+import invariant from 'tiny-invariant';
 
+import useGrid from '../../hooks/useGrid';
+import { useDataGridStateStoreRef } from '../../DataGridStateContext';
+import { canUseDOM } from '../../utils';
+import type { IRenderProps } from '../../utils/types';
 import {
     getRowStartIndexForOffset,
     getRowStopIndexForStartIndex,
@@ -34,13 +46,11 @@ import {
     TimeoutID,
     Align,
     clampIndex,
-    canUseDOM,
 } from './helpers';
 // import { CellRenderer as defaultItemRenderer } from './Cell';
 import Selection from './Selection';
 import FillHandle from './FillHandle';
 import { createHTMLBox } from './utils';
-import invariant from 'tiny-invariant';
 import {
     AreaProps,
     CellInterface,
@@ -64,10 +74,6 @@ import {
     StylingProps,
     ViewPortProps,
 } from './types';
-import { StyleSheet } from 'react-native';
-import useGrid from '../../hooks/useGrid';
-import { useDataGridStateStoreRef } from '../../DataGridStateContext';
-import type { IRenderProps } from '../../utils/types';
 
 const DEFAULT_ESTIMATED_COLUMN_SIZE = 100;
 const DEFAULT_ESTIMATED_ROW_SIZE = 50;

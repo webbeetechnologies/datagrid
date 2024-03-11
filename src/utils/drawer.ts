@@ -1,5 +1,5 @@
 import GraphemeSplitter from 'grapheme-splitter';
-import { autoSizerCanvas } from '../components/Grid/helpers';
+import { autoSizerCanvas } from '../utils/autoSizerCanvas';
 import { getTextWidth, textDataCache } from './getTextWidth';
 import { imageCache } from './image-cache';
 import {

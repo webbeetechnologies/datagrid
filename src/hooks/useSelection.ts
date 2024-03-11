@@ -6,13 +6,12 @@ import {
     getBoundedCells,
     cellIdentifier,
     isEqualCells,
-    clampIndex,
     HiddenType,
-    findNextCellInDataRegion,
     selectionSpansCells,
     newSelectionFromDrag,
     clampCellCoords,
     cellRangeToBounds,
+    getNextFocusableCellByDirection,
 } from '../components/Grid/helpers';
 import { KeyCodes, Direction, MouseButtonCodes, SelectionPolicy } from '../components/Grid/types';
 import { useLatest } from '@bambooapp/bamboo-molecules';
@@ -87,6 +86,14 @@ export interface UseSelectionOptions {
      * Hidden columns
      */
     isSelectionIgnoredColumn?: HiddenType;
+    /**
+     * Is last row?
+     */
+    isLastRow?: HiddenType;
+    /**
+     * Is last column?
+     */
+    isLastColumn?: HiddenType;
     /**
      * Always scroll to active cell
      */
@@ -282,11 +289,12 @@ const useSelection = ({
     // mergedCells = [],
     onActiveCellChange,
     canSelectionSpanMergedCells = defaultSelectionSpan,
-    getValue,
     onSelectionMove,
     onSelectionEnd,
     onBeforeSelection,
     onBeforeFill,
+    isLastColumn,
+    isLastRow,
 }: UseSelectionOptions): SelectionResults => {
     const [activeCell, _setActiveCell] = useState<CellInterface | null>(initialActiveCell);
     const [selections, setSelections] = useState<SelectionArea[]>(initialSelections);
@@ -753,107 +761,23 @@ const useSelection = ({
                 return;
 
             const currentCell = modify ? selectionEnd.current : activeCell;
-            var { rowIndex, columnIndex } = currentCell;
+            const { rowIndex, columnIndex } = getNextFocusableCellByDirection({
+                direction,
+                currentColumnIndex: currentCell.columnIndex,
+                currentRowIndex: currentCell.rowIndex,
+                isHiddenColumn: isSelectionIgnoredColumn,
+                isHiddenRow: isSelectionIgnoredRow,
+                isLastColumn,
+                isLastRow,
+                rowCount,
+                columnCount,
+                scrollToEdge: metaKeyPressed,
+            });
 
             // const currentBounds = gridRef.current.getCellBounds({
             //     rowIndex,
             //     columnIndex,
             // });
-
-            switch (direction) {
-                case Direction.Up:
-                    rowIndex = clampIndex(
-                        Math.max(rowIndex - 1, selectionTopBound),
-                        isSelectionIgnoredRow,
-                        direction,
-                    );
-                    // Shift + Ctrl/Commmand
-                    // TODO: Scroll to last contentful cell
-                    if (metaKeyPressed) {
-                        const startCell = {
-                            ...currentCell,
-                            // Expand from the starting cell
-                            columnIndex: selectionStart.current.columnIndex,
-                        };
-                        rowIndex = findNextCellInDataRegion(
-                            startCell,
-                            getValue,
-                            isSelectionIgnoredRow,
-                            direction,
-                            selectionTopBound,
-                        );
-                    }
-                    break;
-
-                case Direction.Down:
-                    rowIndex = clampIndex(
-                        Math.min(rowIndex + 1, selectionBottomBound),
-                        isSelectionIgnoredRow,
-                        direction,
-                    );
-                    // Shift + Ctrl/Commmand
-                    if (metaKeyPressed) {
-                        const startCell = {
-                            ...currentCell,
-                            // Expand from the starting cell
-                            columnIndex: selectionStart.current.columnIndex,
-                        };
-                        rowIndex = findNextCellInDataRegion(
-                            startCell,
-                            getValue,
-                            isSelectionIgnoredRow,
-                            direction,
-                            selectionBottomBound,
-                        );
-                    }
-                    break;
-
-                case Direction.Left:
-                    columnIndex = clampIndex(
-                        Math.max(columnIndex - 1, selectionLeftBound),
-                        isSelectionIgnoredColumn,
-                        direction,
-                    );
-                    // Shift + Ctrl/Commmand
-                    if (metaKeyPressed) {
-                        const startCell = {
-                            ...currentCell,
-                            // Expand from the starting cell
-                            rowIndex: selectionStart.current.rowIndex,
-                        };
-                        columnIndex = findNextCellInDataRegion(
-                            startCell,
-                            getValue,
-                            isSelectionIgnoredColumn,
-                            direction,
-                            selectionLeftBound,
-                        );
-                    }
-                    break;
-
-                case Direction.Right:
-                    columnIndex = clampIndex(
-                        Math.min(columnIndex + 1, selectionRightBound),
-                        isSelectionIgnoredColumn,
-                        direction,
-                    );
-                    // Shift + Ctrl/Commmand
-                    if (metaKeyPressed) {
-                        const startCell = {
-                            ...currentCell,
-                            // Expand from the starting cell
-                            rowIndex: selectionStart.current.rowIndex,
-                        };
-                        columnIndex = findNextCellInDataRegion(
-                            startCell,
-                            getValue,
-                            isSelectionIgnoredColumn,
-                            direction,
-                            selectionRightBound,
-                        );
-                    }
-                    break;
-            }
 
             const newBounds = gridRef.current.getCellBounds({
                 rowIndex,
@@ -887,15 +811,14 @@ const useSelection = ({
         [
             gridRef,
             activeCell,
-            onSelectionEnd,
-            selectionTopBound,
             isSelectionIgnoredColumn,
             isSelectionIgnoredRow,
-            selectionBottomBound,
-            selectionLeftBound,
-            selectionRightBound,
-            getValue,
+            isLastColumn,
+            isLastRow,
+            rowCount,
+            columnCount,
             modifySelection,
+            onSelectionEnd,
             newSelection,
         ],
     );
