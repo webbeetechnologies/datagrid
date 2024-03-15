@@ -1,12 +1,11 @@
 import { autoSizerCanvas } from './autoSizerCanvas';
 import LRU from 'lru-cache';
 import type { IWrapTextResultProps } from './types';
-import type { Context } from 'konva/lib/Context';
 
 const fontCache: { [key: string]: LRU<string, number> } = {};
 export const textDataCache = new LRU<string, IWrapTextResultProps>(500);
 
-export const getTextWidth = (_ctx: Context, text: string, font: string) => {
+export const getTextWidth = (text: string, font: string) => {
     let width: number | undefined = 0;
     if (!text || typeof text !== 'string') {
         return width;
