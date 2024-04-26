@@ -7,6 +7,7 @@ import type { Field, GridColors, IRecord, IRenderProps } from '../../utils/types
 import type { CellsDrawer } from './utils';
 import type Konva from 'konva';
 import type { TDataTableRow } from '@bambooapp/bamboo-molecules';
+import type { KonvaEventObject } from 'konva/lib/Node';
 
 export enum KeyCodes {
     Right = 39,
@@ -79,7 +80,7 @@ export enum MouseButtonCodes {
 export type SelectionPolicy = 'single' | 'range' | 'multiple';
 
 export interface GridProps
-    extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onScroll' | 'children'> {
+    extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onScroll' | 'children' | 'onContextMenu'> {
     /**
      * Width of the grid
      */
@@ -341,6 +342,8 @@ export interface GridProps
         top: number;
         left: number;
     };
+
+    onContextMenu?: (e: KonvaEventObject<PointerEvent>) => void;
 }
 
 export interface CellRangeArea extends CellInterface {

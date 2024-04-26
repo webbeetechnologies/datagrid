@@ -1848,6 +1848,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             setActiveCellState: _sa,
 
             setSelections: _ss,
+            onContextMenu,
             ...restContainerProps
         } = rest as any;
 
@@ -1887,6 +1888,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             height={containerHeight}
                             ref={stageRef}
                             listening={listenToEvents}
+                            onContextMenu={onContextMenu}
                             {...stageProps}>
                             {wrapper(stageChildren)}
                         </Stage>
