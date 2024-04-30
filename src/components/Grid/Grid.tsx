@@ -1045,9 +1045,26 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 /* If user presses shift key, scroll horizontally */
                 const isScrollingHorizontally = event.shiftKey;
 
-                /* Prevent browser back in Mac */
-                event.preventDefault();
                 const { deltaX, deltaY, deltaMode } = event;
+                const vScrollDirection = deltaY >= 0 ? 'bottom' : 'top';
+
+                // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
+                if (vScrollDirection === 'top') {
+                    if (verticalScrollRef.current.scrollTop + deltaY >= 0) {
+                        event.preventDefault();
+                    }
+                } else {
+                    if (
+                        verticalScrollRef.current.scrollTop + deltaY <=
+                        verticalScrollRef.current.scrollHeight -
+                            (verticalScrollRef.current as HTMLDivElement).clientHeight
+                    ) {
+                        event.preventDefault();
+                    }
+                }
+
+                /* Prevent browser back in Mac */
+                // event.preventDefault();
                 /* Scroll natively */
                 if (wheelingRef.current) return;
 
@@ -1110,6 +1127,55 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         useEffect(() => {
             const scrollContainerEl = scrollContainerRef.current;
+
+            // var xDown: number | null = null;
+            // var yDown: number | null = null;
+
+            // function getTouches(evt: any) {
+            //     return (
+            //         evt.touches || // browser API
+            //         evt.originalEvent.touches
+            //     );
+            // }
+
+            // function handleTouchStart(evt: TouchEvent) {
+            //     const firstTouch = getTouches(evt)[0];
+            //     xDown = firstTouch.clientX;
+            //     yDown = firstTouch.clientY;
+            // }
+
+            // function handleTouchMove(evt: TouchEvent) {
+            //     if (!xDown || !yDown) {
+            //         return;
+            //     }
+
+            //     var xUp = evt.touches[0].clientX;
+            //     var yUp = evt.touches[0].clientY;
+
+            //     var xDiff = xDown - xUp;
+            //     var yDiff = yDown - yUp;
+
+            //     if (Math.abs(xDiff) > Math.abs(yDiff)) {
+            //         /*most significant*/
+            //         if (xDiff > 0) {
+            //             /* right swipe */
+            //         } else {
+            //             /* left swipe */
+            //         }
+            //     } else {
+            //         if (yDiff > 0) {
+            //             /* down swipe */
+            //         } else {
+            //             /* up swipe */
+            //         }
+            //     }
+            //     /* reset values */
+            //     xDown = null;
+            //     yDown = null;
+            // }
+
+            // scrollContainerEl?.addEventListener('touchstart', handleTouchStart, false);
+            // scrollContainerEl?.addEventListener('touchmove', handleTouchMove, false);
 
             scrollContainerEl?.addEventListener('wheel', handleWheel, {
                 passive: false,
