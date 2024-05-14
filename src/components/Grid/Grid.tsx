@@ -1042,6 +1042,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         const handleWheel = useCallback(
             (event: WheelEvent) => {
+                if (event.ctrlKey) return;
                 /* If user presses shift key, scroll horizontally */
                 const isScrollingHorizontally = event.shiftKey;
 
