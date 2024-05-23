@@ -13,3 +13,4 @@ export {
     EditableResults,
     EditorProps,
 } from './useEditable';
+export { useMobileScroller } from './useMobileScroller';
