@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo, CSSProperties } from 'react';
+import { useLatest } from '@bambooapp/bamboo-molecules';
+
 import type {
     CellInterface,
     ScrollCoords,
@@ -10,13 +12,11 @@ import { KeyCodes, Direction } from '../components/Grid/types';
 import {
     findNextCellWithinBounds,
     isEqualCells,
-    clampIndex,
     HiddenType,
-    autoSizerCanvas,
     isArrowKey,
-    castToString,
+    getNextFocusableCellByDirection,
 } from '../components/Grid/helpers';
-import { useLatest } from '@bambooapp/bamboo-molecules';
+import { castToString, autoSizerCanvas } from '../utils';
 // import { useWhatHasUpdated } from './useWhatHasUpdated';
 
 export type EditorConfig = {
@@ -98,6 +98,14 @@ export interface UseEditableOptions {
      * Hidden columns
      */
     isHiddenColumn?: HiddenType;
+    /**
+     * Is last row?
+     */
+    isLastRow?: HiddenType;
+    /**
+     * Is last column?
+     */
+    isLastColumn?: HiddenType;
     /**
      * No of columns in the grid
      */
@@ -284,6 +292,7 @@ export interface EditorProps {
      * Frozen column offset
      */
     frozenColumnOffset?: number;
+    hasInitialValue: boolean;
 }
 
 /**
@@ -444,15 +453,13 @@ const useEditable = ({
     isHiddenColumn = defaultIsHidden,
     rowCount,
     columnCount,
-    selectionTopBound = 0,
-    selectionBottomBound = rowCount - 1,
-    selectionLeftBound = 0,
-    selectionRightBound = columnCount - 1,
     editorProps,
     onBeforeEdit,
     onKeyDown,
     sticky = false,
     onSubmit: onSubmitValue,
+    isLastColumn,
+    isLastRow,
 }: UseEditableOptions): EditableResults => {
     const [isEditorShown, setShowEditor] = useState<boolean>(false);
     const [position, setPosition] = useState<CellPosition>({
@@ -476,6 +483,7 @@ const useEditable = ({
     const currentValueRef = useLatest(value);
     const initialValueRef = useRef<string>();
     const maxEditorDimensionsRef = useRef<{ height: number; width: number }>();
+    const hasInitialValue = useRef(false);
     /* To prevent stale closures data */
     // const getValueRef = useRef(getValue);
     const activeCellRef = useLatest(activeCell);
@@ -522,7 +530,12 @@ const useEditable = ({
      * @param initialValue
      */
     const makeEditable = useCallback(
-        (coords: CellInterface, initialValue?: string, autoFocus: boolean = true) => {
+        (
+            coords: CellInterface,
+            initialValue?: string,
+            autoFocus: boolean = true,
+            _hasInitialValue = false,
+        ) => {
             if (!gridRef.current) return;
             /* Get actual coords for merged cells */
             coords = gridRef.current.getActualCellCoords(coords);
@@ -568,6 +581,8 @@ const useEditable = ({
                  */
                 isDirtyRef.current = !!initialValue;
                 initialValueRef.current = initialValue;
+
+                hasInitialValue.current = _hasInitialValue;
 
                 /* Trigger onChange handlers */
                 setValueRef.current(value);
@@ -686,6 +701,8 @@ const useEditable = ({
                 editorConfigRef.current?.concatInitialValue
                     ? initialValue || currentValueRef.current
                     : undefined,
+                true,
+                !!initialValue,
             );
 
             /* Prevent the first keystroke */
@@ -714,63 +731,21 @@ const useEditable = ({
         ): CellInterface | null => {
             /* Next immediate cell */
             const bounds = gridRef.current?.getCellBounds(currentCell);
+
             if (!bounds) return null;
-            let nextActiveCell;
-            switch (direction) {
-                case Direction.Right: {
-                    const columnIndex = clampIndex(
-                        Math.min(bounds.right + 1, selectionRightBound),
-                        isHiddenColumn,
-                        direction,
-                    );
-                    nextActiveCell = {
-                        rowIndex: bounds.top,
-                        columnIndex,
-                    };
-                    break;
-                }
-                case Direction.Up:
-                    const rowIndex = clampIndex(
-                        Math.max(bounds.top - 1, selectionTopBound),
-                        isHiddenRow,
-                        direction,
-                    );
-                    nextActiveCell = {
-                        rowIndex,
-                        columnIndex: bounds.left,
-                    };
-                    break;
 
-                case Direction.Left: {
-                    const columnIndex = clampIndex(
-                        Math.max(bounds.left - 1, selectionLeftBound),
-                        isHiddenColumn,
-                        direction,
-                    );
-                    nextActiveCell = {
-                        rowIndex: bounds.top,
-                        columnIndex,
-                    };
-                    break;
-                }
+            let nextActiveCell = getNextFocusableCellByDirection({
+                rowCount,
+                columnCount,
+                currentColumnIndex: bounds.left,
+                currentRowIndex: bounds.top,
+                isHiddenColumn,
+                isHiddenRow,
+                direction,
+                isLastColumn,
+                isLastRow,
+            });
 
-                default: {
-                    // Down
-                    const rowIndex = clampIndex(
-                        Math.min(
-                            (initialActiveCell.current?.rowIndex ?? bounds.bottom) + 1,
-                            selectionBottomBound,
-                        ),
-                        isHiddenRow,
-                        direction,
-                    );
-                    nextActiveCell = {
-                        rowIndex,
-                        columnIndex: initialActiveCell.current?.columnIndex ?? bounds.left,
-                    };
-                    break;
-                }
-            }
             if (direction === Direction.Right && !initialActiveCell.current) {
                 initialActiveCell.current = currentCell;
             }
@@ -791,13 +766,13 @@ const useEditable = ({
         },
         [
             gridRef,
-            selections,
-            selectionTopBound,
-            isHiddenRow,
-            selectionRightBound,
+            rowCount,
+            columnCount,
             isHiddenColumn,
-            selectionLeftBound,
-            selectionBottomBound,
+            isHiddenRow,
+            isLastColumn,
+            isLastRow,
+            selections,
         ],
     );
 
@@ -960,6 +935,7 @@ const useEditable = ({
                 isFrozenColumn={isFrozenColumn}
                 frozenRowOffset={frozenRowOffset}
                 frozenColumnOffset={frozenColumnOffset}
+                hasInitialValue={hasInitialValue.current}
             />
         ) : null;
 

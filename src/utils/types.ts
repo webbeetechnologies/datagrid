@@ -153,6 +153,7 @@ export interface IRenderProps {
     cellValue: any;
     isActiveRow: boolean;
     isHoverRow: boolean;
+    isHoverColumn: boolean;
     groupCount?: number;
     // rowHeightLevel: RowHeightLevel;
     style?: IRenderStyleProps;

@@ -1,4 +1,6 @@
 // Utilities extracted from https://github.com/bvaughn/react-window
+
+import { castToString } from '../../utils/castToString';
 import {
     Direction,
     KeyCodes,
@@ -944,97 +946,6 @@ export const cellRangeToBounds = (
     };
 };
 
-/**
- * Check if its being rendered in Browser or SSR
- */
-export const canUseDOM = !!(
-    typeof window !== 'undefined' &&
-    window.document &&
-    window.document.createElement
-);
-
-/**
- * Simple Canvas element to measure text size
- *
- * Usage
- *
- * ```
- * const textSizer = new AutoSizer()
- * textSizer.measureText('Hello world').width
- * ```
- */
-interface AutoSizerProps {
-    fontFamily?: string;
-    fontSize?: number;
-    fontWeight?: string;
-    fontStyle?: string;
-    lineHeight?: number;
-    scale?: number;
-}
-
-type IOptions = {
-    [key: string]: any;
-};
-
-export const AutoSizerCanvas = (defaults: AutoSizerProps = {}) => {
-    const {
-        fontFamily = 'Arial',
-        fontSize = 12,
-        fontWeight = '',
-        fontStyle = '',
-        lineHeight = 16,
-        scale = 1,
-    } = defaults;
-    var o: IOptions = {
-        fontFamily,
-        fontSize,
-        fontWeight,
-        fontStyle,
-        lineHeight,
-        scale,
-    };
-    const canvas = canUseDOM && <HTMLCanvasElement>document.createElement('canvas');
-    const context = canvas ? canvas.getContext('2d') : null;
-
-    const setFont = (options: IOptions = {}) => {
-        for (const key in options) {
-            o[key] = options[key] ?? o[key];
-        }
-        if (context) {
-            context.font = `${o.fontStyle} ${o.fontWeight} ${o.fontSize * o.scale}px ${
-                o.fontFamily
-            }`;
-        }
-    };
-    const getWidthOfLongestText = (text: string | undefined) => {
-        let width = 0;
-        let height = 0;
-        if (text === void 0) return { width, height };
-        const lines = text.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const lineWidth = context?.measureText(line).width ?? 0;
-            width = Math.max(width, lineWidth);
-            height += o.fontSize * 1.2 * o.scale;
-        }
-        return { width: Math.ceil(width), height: Math.ceil(height) };
-    };
-    const measureText = (text: string | number) => getWidthOfLongestText(castToString(text));
-    const reset = () => setFont(defaults);
-    /* Set font in constructor */
-    setFont(o);
-
-    return {
-        context,
-        measureText,
-        setFont,
-        reset,
-    };
-};
-
-/* Export a singleton */
-export const autoSizerCanvas = AutoSizerCanvas();
-
 /* Check if a value is null */
 // export const isNull = (value: any) => value === void 0 || value === null || value === '';
 export const isNull = (value: any) => value === void 0;
@@ -1307,15 +1218,88 @@ export const findNextCellInDataRegion = (
 /* Focusable node names */
 export const focusableNodeNames = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 
-/**
- * Converts a value to string
- * @param value
- */
-export const castToString = (value: any): string | undefined => {
-    if (value === null || value === void 0) return void 0;
-    return typeof value !== 'string' ? '' + value : value;
-};
-
 export const isArrowKey = (keyCode: number) => {
     return [KeyCodes.Up, KeyCodes.Down, KeyCodes.Left, KeyCodes.Right].includes(keyCode);
+};
+
+const returnBoolean = () => false;
+
+export const getNextFocusableCellByDirection = ({
+    currentColumnIndex: columnIndex,
+    currentRowIndex: rowIndex,
+    rowCount,
+    columnCount,
+    isHiddenColumn,
+    isHiddenRow,
+    direction,
+    scrollToEdge = false,
+    isLastColumn = returnBoolean,
+    isLastRow = returnBoolean,
+}: {
+    currentRowIndex: number;
+    currentColumnIndex: number;
+    rowCount: number;
+    columnCount: number;
+    isHiddenColumn: (columnIndex: number) => boolean;
+    isHiddenRow: (rowIndex: number) => boolean;
+    direction: `${Direction}`;
+    scrollToEdge?: boolean;
+    isLastRow?: (columnIndex: number) => boolean;
+    isLastColumn?: (rowIndex: number) => boolean;
+}) => {
+    let newRowIndex = rowIndex;
+    let newColumnIndex = columnIndex;
+
+    switch (direction) {
+        case 'UP':
+            if (rowIndex === 0) break;
+
+            newRowIndex = scrollToEdge ? 0 : newRowIndex - 1;
+
+            // keep finding the rowIndex unless the type is data
+            while (isHiddenRow(newRowIndex)) {
+                newRowIndex = scrollToEdge ? newRowIndex + 1 : newRowIndex - 1;
+
+                if (scrollToEdge ? newRowIndex > rowCount - 1 : newRowIndex <= 0) break;
+            }
+            break;
+        case 'DOWN':
+            if (rowIndex >= rowCount - 1 || isLastRow(rowIndex)) break;
+
+            newRowIndex = scrollToEdge ? rowCount - 1 : newRowIndex + 1;
+
+            // keep finding the rowIndex unless the type is data
+            while (isHiddenRow(newRowIndex)) {
+                newRowIndex = scrollToEdge ? newRowIndex - 1 : newRowIndex + 1;
+
+                if (scrollToEdge ? newRowIndex <= 0 : newRowIndex > rowCount - 1) break;
+            }
+            break;
+        case 'LEFT':
+            if (columnIndex === 0) break;
+
+            newColumnIndex = scrollToEdge ? 0 : newColumnIndex - 1;
+
+            // if it's one of the ignored columns with change the index
+            while (isHiddenColumn(newColumnIndex)) {
+                newColumnIndex = scrollToEdge ? newColumnIndex + 1 : newColumnIndex + 1;
+            }
+
+            break;
+        case 'RIGHT':
+            if (newColumnIndex >= columnCount - 1 || isLastColumn(columnIndex)) break;
+
+            // TODO - remove hardcoded logic
+            newColumnIndex = scrollToEdge ? columnCount - 2 : newColumnIndex + 1;
+
+            // if it's one of the ignored columns with change the index
+            while (isHiddenColumn(newColumnIndex)) {
+                newColumnIndex = scrollToEdge ? newColumnIndex - 2 : newColumnIndex - 1;
+            }
+    }
+
+    return {
+        rowIndex: newRowIndex,
+        columnIndex: newColumnIndex,
+    };
 };

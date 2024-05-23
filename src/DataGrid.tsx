@@ -100,6 +100,8 @@ export type Props = Pick<
         | 'isActiveColumn'
         | 'isActiveRow'
         | 'renderDynamicCell'
+        | 'initialScrollPosition'
+        | 'renderDynamicReactCell'
     > &
     ViewProps & {
         width?: number;
@@ -113,9 +115,6 @@ export type Props = Pick<
         rowCountCellRenderer?: (props: RendererProps) => ReactNode;
 
         gridRef?: RefObject<GridRef>;
-        headerGridRef?: RefObject<GridRef>;
-        // countGridRef?: RefObject<GridRef>;
-        // records: TDataTableRow[];
         rowsLoadingThreshold?: InfiniteLoaderProps['threshold'];
 
         /**
@@ -167,6 +166,8 @@ export type Props = Pick<
         > & { width?: number; height?: number };
 
         onClick?: (e: MouseEvent<HTMLDivElement>, cell: CellInterface | null) => void;
+        isLastRow?: (rowIndex: number) => boolean;
+        isLastColumn?: (columnIndex: number) => boolean;
     };
 
 export type DataGridRef = Pick<
@@ -339,7 +340,6 @@ const DataGrid = (
         stageProps,
         innerContainerProps,
         gridRef: gridRefProp,
-        headerGridRef: headerGridRefProp,
         onDelete,
         getEditor = getEditorDefault,
         useEditorConfig,
@@ -379,6 +379,10 @@ const DataGrid = (
         isActiveColumn,
         isActiveRow,
         renderDynamicCell,
+        initialScrollPosition,
+        renderDynamicReactCell,
+        isLastColumn,
+        isLastRow,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -393,14 +397,12 @@ const DataGrid = (
     const width = widthProp || layout.width;
     const height = heightProp || layout.height;
 
-    const headerGridRef = useRef<GridRef>(null);
     const gridRef = useRef<GridRef>(null);
     const currentViewPort = useRef<ViewPortProps>();
     const infiniteLoaderRef = useRef(null);
     const wheelingRef = useRef<number | null>(null); // Storage timer to ensure smooth operation
 
     useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
-    useImperativeHandle(headerGridRefProp, () => headerGridRef.current as GridRef);
 
     const {
         selections,
@@ -428,6 +430,8 @@ const DataGrid = (
         isSelectionIgnoredRow,
         onBeforeSelection,
         onBeforeFill,
+        isLastColumn,
+        isLastRow,
     });
 
     const onAfterSubmit = useCallback(
@@ -472,12 +476,12 @@ const DataGrid = (
         selectionBottomBound,
         selectionLeftBound,
         selectionTopBound,
+        isLastRow,
+        isLastColumn,
     });
 
     const onScroll = useCallback(
         (scrollCoords: ScrollCoords) => {
-            headerGridRef.current?.scrollTo({ scrollLeft: scrollCoords.scrollLeft });
-            // countGridRef.current?.scrollTo({ scrollTop: scrollCoords.scrollTop });
             onEditableScroll?.(scrollCoords);
 
             onScrollProp?.(scrollCoords);
@@ -515,16 +519,11 @@ const DataGrid = (
     );
 
     const onMouseMove = useCallback(
-        (e: KonvaEventObject<MouseEvent>) => {
-            stageProps?.onMouseMoveProp?.(e);
-
+        (e: React.MouseEvent<HTMLDivElement>) => {
             if (wheelingRef.current) return;
 
             wheelingRef.current = requestAnimationFrame(() => {
-                const coords = gridRef.current?.getCellCoordsFromOffset(
-                    e.evt.clientX,
-                    e.evt.clientY,
-                );
+                const coords = gridRef.current?.getCellCoordsFromOffset(e.clientX, e.clientY);
 
                 if (
                     hoveredCellRef.current === coords ||
@@ -540,32 +539,18 @@ const DataGrid = (
                 wheelingRef.current = null;
             });
         },
-        [hoveredCellRef, stageProps],
+        [hoveredCellRef],
     );
 
-    const onMouseLeave = useCallback(
-        (e: MouseEvent<HTMLDivElement>) => {
-            stageProps?.oonMouseLeaveProp?.(e);
+    const onMouseLeave = useCallback(() => {
+        if (!hoveredCellRef.current) {
+            wheelingRef.current = null;
 
-            if (!hoveredCellRef.current) {
-                wheelingRef.current = null;
+            return;
+        }
 
-                return;
-            }
-
-            setHoveredCell(null);
-        },
-        [hoveredCellRef, stageProps],
-    );
-
-    const _stagedProps = useMemo(
-        () => ({
-            ...stageProps,
-            onMouseMove,
-            onMouseLeave,
-        }),
-        [onMouseLeave, onMouseMove, stageProps],
-    );
+        setHoveredCell(null);
+    }, [hoveredCellRef]);
 
     // const renderCell = useCallback(
     //     (props: RendererProps) => {
@@ -658,7 +643,7 @@ const DataGrid = (
                             onMouseDown={onMouseDown}
                             onClick={onClick}
                             onScroll={onScroll}
-                            stageProps={_stagedProps}
+                            stageProps={stageProps}
                             onContextMenu={onContextMenu}
                             headerHeight={headerHeight}
                             rowHeadCellRenderer={rowHeadCellRenderer}
@@ -671,6 +656,10 @@ const DataGrid = (
                             isActiveColumn={isActiveColumn}
                             isActiveRow={isActiveRow}
                             renderDynamicCell={renderDynamicCell}
+                            initialScrollPosition={initialScrollPosition}
+                            renderDynamicReactCell={renderDynamicReactCell}
+                            onMouseMove={onMouseMove}
+                            onMouseLeave={onMouseLeave}
                         />
                     </DataGridStateProvider>
                 </InfiniteLoader>

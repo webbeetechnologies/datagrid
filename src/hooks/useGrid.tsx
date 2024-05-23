@@ -1,5 +1,5 @@
 import type { Context } from 'konva/lib/Context';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { Shape } from 'react-konva';
 import type { GridProps, GridRef } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
@@ -64,7 +64,7 @@ const useGrid = ({
     });
     const { visibleFields: fields, fieldsMap } = useFields(columnStartIndex, columnStopIndex);
 
-    const [_, forceRender] = useState(false);
+    const [_, forceRender] = useReducer(() => ({}), {});
 
     const processRenderProps = useProcessRenderProps();
     const processRenderPropsRef = useLatest(processRenderProps);
@@ -114,10 +114,11 @@ const useGrid = ({
                     const x = instance.current.getColumnOffset(actualColumnIndex);
                     const width = instance.current.getColumnWidth(actualRight);
 
-                    const cellValue = (data as Record<string, any>)?.[field.slug] || null;
+                    const cellValue = (data as Record<string, any>)?.[field.slug] ?? null;
                     const recordId = rowInfo.id;
 
                     const isHoverRow = rowIndex === hoveredCell?.rowIndex;
+                    const isHoverColumn = columnIndex === hoveredCell?.columnIndex;
                     const isActiveRow = !!instance.current.isActiveRow?.({ rowIndex, recordId });
 
                     cellsDrawer.setState({
@@ -165,6 +166,7 @@ const useGrid = ({
                         cellValue,
                         isActiveRow,
                         isHoverRow,
+                        isHoverColumn,
                         columnCount,
                     };
 
@@ -237,7 +239,7 @@ const useGrid = ({
         [columnStartIndex, columnStopIndex, drawCells, frozenColumns],
     );
 
-    const onForceRender = useCallback(() => forceRender(value => !value), []);
+    const onForceRender = useCallback(() => forceRender(), []);
 
     useEffect(() => {
         gridEventEmitter.addListener('onForceRerender', onForceRender);

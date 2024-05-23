@@ -1,5 +1,5 @@
 import GraphemeSplitter from 'grapheme-splitter';
-import { autoSizerCanvas } from '../components/Grid/helpers';
+import { autoSizerCanvas } from '../utils/autoSizerCanvas';
 import { getTextWidth, textDataCache } from './getTextWidth';
 import { imageCache } from './image-cache';
 import {
@@ -140,7 +140,7 @@ export class KonvaDrawer {
         if (!maxWidth) {
             return {
                 text,
-                textWidth: getTextWidth(this.ctx, text, fontStyle),
+                textWidth: getTextWidth(text, fontStyle),
                 isEllipsis: false,
             };
         }
@@ -152,8 +152,8 @@ export class KonvaDrawer {
         // const guessText = text.substr(0, guessSize);
         // const guessWidth = getTextWidth(this.ctx, guessText, fontStyle);
 
-        const guessWidth = getTextWidth(this.ctx, text, fontStyle);
-        const ellipsisWidth = getTextWidth(this.ctx, ellipsis, fontStyle);
+        const guessWidth = getTextWidth(text, fontStyle);
+        const ellipsisWidth = getTextWidth(ellipsis, fontStyle);
 
         if (guessWidth <= maxWidth || guessWidth <= ellipsisWidth) {
             return {
@@ -165,7 +165,7 @@ export class KonvaDrawer {
 
         const index = binarySearchMaxTextIndex({
             max: text.length,
-            getValue: guess => getTextWidth(this.ctx, text.substring(0, guess), fontStyle),
+            getValue: guess => getTextWidth(text.substring(0, guess), fontStyle),
             match: maxWidth - ellipsisWidth,
         });
 
@@ -538,7 +538,7 @@ export class KonvaDrawer {
         const fontStyle = `${fontWeight} ${fontSize}px ${fontFamily}`;
 
         if (textDecoration === 'underline') {
-            const textWidth = getTextWidth(this.ctx, text, fontStyle);
+            const textWidth = getTextWidth(text, fontStyle);
             this.line({
                 x: x,
                 y: y + 0.5,

@@ -10,10 +10,22 @@ import React, {
     useEffect,
     CSSProperties,
 } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, ViewStyle, ScrollView, View } from 'react-native';
+import {
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    ViewStyle,
+    ScrollView,
+    View,
+    StyleSheet,
+} from 'react-native';
 import { Stage, Layer, Group } from 'react-konva';
 import type Konva from 'konva';
+import invariant from 'tiny-invariant';
 
+import useGrid from '../../hooks/useGrid';
+import { useDataGridStateStoreRef } from '../../DataGridStateContext';
+import { canUseDOM } from '../../utils';
+import type { IRenderProps } from '../../utils/types';
 import {
     getRowStartIndexForOffset,
     getRowStopIndexForStartIndex,
@@ -34,13 +46,11 @@ import {
     TimeoutID,
     Align,
     clampIndex,
-    canUseDOM,
 } from './helpers';
 // import { CellRenderer as defaultItemRenderer } from './Cell';
 import Selection from './Selection';
 import FillHandle from './FillHandle';
 import { createHTMLBox } from './utils';
-import invariant from 'tiny-invariant';
 import {
     AreaProps,
     CellInterface,
@@ -54,6 +64,7 @@ import {
     PosXY,
     PosXYRequired,
     RefAttribute,
+    RendererProps,
     ScrollSnapRef,
     ScrollState,
     SelectionArea,
@@ -63,9 +74,6 @@ import {
     StylingProps,
     ViewPortProps,
 } from './types';
-import { StyleSheet } from 'react-native';
-import useGrid from '../../hooks/useGrid';
-import { useDataGridStateStoreRef } from '../../DataGridStateContext';
 import { useMobileScroller } from '../../hooks';
 import { isTouchDevice } from '../../utils';
 
@@ -135,7 +143,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             // gridLineRenderer = defaultGridLineRenderer,
             isHiddenRow,
             isHiddenColumn,
-            isHiddenCell,
             scale = 1,
             enableSelectionDrag = false,
             isDraggingSelection = false,
@@ -158,6 +165,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             isActiveColumn,
             isActiveRow,
             renderDynamicCell,
+            initialScrollPosition,
+            renderDynamicReactCell,
             ...rest
         } = props;
 
@@ -230,10 +239,27 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const snapToRowThrottler = useRef<({ deltaY }: SnapRowProps) => void>();
         const snapToColumnThrottler = useRef<({ deltaX }: SnapColumnProps) => void>();
 
-        const [_, forceRender] = useReducer(s => s + 1, 0);
+        const [_, forceRender] = useReducer(() => ({}), {});
+
+        const estimatedTotalHeight =
+            getEstimatedTotalHeight(rowCount, instanceProps.current) + overshootScrollHeight;
+        const estimatedTotalWidth =
+            getEstimatedTotalWidth(columnCount, instanceProps.current) + overshootScrollWidth;
+
+        const initialScrollTop = initialScrollPosition?.top
+            ? initialScrollPosition.top > estimatedTotalHeight
+                ? estimatedTotalHeight
+                : initialScrollPosition.top
+            : 0;
+        const initialScrollLeft = initialScrollPosition?.left
+            ? initialScrollPosition.left > estimatedTotalWidth
+                ? estimatedTotalWidth
+                : initialScrollPosition.left
+            : 0;
+
         const [scrollState, setScrollState] = useState<ScrollState>({
-            scrollTop: 0,
-            scrollLeft: 0,
+            scrollTop: initialScrollTop,
+            scrollLeft: initialScrollLeft,
             isScrolling: false,
             verticalScrollDirection: Direction.Down,
             horizontalScrollDirection: Direction.Right,
@@ -406,6 +432,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     startIndex,
                     stopIndex,
                 ];
+                // we require to listen to forceRender state because when that happens we want to recompute
+                // eslint-disable-next-line
             }, [
                 rowHeight,
                 columnWidth,
@@ -418,6 +446,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 isScrolling,
                 verticalScrollDirection,
                 overscanCount,
+                _,
             ]);
 
         const [columnStartIndex, columnStopIndex, visibleColumnStartIndex, visibleColumnStopIndex] =
@@ -460,6 +489,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     startIndex,
                     stopIndex,
                 ];
+                // we require to listen to forceRender state because when that happens we want to recompute
+                // eslint-disable-next-line
             }, [
                 rowHeight,
                 columnWidth,
@@ -472,12 +503,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 isScrolling,
                 horizontalScrollDirection,
                 overscanCount,
+                _,
             ]);
-
-        const estimatedTotalHeight =
-            getEstimatedTotalHeight(rowCount, instanceProps.current) + overshootScrollHeight;
-        const estimatedTotalWidth =
-            getEstimatedTotalWidth(columnCount, instanceProps.current) + overshootScrollWidth;
 
         /* Method to get dimensions of the grid */
         const getDimensions = useCallback(() => {
@@ -1017,12 +1044,30 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         const handleWheel = useCallback(
             (event: WheelEvent) => {
+                if (event.ctrlKey) return;
                 /* If user presses shift key, scroll horizontally */
                 const isScrollingHorizontally = event.shiftKey;
 
-                /* Prevent browser back in Mac */
-                event.preventDefault();
                 const { deltaX, deltaY, deltaMode } = event;
+                const vScrollDirection = deltaY >= 0 ? 'bottom' : 'top';
+
+                // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
+                if (vScrollDirection === 'top') {
+                    if (verticalScrollRef.current.scrollTop + deltaY >= 0) {
+                        event.preventDefault();
+                    }
+                } else {
+                    if (
+                        verticalScrollRef.current.scrollTop + deltaY <=
+                        verticalScrollRef.current.scrollHeight -
+                            (verticalScrollRef.current as HTMLDivElement).clientHeight
+                    ) {
+                        event.preventDefault();
+                    }
+                }
+
+                /* Prevent browser back in Mac */
+                // event.preventDefault();
                 /* Scroll natively */
                 if (wheelingRef.current) return;
 
@@ -1085,11 +1130,69 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             isRunning: true,
         });
 
+        useEffect(() => {
+            if (horizontalScrollRef.current)
+                horizontalScrollRef.current.scrollLeft = initialScrollLeft;
+
+            if (verticalScrollRef.current) verticalScrollRef.current.scrollTop = initialScrollTop;
+
+            // eslint-disable-next-line
+        }, []);
+
         /**
          * Handle mouse wheeel
          */
         useEffect(() => {
             const scrollContainerEl = scrollContainerRef.current;
+
+            // var xDown: number | null = null;
+            // var yDown: number | null = null;
+
+            // function getTouches(evt: any) {
+            //     return (
+            //         evt.touches || // browser API
+            //         evt.originalEvent.touches
+            //     );
+            // }
+
+            // function handleTouchStart(evt: TouchEvent) {
+            //     const firstTouch = getTouches(evt)[0];
+            //     xDown = firstTouch.clientX;
+            //     yDown = firstTouch.clientY;
+            // }
+
+            // function handleTouchMove(evt: TouchEvent) {
+            //     if (!xDown || !yDown) {
+            //         return;
+            //     }
+
+            //     var xUp = evt.touches[0].clientX;
+            //     var yUp = evt.touches[0].clientY;
+
+            //     var xDiff = xDown - xUp;
+            //     var yDiff = yDown - yUp;
+
+            //     if (Math.abs(xDiff) > Math.abs(yDiff)) {
+            //         /*most significant*/
+            //         if (xDiff > 0) {
+            //             /* right swipe */
+            //         } else {
+            //             /* left swipe */
+            //         }
+            //     } else {
+            //         if (yDiff > 0) {
+            //             /* down swipe */
+            //         } else {
+            //             /* up swipe */
+            //         }
+            //     }
+            //     /* reset values */
+            //     xDown = null;
+            //     yDown = null;
+            // }
+
+            // scrollContainerEl?.addEventListener('touchstart', handleTouchStart, false);
+            // scrollContainerEl?.addEventListener('touchmove', handleTouchMove, false);
 
             scrollContainerEl?.addEventListener('wheel', handleWheel, {
                 passive: false,
@@ -1125,104 +1228,25 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             onViewChange,
         ]);
 
-        /* Draw all cells */
-        const headerCells: React.ReactNode[] = [];
-        /* Draw frozen columns */
-        const headerFrozenCells: React.ReactNode[] = [];
-
-        if (headerCellRenderer) {
-            if (columnCount > 0 && rowCount) {
-                /**
-                 * Do any pre-processing of the row before being renderered.
-                 * Useful for `react-table` to call `prepareRow(row)`
-                 */
-                // onBeforeRenderRow?.(rowIndex);
-
-                for (
-                    let columnIndex = columnStartIndex;
-                    columnIndex <= columnStopIndex;
-                    columnIndex++
-                ) {
-                    /**
-                     * Skip frozen columns
-                     * Skip merged cells that are out of bounds
-                     */
-                    if (columnIndex < frozenColumns) {
-                        continue;
-                    }
-
-                    // const isMerged = isMergedCell({ rowIndex, columnIndex });
-                    const bounds = getCellBounds({ rowIndex: 0, columnIndex });
-                    const actualRowIndex = 0;
-                    const actualColumnIndex = columnIndex;
-                    const actualRight = Math.max(columnIndex, bounds.right);
-
-                    if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
-                        continue;
-                    }
-
-                    const y = getRowOffset(actualRowIndex);
-                    const x = getColumnOffset(actualColumnIndex);
-
-                    const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-                    headerCells.push(
-                        headerCellRenderer?.({
-                            x,
-                            y,
-                            width,
-                            height: headerHeight,
-                            rowIndex: actualRowIndex,
-                            columnIndex: actualColumnIndex,
-                            key: itemKey({
-                                rowIndex: actualRowIndex,
-                                columnIndex: actualColumnIndex,
-                            }),
-                        }),
-                    );
-                }
-
-                /**
-                 * Do any pre-processing of the row before being renderered.
-                 * Useful for `react-table` to call `prepareRow(row)`
-                 */
-                // onBeforeRenderRow?.(rowIndex);
-
-                for (
-                    let columnIndex = 0;
-                    columnIndex < Math.min(columnStopIndex, frozenColumns);
-                    columnIndex++
-                ) {
-                    const bounds = getCellBounds({ rowIndex: 0, columnIndex });
-                    const actualRowIndex = 0;
-                    const actualColumnIndex = columnIndex;
-                    const actualRight = Math.max(columnIndex, bounds.right);
-                    if (isHiddenCell?.(actualRowIndex, actualColumnIndex)) {
-                        continue;
-                    }
-
-                    const y = getRowOffset(actualRowIndex);
-                    const x = getColumnOffset(actualColumnIndex);
-
-                    const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-                    headerFrozenCells.push(
-                        headerCellRenderer?.({
-                            x,
-                            y,
-                            width,
-                            height: headerHeight,
-                            rowIndex: actualRowIndex,
-                            columnIndex: actualColumnIndex,
-                            key: itemKey({
-                                rowIndex: actualRowIndex,
-                                columnIndex: actualColumnIndex,
-                            }),
-                        }),
-                    );
-                }
-            }
-        }
+        const { cells: headerCells, frozenCells: headerFrozenCells } = renderCellsByRange({
+            columnStartIndex,
+            columnStopIndex,
+            rowStartIndex: 0,
+            rowStopIndex: 1,
+            columnCount,
+            rowCount: 1,
+            getCellBounds,
+            getColumnOffset,
+            getColumnWidth,
+            getRowHeight: () => headerHeight,
+            getRowOffset: getRowOffset,
+            renderCell: headerCellRenderer as RenderCellsByRangeArgs['renderCell'],
+            isHiddenColumn,
+            isHiddenRow: headerIsHiddenRow,
+            frozenColumns,
+            hoveredCell: null,
+            withCellStates: false,
+        });
 
         /**
          * Renders active cell
@@ -1572,100 +1596,46 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         const listenToEvents = !isScrolling;
 
-        const dynamicCells: React.ReactNode[] = [];
-        const frozenDynamicCells: React.ReactNode[] = [];
+        const { cells: dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
+            columnStartIndex,
+            columnStopIndex,
+            rowStartIndex,
+            rowStopIndex,
+            columnCount,
+            rowCount,
+            getCellBounds,
+            getColumnOffset,
+            getColumnWidth,
+            getRowHeight,
+            getRowOffset,
+            renderCell: renderDynamicCell as RenderCellsByRangeArgs['renderCell'],
+            hoveredCell: datagridStoreRef.current?.hoveredCell,
+            isHiddenColumn,
+            isActiveRow,
+            isHiddenRow,
+            frozenColumns,
+        });
 
-        for (let columnIndex = columnStartIndex; columnIndex <= columnStopIndex; columnIndex++) {
-            if (columnIndex > columnCount - 1) break;
-
-            if (isHiddenColumn?.(columnIndex)) {
-                continue;
-            }
-
-            // const isFirstColumn = columnIndex === 0;
-
-            for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
-                if (rowIndex > rowCount - 1) break;
-
-                if (isHiddenRow?.(rowIndex)) {
-                    continue;
-                }
-
-                const bounds = getCellBounds({ rowIndex, columnIndex });
-                const { top, left, right, bottom } = bounds;
-                const actualBottom = Math.min(rowStopIndex, bottom);
-                const actualRight = Math.min(columnStopIndex, right);
-
-                const y = getRowOffset(top);
-                const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
-
-                const x = getColumnOffset(left);
-
-                const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-                const _cell = renderDynamicCell?.({
-                    x,
-                    y,
-                    width,
-                    height,
-                    columnIndex,
-                    rowIndex,
-                    key: itemKey({ rowIndex, columnIndex }),
-                    isHoverRow: datagridStoreRef.current.hoveredCell?.rowIndex === rowIndex,
-                    isActiveRow: !!isActiveRow?.({ rowIndex }),
-                });
-
-                if (_cell) {
-                    dynamicCells.push(_cell);
-                }
-            }
-        }
-
-        for (
-            let columnIndex = 0;
-            columnIndex < Math.min(columnStopIndex, frozenColumns);
-            columnIndex++
-        ) {
-            if (isHiddenColumn?.(columnIndex)) {
-                continue;
-            }
-
-            for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
-                if (rowIndex > rowCount - 1) break;
-
-                if (isHiddenRow?.(rowIndex)) {
-                    continue;
-                }
-
-                const bounds = getCellBounds({ rowIndex, columnIndex });
-                const { top, left, right, bottom } = bounds;
-                const actualBottom = Math.min(rowStopIndex, bottom);
-                const actualRight = Math.min(columnStopIndex, right);
-
-                const y = getRowOffset(top);
-                const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
-
-                const x = getColumnOffset(left);
-
-                const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-                const _cell = renderDynamicCell?.({
-                    x,
-                    y,
-                    width,
-                    height,
-                    columnIndex,
-                    rowIndex,
-                    key: itemKey({ rowIndex, columnIndex }),
-                    isHoverRow: datagridStoreRef.current.hoveredCell?.rowIndex === rowIndex,
-                    isActiveRow: !!isActiveRow?.({ rowIndex }),
-                });
-
-                if (_cell) {
-                    frozenDynamicCells.push(_cell);
-                }
-            }
-        }
+        const { cells: dynamicReactCells, frozenCells: frozenDynamicReactCells } =
+            renderCellsByRange({
+                columnStartIndex,
+                columnStopIndex,
+                rowStartIndex,
+                rowStopIndex,
+                columnCount,
+                rowCount,
+                getCellBounds,
+                getColumnOffset,
+                getColumnWidth,
+                getRowHeight,
+                getRowOffset,
+                renderCell: renderDynamicReactCell as RenderCellsByRangeArgs['renderCell'],
+                hoveredCell: datagridStoreRef.current?.hoveredCell,
+                isHiddenColumn,
+                isActiveRow,
+                isHiddenRow,
+                frozenColumns,
+            });
 
         const { cells, frozenCells } = useGrid({
             instance: gridRef!,
@@ -1844,6 +1814,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         {selectionAreas}
                         {activeCellSelection}
                         {fillhandleComponent}
+                        {dynamicReactCells}
                     </View>
                 </View>
                 {frozenColumns ? (
@@ -1853,6 +1824,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             {selectionAreasFrozenColumns}
                             {activeCellSelectionFrozenColumn}
                             {fillhandleComponent}
+                            {frozenDynamicReactCells}
                         </View>
                     </View>
                 ) : null}
@@ -1898,6 +1870,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     {
                         outline: 'none',
                     },
+                    isScrolling ? { pointerEvents: 'none' } : {},
                     style,
                 ]),
                 verticalScrollbarStyle: {
@@ -1928,6 +1901,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 } as ViewStyle,
             }),
             [
+                isScrolling,
                 containerHeight,
                 containerStyleProp,
                 containerWidth,
@@ -1957,6 +1931,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             setActiveCellState: _sa,
 
             setSelections: _ss,
+            onContextMenu,
             ...restContainerProps
         } = rest as any;
 
@@ -1996,11 +1971,12 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             height={containerHeight}
                             ref={stageRef}
                             listening={listenToEvents}
+                            onContextMenu={onContextMenu}
                             {...stageProps}>
                             {wrapper(stageChildren)}
                         </Stage>
+                        {selectionChildren}
                     </div>
-                    {selectionChildren}
                     {showScrollbar ? (
                         <>
                             <ScrollView
@@ -2030,6 +2006,166 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
     }),
 );
 
-const selectionContainer = { pointerEvents: 'none', outline: 'none' } as CSSProperties;
+type RenderCellsByRangeArgs = {
+    columnStartIndex: number;
+    columnStopIndex: number;
+    rowStartIndex: number;
+    rowStopIndex: number;
+    rowCount: number;
+    columnCount: number;
+    frozenColumns: number;
+    isHiddenColumn?: GridProps['isHiddenColumn'];
+    isHiddenRow?: GridProps['isHiddenColumn'];
+    isActiveRow?: GridProps['isActiveRow'];
+    hoveredCell: CellInterface | null;
+    getCellBounds: GridRef['getCellBounds'];
+    getRowOffset: GridRef['getRowOffset'];
+    getColumnOffset: GridRef['getColumnOffset'];
+    getColumnWidth: GridRef['getColumnWidth'];
+    getRowHeight: GridRef['getRowHeight'];
+    renderCell?: (
+        props: RendererProps & {
+            isActiveRow?: IRenderProps['isActiveRow'];
+            isHoverRow?: IRenderProps['isHoverRow'];
+            isHoverColumn?: IRenderProps['isHoverColumn'];
+        },
+    ) => React.ReactNode;
+    withCellStates?: boolean;
+};
+
+const renderCellsByRange = ({
+    columnStartIndex,
+    columnStopIndex,
+    rowStartIndex,
+    rowStopIndex,
+    rowCount,
+    columnCount,
+    isHiddenColumn,
+    isActiveRow,
+    isHiddenRow,
+    hoveredCell,
+    frozenColumns,
+    getCellBounds,
+    getColumnOffset,
+    getColumnWidth,
+    getRowHeight,
+    getRowOffset,
+    renderCell,
+    withCellStates = true,
+}: RenderCellsByRangeArgs) => {
+    const cells: React.ReactNode[] = [];
+    const frozenCells: React.ReactNode[] = [];
+
+    for (let columnIndex = columnStartIndex; columnIndex <= columnStopIndex; columnIndex++) {
+        if (columnIndex > columnCount - 1) break;
+
+        if (isHiddenColumn?.(columnIndex)) {
+            continue;
+        }
+
+        // const isFirstColumn = columnIndex === 0;
+
+        for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
+            if (rowIndex > rowCount - 1) break;
+
+            if (isHiddenRow?.(rowIndex)) {
+                continue;
+            }
+
+            const bounds = getCellBounds({ rowIndex, columnIndex });
+            const { top, left, right, bottom } = bounds;
+            const actualBottom = Math.min(rowStopIndex, bottom);
+            const actualRight = Math.min(columnStopIndex, right);
+
+            const y = getRowOffset(top);
+            const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
+
+            const x = getColumnOffset(left);
+
+            const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
+
+            const _cell = renderCell?.({
+                x,
+                y,
+                width,
+                height,
+                columnIndex,
+                rowIndex,
+                key: itemKey({ rowIndex, columnIndex }),
+                ...(withCellStates
+                    ? {
+                          isHoverRow: hoveredCell?.rowIndex === rowIndex,
+                          isHoverColumn: hoveredCell?.columnIndex === columnIndex,
+                          isActiveRow: !!isActiveRow?.({ rowIndex }),
+                      }
+                    : {}),
+            });
+
+            if (_cell) {
+                cells.push(_cell);
+            }
+        }
+    }
+
+    for (
+        let columnIndex = 0;
+        columnIndex < Math.min(columnStopIndex, frozenColumns);
+        columnIndex++
+    ) {
+        if (isHiddenColumn?.(columnIndex)) {
+            continue;
+        }
+
+        for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
+            if (rowIndex > rowCount - 1) break;
+
+            if (isHiddenRow?.(rowIndex)) {
+                continue;
+            }
+
+            const bounds = getCellBounds({ rowIndex, columnIndex });
+            const { top, left, right, bottom } = bounds;
+            const actualBottom = Math.min(rowStopIndex, bottom);
+            const actualRight = Math.min(columnStopIndex, right);
+
+            const y = getRowOffset(top);
+            const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
+
+            const x = getColumnOffset(left);
+
+            const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
+
+            const _cell = renderCell?.({
+                x,
+                y,
+                width,
+                height,
+                columnIndex,
+                rowIndex,
+                key: itemKey({ rowIndex, columnIndex }),
+                ...(withCellStates
+                    ? {
+                          isHoverRow: hoveredCell?.rowIndex === rowIndex,
+                          isHoverColumn: hoveredCell?.columnIndex === columnIndex,
+                          isActiveRow: !!isActiveRow?.({ rowIndex }),
+                      }
+                    : {}),
+            });
+
+            if (_cell) {
+                frozenCells.push(_cell);
+            }
+        }
+    }
+
+    return { cells, frozenCells };
+};
+
+const headerIsHiddenRow = () => false;
+
+const selectionContainer = {
+    pointerEvents: 'none',
+    outline: 'none',
+} as CSSProperties;
 
 export default Grid;
