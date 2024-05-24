@@ -13,4 +13,4 @@ export {
     EditableResults,
     EditorProps,
 } from './useEditable';
-export { useMobileScroller } from './useMobileScroller';
+export { default as useMobileScroller } from './useMobileScroller';
