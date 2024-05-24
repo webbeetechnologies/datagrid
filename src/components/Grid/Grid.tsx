@@ -74,8 +74,6 @@ import {
     StylingProps,
     ViewPortProps,
 } from './types';
-import { useMobileScroller } from '../../hooks';
-import { isTouchDevice } from '../../utils';
 
 const DEFAULT_ESTIMATED_COLUMN_SIZE = 100;
 const DEFAULT_ESTIMATED_ROW_SIZE = 50;
@@ -1115,20 +1113,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             },
             [scrollbarSize, snap],
         );
-
-        const isRealTouchDevice = isTouchDevice();
-
-        useMobileScroller({
-            containerRef,
-            horizontalBarRef: horizontalScrollRef,
-            verticalBarRef: verticalScrollRef,
-            containerWidth: containerWidth,
-            containerHeight,
-            totalWidth: estimatedTotalHeight,
-            totalHeight: estimatedTotalHeight,
-            isTouchDevice: isRealTouchDevice,
-            isRunning: true,
-        });
 
         useEffect(() => {
             if (horizontalScrollRef.current)

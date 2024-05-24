@@ -1,128 +1,117 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 // @ts-ignore
 import { Scroller } from 'scroller';
+import type { GridRef, ScrollCoords } from '../components/Grid/types';
+import { canUseDOM } from '../utils';
 
-export interface IScrollCoordsProps {
-    scrollLeft?: number;
-    scrollTop?: number;
+export interface TouchProps {
+    /**
+     * Grid reference to access grid methods
+     */
+    gridRef: React.MutableRefObject<GridRef | null>;
 }
 
-interface IUseScrollerProps {
-    containerRef: React.RefObject<any>;
-    verticalBarRef: React.RefObject<HTMLDivElement>;
-    horizontalBarRef: React.RefObject<HTMLDivElement>;
-    containerWidth: number;
-    containerHeight: number;
-    totalWidth: number;
-    totalHeight: number;
+export interface TouchResults {
     isTouchDevice: boolean;
-    isRunning: boolean;
+    scrollTo: (scrollState: ScrollCoords) => void;
+    scrollToTop: () => void;
 }
 
-export const useMobileScroller = (props: IUseScrollerProps) => {
-    const {
-        containerRef,
-        horizontalBarRef,
-        verticalBarRef,
-        containerWidth,
-        containerHeight,
-        totalWidth,
-        totalHeight,
-        isTouchDevice,
-        isRunning,
-    } = props;
+/**
+ * Enable touch interactions
+ * Supports
+ * 1. Scrolling
+ * 2. Cell selection
+ */
+const useTouch = ({ gridRef }: TouchProps): TouchResults => {
     const scrollerRef = useRef<typeof Scroller | null>(null);
+    const isTouchDevice = useRef<boolean>(false);
 
-    const mobileScrollHandler = useCallback(
-        (scrollLeft: number, scrollTop: number) => {
-            if (verticalBarRef.current) {
-                verticalBarRef.current.scrollTop = scrollTop;
-            }
-            if (horizontalBarRef.current) {
-                horizontalBarRef.current.scrollLeft = scrollLeft;
-            }
-        },
-        [verticalBarRef, horizontalBarRef],
-    );
-
-    // Scroll to a location (for mobile use)
-    const scrollTo = useCallback(
-        ({ scrollTop, scrollLeft }: IScrollCoordsProps) => {
-            if (horizontalBarRef.current && verticalBarRef.current) {
-                scrollerRef.current?.scrollTo(
-                    scrollLeft || horizontalBarRef.current.scrollLeft,
-                    scrollTop || verticalBarRef.current.scrollTop,
-                );
-            }
-        },
-        [horizontalBarRef, verticalBarRef],
-    );
-
-    const onTouchStart = useCallback((e: TouchEvent) => {
-        if (scrollerRef.current) {
-            scrollerRef.current.doTouchStart(e.changedTouches, e.timeStamp);
-        }
+    /* Scroll to x, y coordinate */
+    const scrollTo = useCallback(({ scrollLeft, scrollTop }: ScrollCoords) => {
+        if (scrollerRef.current) scrollerRef.current.scrollTo(scrollLeft, scrollTop);
+    }, []);
+    /* Scrolls to top if mobile */
+    const scrollToTop = useCallback(() => {
+        if (scrollerRef.current) scrollerRef.current.scrollTo(0, 0);
     }, []);
 
-    const onTouchMove = useCallback((e: TouchEvent) => {
-        e.preventDefault();
-        if (scrollerRef.current) {
-            scrollerRef.current.doTouchMove(e.changedTouches, e.timeStamp);
-        }
-    }, []);
-
-    const onTouchEnd = useCallback(
-        (e: any) => {
-            if (scrollerRef.current) {
-                if (horizontalBarRef.current && verticalBarRef.current) {
-                    scrollTo({
-                        scrollLeft: horizontalBarRef.current.scrollLeft,
-                        scrollTop: verticalBarRef.current.scrollTop,
-                    });
-                }
-                scrollerRef.current.doTouchEnd(e.timeStamp);
-            }
-        },
-        [horizontalBarRef, verticalBarRef, scrollTo],
-    );
-
-    useEffect(() => {
-        if (isTouchDevice) {
-            const options = {
-                scrollingX: true,
-                scrollingY: true,
-                animationDuration: 200,
-            };
-
-            scrollerRef.current = new Scroller(mobileScrollHandler, options);
-        }
-    }, [isTouchDevice, mobileScrollHandler]);
-
-    useEffect(() => {
-        if (isTouchDevice && scrollerRef.current) {
-            scrollTo({});
+    const updateScrollDimensions = useCallback(
+        ({
+            containerWidth,
+            containerHeight,
+            estimatedTotalWidth,
+            estimatedTotalHeight,
+        }: {
+            containerWidth: number;
+            containerHeight: number;
+            estimatedTotalWidth: number;
+            estimatedTotalHeight: number;
+        }) => {
             scrollerRef.current.setDimensions(
                 containerWidth,
                 containerHeight,
-                totalWidth,
-                totalHeight,
+                estimatedTotalWidth,
+                estimatedTotalHeight,
             );
-        }
-    }, [containerHeight, totalHeight, isTouchDevice, scrollTo, containerWidth, totalWidth]);
+        },
+        [],
+    );
+
+    const handleTouchScroll = useCallback(
+        (scrollLeft: number, scrollTop: number) => {
+            gridRef.current?.scrollTo({ scrollTop, scrollLeft });
+        },
+        [gridRef],
+    );
+    const handleTouchStart = useCallback((e: globalThis.TouchEvent) => {
+        scrollerRef.current.doTouchStart(e.touches, e.timeStamp);
+    }, []);
+    const handleTouchMove = useCallback((e: globalThis.TouchEvent) => {
+        e.preventDefault();
+        scrollerRef.current.doTouchMove(e.touches, e.timeStamp);
+    }, []);
+    const handleTouchEnd = useCallback((e: globalThis.TouchEvent) => {
+        scrollerRef.current.doTouchEnd(e.timeStamp);
+    }, []);
 
     useEffect(() => {
-        if (!isRunning || !isTouchDevice || !containerRef.current) return;
-        const element = containerRef.current;
-        element.addEventListener('touchstart', onTouchStart);
-        element.addEventListener('touchend', onTouchEnd);
-        element.addEventListener('touchmove', onTouchMove);
+        isTouchDevice.current = canUseDOM && 'ontouchstart' in window;
+        /* Update dimension */
+        if (isTouchDevice.current) {
+            const options = {
+                scrollingX: true,
+                scrollingY: true,
+                decelerationRate: 0.95,
+                penetrationAcceleration: 0.08,
+            };
 
-        return () => {
-            element.removeEventListener('touchstart', onTouchStart);
-            element.removeEventListener('touchend', onTouchEnd);
-            element.removeEventListener('touchmove', onTouchMove);
-        };
-    });
+            /* Add listeners */
+            gridRef.current?.container?.addEventListener('touchstart', handleTouchStart);
+            gridRef.current?.container?.addEventListener('touchend', handleTouchEnd);
+            gridRef.current?.container?.addEventListener('touchmove', handleTouchMove);
 
-    return useMemo(() => ({ scrollTo }), [scrollTo]);
+            /* Add scroller */
+            scrollerRef.current = new Scroller(handleTouchScroll, options);
+
+            const dims = gridRef.current?.getDimensions();
+            /* Update dimensions */
+            if (dims) updateScrollDimensions(dims);
+        }
+    }, [
+        gridRef,
+        handleTouchEnd,
+        handleTouchMove,
+        handleTouchScroll,
+        handleTouchStart,
+        updateScrollDimensions,
+    ]);
+
+    return {
+        isTouchDevice: isTouchDevice.current,
+        scrollTo,
+        scrollToTop,
+    };
 };
+
+export default useTouch;
