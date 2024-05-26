@@ -170,6 +170,7 @@ export type Props = Pick<
         onClick?: (e: MouseEvent<HTMLDivElement>, cell: CellInterface | null) => void;
         isLastRow?: (rowIndex: number) => boolean;
         isLastColumn?: (columnIndex: number) => boolean;
+        scale?: number;
     };
 
 export type DataGridRef = Pick<
@@ -385,6 +386,7 @@ const DataGrid = (
         renderDynamicReactCell,
         isLastColumn,
         isLastRow,
+        scale = 1,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -642,6 +644,7 @@ const DataGrid = (
                             activeCell={activeCell}
                             showFillHandle={!isEditInProgress}
                             headerCellRenderer={headerCellRenderer}
+                            scale={scale}
                             {...gridProps}
                             {...selectionProps}
                             useRecords={useRecords}
