@@ -105,6 +105,8 @@ const useTouch = ({ gridRef }: TouchProps): TouchResults => {
                 _gridRef.current?.container?.removeEventListener('touchmove', handleTouchMove);
             };
         }
+
+        return;
     }, [
         gridRef,
         handleTouchEnd,
