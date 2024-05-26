@@ -1854,7 +1854,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     {
                         outline: 'none',
                     },
-                    isScrolling ? { pointerEvents: 'none' } : {},
+                    // isScrolling ? { pointerEvents: 'none' } : {},
                     style,
                 ]),
                 verticalScrollbarStyle: {
@@ -1885,7 +1885,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 } as ViewStyle,
             }),
             [
-                isScrolling,
                 containerHeight,
                 containerStyleProp,
                 containerWidth,

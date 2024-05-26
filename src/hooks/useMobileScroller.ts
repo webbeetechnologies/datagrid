@@ -33,7 +33,7 @@ const useTouch = ({ gridRef }: TouchProps): TouchResults => {
     }, []);
     /* Scrolls to top if mobile */
     const scrollToTop = useCallback(() => {
-        if (scrollerRef.current) scrollerRef.current.scrollTo(0, 0);
+        // if (scrollerRef.current) scrollerRef.current.scrollTo(0, 0);
     }, []);
 
     const updateScrollDimensions = useCallback(
@@ -76,6 +76,7 @@ const useTouch = ({ gridRef }: TouchProps): TouchResults => {
     }, []);
 
     useEffect(() => {
+        const _gridRef = gridRef;
         isTouchDevice.current = canUseDOM && 'ontouchstart' in window;
         /* Update dimension */
         if (isTouchDevice.current) {
@@ -87,9 +88,9 @@ const useTouch = ({ gridRef }: TouchProps): TouchResults => {
             };
 
             /* Add listeners */
-            gridRef.current?.container?.addEventListener('touchstart', handleTouchStart);
-            gridRef.current?.container?.addEventListener('touchend', handleTouchEnd);
-            gridRef.current?.container?.addEventListener('touchmove', handleTouchMove);
+            _gridRef.current?.container?.addEventListener('touchstart', handleTouchStart);
+            _gridRef.current?.container?.addEventListener('touchend', handleTouchEnd);
+            _gridRef.current?.container?.addEventListener('touchmove', handleTouchMove);
 
             /* Add scroller */
             scrollerRef.current = new Scroller(handleTouchScroll, options);
@@ -97,6 +98,12 @@ const useTouch = ({ gridRef }: TouchProps): TouchResults => {
             const dims = gridRef.current?.getDimensions();
             /* Update dimensions */
             if (dims) updateScrollDimensions(dims);
+
+            return () => {
+                _gridRef.current?.container?.removeEventListener('touchstart', handleTouchStart);
+                _gridRef.current?.container?.removeEventListener('touchend', handleTouchEnd);
+                _gridRef.current?.container?.removeEventListener('touchmove', handleTouchMove);
+            };
         }
     }, [
         gridRef,
