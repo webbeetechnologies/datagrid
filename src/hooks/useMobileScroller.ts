@@ -98,15 +98,13 @@ const useTouch = ({ gridRef }: TouchProps): TouchResults => {
             const dims = gridRef.current?.getDimensions();
             /* Update dimensions */
             if (dims) updateScrollDimensions(dims);
-
-            return () => {
-                _gridRef.current?.container?.removeEventListener('touchstart', handleTouchStart);
-                _gridRef.current?.container?.removeEventListener('touchend', handleTouchEnd);
-                _gridRef.current?.container?.removeEventListener('touchmove', handleTouchMove);
-            };
         }
 
-        return;
+        return () => {
+            _gridRef.current?.container?.removeEventListener('touchstart', handleTouchStart);
+            _gridRef.current?.container?.removeEventListener('touchend', handleTouchEnd);
+            _gridRef.current?.container?.removeEventListener('touchmove', handleTouchMove);
+        };
     }, [
         gridRef,
         handleTouchEnd,
