@@ -33,7 +33,7 @@ const useTouch = ({ gridRef }: TouchProps): TouchResults => {
     }, []);
     /* Scrolls to top if mobile */
     const scrollToTop = useCallback(() => {
-        // if (scrollerRef.current) scrollerRef.current.scrollTo(0, 0);
+        if (scrollerRef.current) scrollerRef.current.scrollTo(0, 0);
     }, []);
 
     const updateScrollDimensions = useCallback(

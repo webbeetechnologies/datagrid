@@ -679,7 +679,6 @@ const DataGrid = (
                 {children}
             </View>
         </View>
-        // </View>
     );
 };
 

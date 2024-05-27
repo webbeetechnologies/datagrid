@@ -1916,8 +1916,36 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
             setSelections: _ss,
             onContextMenu,
+            onDoubleClick,
+            onTouchStart: _onTouchStart,
             ...restContainerProps
         } = rest as any;
+
+        const lastClickRef = useRef(0);
+
+        const onTouchStart = useCallback(
+            (e: globalThis.TouchEvent) => {
+                _onTouchStart?.(e);
+
+                e.preventDefault(); // to disable browser default zoom on double tap
+
+                const newEvent = Object.assign({}, e);
+                Object.assign((newEvent as any).nativeEvent, {
+                    clientX: e.touches[0].clientX,
+                    clientY: e.touches[0].clientY,
+                });
+
+                const date = new Date();
+                const time = date.getTime();
+                const time_between_taps = 200; // 200ms
+                if (time - lastClickRef.current < time_between_taps) {
+                    // do stuff
+                    onDoubleClick(newEvent);
+                }
+                lastClickRef.current = time;
+            },
+            [_onTouchStart, onDoubleClick],
+        );
 
         return (
             <View style={containerStyle}>
@@ -1949,6 +1977,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         {...{ tabIndex: 0 }}
                         ref={containerRef}
                         style={innerContainerStyle}
+                        onTouchStart={onTouchStart}
                         {...restContainerProps}>
                         <Stage
                             width={containerWidth}
