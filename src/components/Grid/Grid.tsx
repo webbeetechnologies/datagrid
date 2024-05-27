@@ -1978,6 +1978,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         ref={containerRef}
                         style={innerContainerStyle}
                         onTouchStart={onTouchStart}
+                        onDoubleClick={onDoubleClick}
                         {...restContainerProps}>
                         <Stage
                             width={containerWidth}
