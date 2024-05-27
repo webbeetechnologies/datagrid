@@ -1638,6 +1638,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             useFields,
             themeColors,
             useProcessRenderProps,
+            scale,
         });
 
         const rowEndCells: React.ReactNode[] = [];

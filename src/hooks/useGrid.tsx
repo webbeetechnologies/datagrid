@@ -17,6 +17,7 @@ export type UseGridProps = Pick<
     | 'isActiveColumn'
     | 'isActiveRow'
     | 'renderDynamicCell'
+    | 'scale'
 > & {
     instance: React.RefObject<GridRef>;
     rowStartIndex: number;
@@ -55,6 +56,7 @@ const useGrid = ({
     useFields,
     themeColors = emptyObj,
     useProcessRenderProps = useProcessRenderPropsDefault,
+    scale = 1,
 }: UseGridProps) => {
     const records = useRecords({
         columnStartIndex,
@@ -168,6 +170,7 @@ const useGrid = ({
                         isHoverRow,
                         isHoverColumn,
                         columnCount,
+                        scale,
                     };
 
                     if (isLastColumn && cellValue != null) {
@@ -210,6 +213,7 @@ const useGrid = ({
             groupingLevel,
             processRenderPropsRef,
             fieldsMap,
+            scale,
         ],
     );
 

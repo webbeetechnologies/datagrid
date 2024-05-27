@@ -160,6 +160,7 @@ export interface IRenderProps {
     // groupField?: Field;
     // groupValue?: any;
     columnCount: number;
+    scale: number;
 }
 export interface IRenderStyleProps {
     color?: string;
