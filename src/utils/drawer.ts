@@ -2,22 +2,23 @@ import GraphemeSplitter from 'grapheme-splitter';
 import { autoSizerCanvas } from '../utils/autoSizerCanvas';
 import { getTextWidth, textDataCache } from './getTextWidth';
 import { imageCache } from './image-cache';
-import {
-    type ICtxStyleProps,
-    type IImageProps,
-    type ILabelProps,
-    type ILineProps,
-    type ILinkData,
-    type IRectProps,
-    type ITextEllipsisProps,
-    type ITextProps,
-    type IWrapTextDataProps,
-    type IWrapTextProps,
-    type ISegment,
-    type IHyperlinkSegment,
-    SegmentType,
+import type {
+    ICtxStyleProps,
+    IImageProps,
+    ILabelProps,
+    ILineProps,
+    ILinkData,
+    IRectProps,
+    ITextEllipsisProps,
+    ITextProps,
+    IWrapTextDataProps,
+    IWrapTextProps,
+    ISegment,
+    IHyperlinkSegment,
     GridColors,
+    GridConstants,
 } from './types';
+import { SegmentType } from './types';
 import type { Context } from 'konva/lib/Context';
 import { IconPacks } from '../components/Grid/CanvasIcon';
 import { resolveContrastColor } from '@bambooapp/bamboo-molecules';
@@ -90,21 +91,38 @@ export class KonvaDrawer {
         textColorLight: '#fff',
         textColorDark: '#000',
     };
+    constants: GridConstants = {
+        scale: 1,
+        groupCount: 0,
+    };
 
-    public initCtx(ctx: Context, colors?: Partial<GridColors> & Record<string, any>) {
+    public initCtx(
+        ctx: Context,
+        colors?: Partial<GridColors> & Record<string, any>,
+        constants?: GridConstants,
+    ) {
         this.needDraw = Boolean(ctx);
         this.ctx = ctx || autoSizerCanvas.context!;
         /**
          * textBaseline is specified as middle, compatible with browser differences
          */
         this.ctx.textBaseline = 'middle';
+
         if (colors) this.setColors(colors);
+        if (constants) this.setConstants(constants);
     }
 
     public setColors(colors: Partial<GridColors> & Record<string, any>) {
         this.colors = {
             ...this.colors,
             ...colors,
+        };
+    }
+
+    public setConstants(constants: Partial<GridConstants>) {
+        this.constants = {
+            ...this.constants,
+            ...constants,
         };
     }
 
@@ -126,6 +144,10 @@ export class KonvaDrawer {
         }
     }
 
+    public numberWithScale(value: number) {
+        return value * this.constants.scale;
+    }
+
     public textEllipsis(props: ITextEllipsisProps) {
         const { text, maxWidth, fontSize = 13, fontWeight = 'normal' } = props;
 
@@ -135,7 +157,9 @@ export class KonvaDrawer {
                 textWidth: 0,
                 isEllipsis: false,
             };
-        const fontStyle = `${fontWeight} ${fontSize}px ${DEFAULT_FONT_FAMILY}`;
+        const fontStyle = `${fontWeight} ${this.numberWithScale(
+            fontSize,
+        )}px ${DEFAULT_FONT_FAMILY}`;
 
         if (!maxWidth) {
             return {
@@ -316,7 +340,7 @@ export class KonvaDrawer {
             maxWidth,
             lineHeight,
             maxRow = 1,
-            fontSize = 13,
+            fontSize: _fontSize = 13,
             fillStyle = this.colors.textColor,
             textAlign = 'left',
             verticalAlign = 'top',
@@ -330,6 +354,7 @@ export class KonvaDrawer {
         } = props;
         let offsetX = 0 + (favicon ? 24 : 0);
         let offsetY = 0;
+        const fontSize = this.numberWithScale(_fontSize);
         const baselineOffset = verticalAlign === 'top' ? fontSize / 2 : 0;
         const fontStyle = `${fontWeight}-${fontSize}px`;
         const isUnderline = textDecoration === 'underline';
@@ -526,7 +551,7 @@ export class KonvaDrawer {
             x,
             y,
             text,
-            fontSize = 14,
+            fontSize: _fontSize = 14,
             fontFamily = DEFAULT_FONT_FAMILY,
             fillStyle = this.colors.textColor,
             textAlign = 'left',
@@ -534,7 +559,7 @@ export class KonvaDrawer {
             fontWeight = 'normal',
             textDecoration = 'none',
         } = props;
-
+        const fontSize = this.numberWithScale(_fontSize);
         const fontStyle = `${fontWeight} ${fontSize}px ${fontFamily}`;
 
         if (textDecoration === 'underline') {
@@ -616,13 +641,14 @@ export class KonvaDrawer {
             radius,
             background,
             color = this.colors.textColor,
-            fontSize = 13,
+            fontSize: _fontSize = 13,
             textAlign = 'left',
             verticalAlign = 'top',
             fontWeight = 'normal',
             padding = 0,
             stroke,
         } = props;
+        const fontSize = this.numberWithScale(_fontSize);
 
         this.rect({
             x,
@@ -646,7 +672,7 @@ export class KonvaDrawer {
             y: y + (height - fontSize) / 2,
             text,
             fillStyle: color,
-            fontSize,
+            fontSize: _fontSize,
             textAlign,
             verticalAlign,
             fontWeight,

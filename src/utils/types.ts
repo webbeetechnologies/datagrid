@@ -160,7 +160,6 @@ export interface IRenderProps {
     // groupField?: Field;
     // groupValue?: any;
     columnCount: number;
-    scale: number;
 }
 export interface IRenderStyleProps {
     color?: string;
@@ -183,6 +182,11 @@ export type GridColors = {
     textColorLight: string;
     textColorDark: string;
     [key: string]: any;
+};
+
+export type GridConstants = {
+    scale: number;
+    groupCount: number;
 };
 
 enum RowType {

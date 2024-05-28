@@ -75,7 +75,7 @@ const useGrid = ({
 
     const drawCells = useCallback(
         (ctx: Context, columnStartIndex: number, columnStopIndex: number) => {
-            cellsDrawer.initCtx(ctx, themeColors);
+            cellsDrawer.initCtx(ctx, themeColors, { scale, groupCount: groupingLevel });
             recordRowLayout.initCtx(ctx, themeColors);
 
             if (!instance.current) return;
@@ -170,7 +170,6 @@ const useGrid = ({
                         isHoverRow,
                         isHoverColumn,
                         columnCount,
-                        scale,
                     };
 
                     if (isLastColumn && cellValue != null) {
