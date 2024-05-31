@@ -44,10 +44,8 @@ import {
     UseSelectionOptions,
     EditableResults,
     UseEditableOptions,
-    useMobileScroller,
 } from './hooks';
 import { DataGridStateProvider } from './DataGridStateContext';
-import { isTouchDevice } from './utils';
 
 export type CellRendererProps = RendererProps & { useCellValue: Props['useCellValue'] };
 
@@ -484,12 +482,6 @@ const DataGrid = (
         isLastColumn,
     });
 
-    const isRealTouchDevice = isTouchDevice();
-
-    const touchProps = useMobileScroller({
-        gridRef,
-    });
-
     const onScroll = useCallback(
         (scrollCoords: ScrollCoords) => {
             onEditableScroll?.(scrollCoords);
@@ -671,7 +663,6 @@ const DataGrid = (
                             renderDynamicReactCell={renderDynamicReactCell}
                             onMouseMove={onMouseMove}
                             onMouseLeave={onMouseLeave}
-                            {...(isRealTouchDevice ? touchProps : {})}
                         />
                     </DataGridStateProvider>
                 </InfiniteLoader>

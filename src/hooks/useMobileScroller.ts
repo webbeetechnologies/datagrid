@@ -64,9 +64,15 @@ const useTouch = ({ gridRef }: TouchProps): TouchResults => {
         },
         [gridRef],
     );
-    const handleTouchStart = useCallback((e: globalThis.TouchEvent) => {
-        scrollerRef.current.doTouchStart(e.touches, e.timeStamp);
-    }, []);
+    const handleTouchStart = useCallback(
+        (e: globalThis.TouchEvent) => {
+            const dims = gridRef.current?.getDimensions();
+            if (dims) updateScrollDimensions(dims);
+
+            scrollerRef.current.doTouchStart(e.touches, e.timeStamp);
+        },
+        [gridRef, updateScrollDimensions],
+    );
     const handleTouchMove = useCallback((e: globalThis.TouchEvent) => {
         e.preventDefault();
         scrollerRef.current.doTouchMove(e.touches, e.timeStamp);

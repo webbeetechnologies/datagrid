@@ -22,6 +22,7 @@ import { Stage, Layer, Group } from 'react-konva';
 import type Konva from 'konva';
 import invariant from 'tiny-invariant';
 
+import { useMobileScroller } from '../../hooks';
 import useGrid from '../../hooks/useGrid';
 import { useDataGridStateStoreRef } from '../../DataGridStateContext';
 import { canUseDOM } from '../../utils';
@@ -179,6 +180,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const wheelingRef = useRef<number | null>(null);
         const horizontalScrollRef = useRef<any>(null);
         const gridRef = useRef<GridRef | null>(null);
+
+        useMobileScroller({
+            gridRef,
+        });
 
         const datagridStoreRef = useDataGridStateStoreRef().store;
 
@@ -1918,6 +1923,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             onContextMenu,
             onDoubleClick,
             onTouchStart: _onTouchStart,
+            scrollTo: _scrollTo,
+            scrollToTop: _scrollToTop,
             ...restContainerProps
         } = rest as any;
 
