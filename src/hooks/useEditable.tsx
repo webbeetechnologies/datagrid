@@ -777,13 +777,24 @@ const useEditable = ({
     );
 
     const onSubmit = useCallback(
-        (value: any, activeCell: CellInterface, nextActiveCell?: CellInterface | null) => {
+        (value: any, activeCell: CellInterface, _nextActiveCell?: CellInterface | null) => {
             setValueRef.current(value);
+
+            let nextActiveCell = _nextActiveCell;
+
+            if (
+                !nextActiveCell ||
+                isHiddenColumn(nextActiveCell.rowIndex) ||
+                isHiddenRow(nextActiveCell.columnIndex)
+            ) {
+                nextActiveCell = null;
+            }
+
             onSubmitValue?.(value, activeCell, nextActiveCell);
 
             onAfterSubmit?.(value, activeCell, nextActiveCell);
         },
-        [onAfterSubmit, onSubmitValue, setValueRef],
+        [isHiddenColumn, isHiddenRow, onAfterSubmit, onSubmitValue, setValueRef],
     );
 
     /* Save the value */
