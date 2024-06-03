@@ -1053,6 +1053,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
                 const { deltaX, deltaY, deltaMode } = event;
                 const vScrollDirection = deltaY >= 0 ? 'bottom' : 'top';
+                const hScrollDirection = deltaX >= 0 ? 'right' : 'left';
 
                 // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
                 if (vScrollDirection === 'top') {
@@ -1064,6 +1065,21 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         verticalScrollRef.current.scrollTop + deltaY <=
                         verticalScrollRef.current.scrollHeight -
                             (verticalScrollRef.current as HTMLDivElement).clientHeight
+                    ) {
+                        event.preventDefault();
+                    }
+                }
+
+                // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
+                if (hScrollDirection === 'left') {
+                    if (horizontalScrollRef.current.scrollLeft + deltaX >= 0) {
+                        event.preventDefault();
+                    }
+                } else {
+                    if (
+                        horizontalScrollRef.current.scrollLeft + deltaX <=
+                        horizontalScrollRef.current.scrollWidth -
+                            (horizontalScrollRef.current as HTMLDivElement).clientWidth
                     ) {
                         event.preventDefault();
                     }
