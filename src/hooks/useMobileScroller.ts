@@ -9,6 +9,8 @@ export interface TouchProps {
      * Grid reference to access grid methods
      */
     gridRef: React.MutableRefObject<GridRef | null>;
+    initialScrollTop: number;
+    initialScrollLeft: number;
 }
 
 export interface TouchResults {
@@ -23,7 +25,7 @@ export interface TouchResults {
  * 1. Scrolling
  * 2. Cell selection
  */
-const useTouch = ({ gridRef }: TouchProps): TouchResults => {
+const useTouch = ({ gridRef, initialScrollLeft, initialScrollTop }: TouchProps): TouchResults => {
     const scrollerRef = useRef<typeof Scroller | null>(null);
     const isTouchDevice = useRef<boolean>(false);
 
@@ -119,6 +121,14 @@ const useTouch = ({ gridRef }: TouchProps): TouchResults => {
         handleTouchStart,
         updateScrollDimensions,
     ]);
+
+    useEffect(() => {
+        if (scrollerRef.current) {
+            scrollerRef.current.scrollTo(initialScrollLeft, initialScrollTop);
+        }
+
+        // eslint-disable-next-line
+    }, []);
 
     return {
         isTouchDevice: isTouchDevice.current,

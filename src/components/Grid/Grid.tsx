@@ -181,10 +181,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const horizontalScrollRef = useRef<any>(null);
         const gridRef = useRef<GridRef | null>(null);
 
-        useMobileScroller({
-            gridRef,
-        });
-
         const datagridStoreRef = useDataGridStateStoreRef().store;
 
         const hasHeader = !!headerCellRenderer;
@@ -276,6 +272,12 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             horizontalScrollDirection,
         } = scrollState;
         const isMounted = useRef(false);
+
+        useMobileScroller({
+            gridRef,
+            initialScrollLeft,
+            initialScrollTop,
+        });
 
         /* Focus container */
         const focusContainer = useCallback(() => {
