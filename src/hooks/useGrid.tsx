@@ -196,6 +196,7 @@ const useGrid = ({
                 }
             }
         },
+        // eslint-disable-next-line
         [
             cellsDrawer,
             themeColors,
@@ -213,6 +214,7 @@ const useGrid = ({
             processRenderPropsRef,
             fieldsMap,
             scale,
+            _,
         ],
     );
 
