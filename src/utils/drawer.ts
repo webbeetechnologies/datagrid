@@ -270,7 +270,16 @@ export class KonvaDrawer {
     }
 
     public rect(props: IRectProps) {
-        const { x, y, width, height, radius, fill, stroke } = props;
+        const { x, y, width, height, radius, fill, stroke, shadowBlur, shadowColor, shadowOffset } =
+            props;
+
+        this.ctx.save(); // Save the current state of the context
+
+        // Set shadow properties if provided
+        if (shadowColor) this.ctx.shadowColor = shadowColor;
+        if (shadowBlur !== undefined) this.ctx.shadowBlur = shadowBlur;
+        if (shadowOffset?.x !== undefined) this.ctx.shadowOffsetX = shadowOffset.x;
+        if (shadowOffset?.y !== undefined) this.ctx.shadowOffsetY = shadowOffset.y;
 
         this.ctx.beginPath();
         if (fill) this.setStyle({ fillStyle: fill });
@@ -330,6 +339,8 @@ export class KonvaDrawer {
         if (stroke) {
             this.ctx.stroke();
         }
+
+        this.ctx.restore();
     }
 
     public wrapText(props: IWrapTextProps) {

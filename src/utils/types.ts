@@ -1,4 +1,12 @@
+import type { Vector2d } from 'konva/lib/types';
+
 export type IFontWeight = 'normal' | 'bold' | 'bolder' | 'lighter';
+
+export type IShadowProps = {
+    shadowColor?: string;
+    shadowBlur?: number;
+    shadowOffset?: Vector2d;
+};
 
 export interface IGraphProps {
     x: number;
@@ -11,7 +19,7 @@ export interface ILineProps extends IGraphProps {
     closed?: boolean;
 }
 
-export interface IRectProps extends IGraphProps {
+export interface IRectProps extends IGraphProps, IShadowProps {
     width: number;
     height: number;
     fill?: string;
@@ -160,6 +168,9 @@ export interface IRenderProps {
     // groupField?: Field;
     // groupValue?: any;
     columnCount: number;
+    isRowMoved?: boolean;
+    isRowFiltered?: boolean;
+    isFloatingRow?: boolean;
 }
 export interface IRenderStyleProps {
     color?: string;

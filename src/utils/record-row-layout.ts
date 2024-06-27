@@ -1,6 +1,6 @@
 import type React from 'react';
 import { GridLayout } from './grid-layout';
-import type { Row } from './types';
+import type { IShadowProps, Row } from './types';
 
 interface IFirstCell {
     row: Row;
@@ -10,6 +10,7 @@ interface IFirstCell {
     isHoverRow: boolean;
     isDraggingRow: boolean;
     isThisCellWillMove: boolean;
+    shadowProps?: IShadowProps;
 }
 
 export class RecordRowLayout extends GridLayout {
@@ -46,7 +47,11 @@ export class RecordRowLayout extends GridLayout {
         // }
     }
 
-    private renderLastCell({ row, style }: Pick<IFirstCell, 'row' | 'style'>) {
+    private renderLastCell({
+        row,
+        style,
+        shadowProps,
+    }: Pick<IFirstCell, 'row' | 'style' | 'shadowProps'>) {
         if (!this.isLast) return;
         this.renderAddFieldBlank(row);
         if (this.isFirst) return;
@@ -59,12 +64,13 @@ export class RecordRowLayout extends GridLayout {
             height: this.rowHeight,
             fill: fill || this.colors.backgroundColor,
             stroke: stroke || this.colors.lines,
+            ...shadowProps,
         });
 
         // this.renderIndentEnd(this.groupCount);
     }
 
-    private renderCommonCell({ style }: Pick<IFirstCell, 'style'>) {
+    private renderCommonCell({ style, shadowProps }: Pick<IFirstCell, 'style' | 'shadowProps'>) {
         if (this.isFirst || this.isLast) return;
 
         const { fill, stroke } = style || {};
@@ -82,12 +88,20 @@ export class RecordRowLayout extends GridLayout {
             height: this.rowHeight,
             fill: fill || this.colors.backgroundColor,
             stroke: stroke || this.colors.lines,
+            ...shadowProps,
         });
     }
 
     render(props: IFirstCell) {
-        const { row, isHoverRow, isCheckedRow, isActiveRow, isDraggingRow, isThisCellWillMove } =
-            props;
+        const {
+            row,
+            isHoverRow,
+            isCheckedRow,
+            isActiveRow,
+            isDraggingRow,
+            isThisCellWillMove,
+            shadowProps,
+        } = props;
 
         let fill = this.colors.backgroundColor;
 
@@ -110,13 +124,16 @@ export class RecordRowLayout extends GridLayout {
             isCheckedRow,
             isDraggingRow,
             isThisCellWillMove,
+            shadowProps,
         });
         this.renderCommonCell({
             style: { fill },
+            shadowProps,
         });
         this.renderLastCell({
             row,
             style: { fill },
+            shadowProps,
         });
     }
 }

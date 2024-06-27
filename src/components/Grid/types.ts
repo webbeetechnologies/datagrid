@@ -333,6 +333,16 @@ export interface GridProps
         otherProps: { fieldsMap: Record<string, Field>; records: IRecord[] },
     ) => IRenderProps & { [key: string]: any };
 
+    useFloatingRowProps?: () =>
+        | {
+              rowIndex: number;
+              isFiltered?: boolean;
+              isMoved?: boolean;
+              record: IRecord;
+              height: number;
+          }
+        | undefined;
+
     // for active state of the row (selected or highlighted)
     isActiveRow?: (arg: { rowIndex: number; recordId?: TDataTableRow }) => boolean;
     // for active state of the column (selected or highlighted)

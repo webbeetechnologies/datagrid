@@ -102,6 +102,7 @@ export type Props = Pick<
         | 'renderDynamicCell'
         | 'initialScrollPosition'
         | 'renderDynamicReactCell'
+        | 'useFloatingRowProps'
     > &
     ViewProps & {
         width?: number;
@@ -321,6 +322,8 @@ const DefaultCellWrapper = memo(
     },
 );
 
+// const useFloatingRowPropsDefault = () => undefined;
+
 const DataGrid = (
     {
         rowCount,
@@ -385,11 +388,14 @@ const DataGrid = (
         isLastColumn,
         isLastRow,
         scale = 1,
+        useFloatingRowProps,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
 ) => {
     const { View } = useMolecules();
+
+    // const floatingRowProps = useFloatingRowProps();
 
     const [hoveredCell, setHoveredCell] = useState<CellInterface | null>(null);
     const [layout, setLayout] = useState({ width: 0, height: 0 });
@@ -527,6 +533,13 @@ const DataGrid = (
             wheelingRef.current = requestAnimationFrame(() => {
                 const coords = gridRef.current?.getCellCoordsFromOffset(e.clientX, e.clientY);
 
+                //    if (floatingRowProps?.rowIndex !== undefined && coords) {
+                //     const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
+                //         rowIndex: floatingRowProps?.rowIndex,
+                //         columnIndex: coords?.columnIndex,
+                //     });
+                //    }
+
                 if (
                     hoveredCellRef.current === coords ||
                     (hoveredCellRef.current?.columnIndex === coords?.columnIndex &&
@@ -663,6 +676,7 @@ const DataGrid = (
                             renderDynamicReactCell={renderDynamicReactCell}
                             onMouseMove={onMouseMove}
                             onMouseLeave={onMouseLeave}
+                            useFloatingRowProps={useFloatingRowProps}
                         />
                     </DataGridStateProvider>
                 </InfiniteLoader>

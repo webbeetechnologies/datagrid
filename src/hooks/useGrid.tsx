@@ -7,6 +7,7 @@ import { recordRowLayout } from '../utils/record-row-layout';
 import { useLatest } from '@bambooapp/bamboo-molecules';
 import { useDataGridState } from '../DataGridStateContext';
 import { gridEventEmitter } from '../utils/grid-eventemitter';
+import type { Field, IRecord } from 'src/utils/types';
 
 export type UseGridProps = Pick<
     GridProps,
@@ -18,6 +19,7 @@ export type UseGridProps = Pick<
     | 'isActiveRow'
     | 'renderDynamicCell'
     | 'scale'
+    | 'useFloatingRowProps'
 > & {
     instance: React.RefObject<GridRef>;
     rowStartIndex: number;
@@ -38,6 +40,7 @@ const emptyObj = {};
 const returnSame = (props: any) => props;
 
 const useProcessRenderPropsDefault = () => returnSame;
+const useFloatingRowPropsDefault = () => undefined;
 
 const useGrid = ({
     instance,
@@ -56,6 +59,7 @@ const useGrid = ({
     useFields,
     themeColors = emptyObj,
     useProcessRenderProps = useProcessRenderPropsDefault,
+    useFloatingRowProps = useFloatingRowPropsDefault,
     scale = 1,
 }: UseGridProps) => {
     const records = useRecords({
@@ -70,6 +74,7 @@ const useGrid = ({
 
     const processRenderProps = useProcessRenderProps();
     const processRenderPropsRef = useLatest(processRenderProps);
+    const floatingRowProps = useFloatingRowProps();
 
     const hoveredCell = useDataGridState(store => store.hoveredCell);
 
@@ -79,6 +84,151 @@ const useGrid = ({
             recordRowLayout.initCtx(ctx, themeColors);
 
             if (!instance.current) return;
+
+            const renderCell = ({
+                rowIndex,
+                columnIndex,
+                record,
+                field,
+                height: _height,
+                isLastColumn,
+                isFloatingRow = false,
+                isMoved = false,
+                isFiltered = false,
+            }: {
+                rowIndex: number;
+                columnIndex: number;
+                record?: IRecord;
+                height?: number;
+                field: Field;
+                isLastColumn: boolean;
+                isFloatingRow?: boolean;
+                isFiltered?: boolean;
+                isMoved?: boolean;
+            }) => {
+                const { data, ...rowInfo } = record ?? (records[rowIndex] || {});
+
+                if (!instance.current) return;
+
+                const bounds = instance.current.getCellBounds({ rowIndex, columnIndex });
+                const actualRowIndex = rowIndex;
+                const actualColumnIndex = columnIndex;
+                const actualBottom = Math.max(rowIndex, bounds.bottom);
+                const actualRight = Math.max(columnIndex, bounds.right);
+
+                const _y = instance.current.getRowOffset(actualRowIndex);
+                const height = _height ?? instance.current.getRowHeight(actualBottom);
+                const y = isFiltered || isMoved ? _y - height / 2 : _y;
+
+                const x = instance.current.getColumnOffset(actualColumnIndex);
+                const width = instance.current.getColumnWidth(actualRight);
+
+                const cellValue = (data as Record<string, any>)?.[field.slug] ?? null;
+                const recordId = rowInfo.id;
+
+                const isHoverRow = rowIndex === hoveredCell?.rowIndex;
+                const isHoverColumn = columnIndex === hoveredCell?.columnIndex;
+                const isActiveRow = !!instance.current.isActiveRow?.({ rowIndex, recordId });
+
+                cellsDrawer.setState({
+                    hoveredCell,
+                    isHoverRow,
+                    isActiveRow,
+                });
+
+                if (
+                    (rowInfo.rowType === 'data' || isFloatingRow) &&
+                    columnIndex + 1 !== columnCount
+                ) {
+                    const shadowProps =
+                        isFloatingRow && (isMoved || isFiltered)
+                            ? {
+                                  shadowBlur: 5,
+                                  shadowColor: '#000',
+                                  shadowOffset: {
+                                      x: 10,
+                                      y: 10,
+                                  },
+                              }
+                            : {};
+
+                    recordRowLayout.init({
+                        x,
+                        y,
+                        rowIndex,
+                        columnIndex,
+                        columnWidth: width,
+                        rowHeight: height,
+                        columnCount,
+                        groupCount: groupingLevel,
+                        // viewType,
+                    });
+
+                    recordRowLayout.render({
+                        row: rowInfo,
+                        isHoverRow,
+                        isCheckedRow: isActiveRow,
+                        isActiveRow: false,
+                        isDraggingRow: false,
+                        isThisCellWillMove: false,
+                        shadowProps,
+                        // commentCount,
+                        // commentVisible,
+                    });
+                }
+
+                const renderProps = {
+                    x,
+                    y,
+                    columnIndex,
+                    rowIndex,
+                    columnWidth: width,
+                    rowHeight: height,
+                    recordId,
+                    row: rowInfo,
+                    groupCount: groupingLevel,
+                    field,
+                    cellValue,
+                    isActiveRow,
+                    isHoverRow,
+                    isHoverColumn,
+                    columnCount,
+                    isFloatingRow,
+                    isRowMoved: isMoved,
+                    isRowFiltered: isFiltered,
+                };
+
+                if (isLastColumn && cellValue != null) {
+                    ctx.save();
+                    ctx.rect(x, y, width, height);
+                    ctx.clip();
+                    cellsDrawer.renderCell(
+                        processRenderPropsRef.current(renderProps, {
+                            fieldsMap: fieldsMap,
+                            records,
+                        }),
+                        ctx,
+                    );
+                    ctx.restore();
+                } else {
+                    if (
+                        !isFloatingRow &&
+                        columnIndex > 0 &&
+                        floatingRowProps?.rowIndex === rowIndex &&
+                        !floatingRowProps.isFiltered &&
+                        !floatingRowProps.isMoved
+                    )
+                        return;
+
+                    cellsDrawer.renderCell(
+                        processRenderPropsRef.current(renderProps, {
+                            fieldsMap: fieldsMap,
+                            records,
+                        }),
+                        ctx,
+                    );
+                }
+            };
 
             for (
                 let columnIndex = columnStartIndex;
@@ -102,97 +252,23 @@ const useGrid = ({
                     if (isHiddenRow?.(rowIndex)) {
                         continue;
                     }
+                    renderCell({ rowIndex, columnIndex, field, isLastColumn });
+                }
 
-                    const { data, ...rowInfo } = records[rowIndex] || {};
+                if (floatingRowProps) {
+                    const { rowIndex, record, height, isFiltered, isMoved } = floatingRowProps;
 
-                    const bounds = instance.current.getCellBounds({ rowIndex, columnIndex });
-                    const actualRowIndex = rowIndex;
-                    const actualColumnIndex = columnIndex;
-                    const actualBottom = Math.max(rowIndex, bounds.bottom);
-                    const actualRight = Math.max(columnIndex, bounds.right);
-
-                    const y = instance.current.getRowOffset(actualRowIndex);
-                    const height = instance.current.getRowHeight(actualBottom);
-                    const x = instance.current.getColumnOffset(actualColumnIndex);
-                    const width = instance.current.getColumnWidth(actualRight);
-
-                    const cellValue = (data as Record<string, any>)?.[field.slug] ?? null;
-                    const recordId = rowInfo.id;
-
-                    const isHoverRow = rowIndex === hoveredCell?.rowIndex;
-                    const isHoverColumn = columnIndex === hoveredCell?.columnIndex;
-                    const isActiveRow = !!instance.current.isActiveRow?.({ rowIndex, recordId });
-
-                    cellsDrawer.setState({
-                        hoveredCell,
-                        isHoverRow,
-                        isActiveRow,
-                    });
-
-                    if (rowInfo.rowType === 'data' && columnIndex + 1 !== columnCount) {
-                        recordRowLayout.init({
-                            x,
-                            y,
-                            rowIndex,
-                            columnIndex,
-                            columnWidth: width,
-                            rowHeight: height,
-                            columnCount,
-                            groupCount: groupingLevel,
-                            // viewType,
-                        });
-
-                        recordRowLayout.render({
-                            row: rowInfo,
-                            isHoverRow,
-                            isCheckedRow: isActiveRow,
-                            isActiveRow: false,
-                            isDraggingRow: false,
-                            isThisCellWillMove: false,
-                            // commentCount,
-                            // commentVisible,
-                        });
-                    }
-
-                    const renderProps = {
-                        x,
-                        y,
-                        columnIndex,
+                    renderCell({
                         rowIndex,
-                        columnWidth: width,
-                        rowHeight: height,
-                        recordId,
-                        row: rowInfo,
-                        groupCount: groupingLevel,
+                        columnIndex,
                         field,
-                        cellValue,
-                        isActiveRow,
-                        isHoverRow,
-                        isHoverColumn,
-                        columnCount,
-                    };
-
-                    if (isLastColumn && cellValue != null) {
-                        ctx.save();
-                        ctx.rect(x, y, width, height);
-                        ctx.clip();
-                        cellsDrawer.renderCell(
-                            processRenderPropsRef.current(renderProps, {
-                                fieldsMap: fieldsMap,
-                                records,
-                            }),
-                            ctx,
-                        );
-                        ctx.restore();
-                    } else {
-                        cellsDrawer.renderCell(
-                            processRenderPropsRef.current(renderProps, {
-                                fieldsMap: fieldsMap,
-                                records,
-                            }),
-                            ctx,
-                        );
-                    }
+                        isLastColumn,
+                        record,
+                        height,
+                        isFloatingRow: true,
+                        isFiltered,
+                        isMoved,
+                    });
                 }
             }
         },
@@ -215,6 +291,7 @@ const useGrid = ({
             fieldsMap,
             scale,
             _,
+            floatingRowProps,
         ],
     );
 

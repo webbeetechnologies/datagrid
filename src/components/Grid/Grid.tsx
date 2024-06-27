@@ -9,6 +9,7 @@ import React, {
     memo,
     useEffect,
     CSSProperties,
+    ReactNode,
 } from 'react';
 import {
     NativeScrollEvent,
@@ -92,6 +93,7 @@ export const RESET_SCROLL_EVENTS_DEBOUNCE_INTERVAL = 100;
 const EMPTY_ARRAY: any = [];
 
 const defaultWrapper = (children: React.ReactNode): React.ReactNode => children;
+const useFloatingRowPropsDefault = () => undefined;
 
 /**
  * Grid component using React Konva
@@ -166,6 +168,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             renderDynamicCell,
             initialScrollPosition,
             renderDynamicReactCell,
+            useFloatingRowProps = useFloatingRowPropsDefault,
             ...rest
         } = props;
 
@@ -1264,6 +1267,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         let activeCellSelectionFrozenRow = null;
         let activeCellSelectionFrozenIntersection = null;
         let activeCellComponent: React.ReactNode = null;
+        const floatingRowProps = useFloatingRowProps();
 
         if (activeCell) {
             const bounds = getCellBounds(activeCell);
@@ -1273,8 +1277,11 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             const isInFrozenColumn = left < frozenColumns;
             const isInFrozenRow = top < frozenRows;
             const isInFrozenIntersection = isInFrozenRow && isInFrozenColumn;
-            const y = getRowOffset(top);
-            const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
+            const _rowHeight = floatingRowProps?.height ?? getRowHeight(actualBottom);
+            const isFloating = floatingRowProps?.isFiltered || floatingRowProps?.isMoved;
+            const y = getRowOffset(top) - (isFloating ? _rowHeight / 2 : 0);
+            const height =
+                getRowOffset(actualBottom) - y + _rowHeight - (isFloating ? _rowHeight / 2 : 0);
 
             const x = getColumnOffset(left);
 
@@ -1603,6 +1610,40 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         const listenToEvents = !isScrolling;
 
+        let floatingRowAllDynamicCells = {
+            cells: [] as ReactNode[],
+            frozenCells: [] as ReactNode[],
+        };
+
+        if (
+            floatingRowProps &&
+            floatingRowProps.record &&
+            (floatingRowProps.isMoved || floatingRowProps.isFiltered)
+        ) {
+            floatingRowAllDynamicCells = renderCellsByRange({
+                columnStartIndex,
+                columnStopIndex,
+                rowStartIndex: floatingRowProps.rowIndex,
+                rowStopIndex: floatingRowProps.rowIndex,
+                columnCount,
+                rowCount: floatingRowProps.rowIndex + 1,
+                getCellBounds,
+                getColumnOffset,
+                getColumnWidth,
+                getRowOffset: (top: number) => getRowOffset(top) - floatingRowProps.height / 2,
+                getRowHeight: () => floatingRowProps.height,
+                renderCell: renderDynamicCell as RenderCellsByRangeArgs['renderCell'],
+                hoveredCell: datagridStoreRef.current?.hoveredCell,
+                isHiddenColumn,
+                isActiveRow,
+                isHiddenRow,
+                frozenColumns,
+            });
+        }
+
+        const { cells: floatingRowDynamicCells, frozenCells: floatingRowFrozenDynamicCells } =
+            floatingRowAllDynamicCells;
+
         const { cells: dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
             columnStartIndex,
             columnStopIndex,
@@ -1662,6 +1703,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             themeColors,
             useProcessRenderProps,
             scale,
+            useFloatingRowProps,
         });
 
         const rowEndCells: React.ReactNode[] = [];
@@ -1705,6 +1747,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         <Group offsetY={scrollTop} offsetX={scrollLeft}>
                             {cells}
                             {dynamicCells}
+                            {floatingRowDynamicCells}
                         </Group>
                     </Group>
                     <Group offsetY={scrollTop} offsetX={scrollLeft}>
@@ -1718,6 +1761,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         <Group offsetY={scrollTop}>
                             {frozenCells}
                             {frozenDynamicCells}
+                            {floatingRowFrozenDynamicCells}
                         </Group>
                     </Group>
                 </Layer>
