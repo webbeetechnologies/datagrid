@@ -175,7 +175,7 @@ const useGrid = ({
                         isCheckedRow: isActiveRow,
                         isActiveRow: false,
                         isDraggingRow: false,
-                        isThisCellWillMove: false,
+                        isThisCellWillMove: isFiltered || isMoved,
                         shadowProps,
                         // commentCount,
                         // commentVisible,

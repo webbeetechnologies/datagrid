@@ -57,6 +57,21 @@ export enum KeyCodes {
     F12 = 123,
 }
 
+export type RenderCellProps = RendererProps &
+    Partial<
+        Pick<
+            IRenderProps,
+            | 'isActiveRow'
+            | 'isHoverRow'
+            | 'isHoverColumn'
+            | 'isFloatingRow'
+            | 'isRowFiltered'
+            | 'isRowMoved'
+        >
+    > & {
+        floatingRowId?: number | string;
+    };
+
 export enum Direction {
     Up = 'UP',
     Down = 'DOWN',
@@ -228,16 +243,12 @@ export interface GridProps
     /**
      * DynamicCell renderer (for rendering while hover). Must be a Konva Component eg: Group, Rect etc
      */
-    renderDynamicCell?: (
-        props: RendererProps & Pick<IRenderProps, 'isActiveRow' | 'isHoverRow' | 'isHoverColumn'>,
-    ) => React.ReactNode;
+    renderDynamicCell?: (props: RenderCellProps) => React.ReactNode;
 
     /**
      * DynamicCell renderer (for rendering while hover). Must be a React component
      */
-    renderDynamicReactCell?: (
-        props: RendererProps & Pick<IRenderProps, 'isActiveRow' | 'isHoverRow' | 'isHoverColumn'>,
-    ) => React.ReactNode;
+    renderDynamicReactCell?: (props: RenderCellProps) => React.ReactNode;
 
     /**
      * Allow users to customize selected cells design

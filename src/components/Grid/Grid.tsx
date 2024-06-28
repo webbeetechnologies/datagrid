@@ -27,7 +27,6 @@ import { useMobileScroller } from '../../hooks';
 import useGrid from '../../hooks/useGrid';
 import { useDataGridStateStoreRef } from '../../DataGridStateContext';
 import { canUseDOM } from '../../utils';
-import type { IRenderProps } from '../../utils/types';
 import {
     getRowStartIndexForOffset,
     getRowStopIndexForStartIndex,
@@ -66,7 +65,7 @@ import {
     PosXY,
     PosXYRequired,
     RefAttribute,
-    RendererProps,
+    RenderCellProps,
     ScrollSnapRef,
     ScrollState,
     SelectionArea,
@@ -1638,6 +1637,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 isActiveRow,
                 isHiddenRow,
                 frozenColumns,
+                isFloatingRow: true,
+                isRowFiltered: floatingRowProps.isFiltered,
+                isRowMoved: floatingRowProps.isMoved,
+                floatingRowId: floatingRowProps.record?.id,
             });
         }
 
@@ -2106,14 +2109,12 @@ type RenderCellsByRangeArgs = {
     getColumnOffset: GridRef['getColumnOffset'];
     getColumnWidth: GridRef['getColumnWidth'];
     getRowHeight: GridRef['getRowHeight'];
-    renderCell?: (
-        props: RendererProps & {
-            isActiveRow?: IRenderProps['isActiveRow'];
-            isHoverRow?: IRenderProps['isHoverRow'];
-            isHoverColumn?: IRenderProps['isHoverColumn'];
-        },
-    ) => React.ReactNode;
+    renderCell?: (props: RenderCellProps) => React.ReactNode;
     withCellStates?: boolean;
+    isFloatingRow?: boolean;
+    isRowMoved?: boolean;
+    isRowFiltered?: boolean;
+    floatingRowId?: number | string;
 };
 
 const renderCellsByRange = ({
@@ -2135,6 +2136,10 @@ const renderCellsByRange = ({
     getRowOffset,
     renderCell,
     withCellStates = true,
+    isFloatingRow = false,
+    isRowFiltered = false,
+    isRowMoved = false,
+    floatingRowId,
 }: RenderCellsByRangeArgs) => {
     const cells: React.ReactNode[] = [];
     const frozenCells: React.ReactNode[] = [];
@@ -2182,6 +2187,10 @@ const renderCellsByRange = ({
                           isActiveRow: !!isActiveRow?.({ rowIndex }),
                       }
                     : {}),
+                isFloatingRow,
+                isRowFiltered,
+                isRowMoved,
+                floatingRowId,
             });
 
             if (_cell) {
@@ -2233,6 +2242,10 @@ const renderCellsByRange = ({
                           isActiveRow: !!isActiveRow?.({ rowIndex }),
                       }
                     : {}),
+                isFloatingRow,
+                isRowFiltered,
+                isRowMoved,
+                floatingRowId,
             });
 
             if (_cell) {
