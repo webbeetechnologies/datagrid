@@ -11,6 +11,7 @@ interface IFirstCell {
     isDraggingRow: boolean;
     isThisCellWillMove: boolean;
     shadowProps?: IShadowProps;
+    renderEmptyCell?: boolean;
 }
 
 export class RecordRowLayout extends GridLayout {
@@ -51,7 +52,7 @@ export class RecordRowLayout extends GridLayout {
         row,
         style,
         shadowProps,
-    }: Pick<IFirstCell, 'row' | 'style' | 'shadowProps'>) {
+    }: Pick<IFirstCell, 'row' | 'style' | 'shadowProps' | 'renderEmptyCell'>) {
         if (!this.isLast) return;
         this.renderAddFieldBlank(row);
         if (this.isFirst) return;
@@ -70,7 +71,11 @@ export class RecordRowLayout extends GridLayout {
         // this.renderIndentEnd(this.groupCount);
     }
 
-    private renderCommonCell({ style, shadowProps }: Pick<IFirstCell, 'style' | 'shadowProps'>) {
+    private renderCommonCell({
+        style,
+        shadowProps,
+        renderEmptyCell = true,
+    }: Pick<IFirstCell, 'style' | 'shadowProps' | 'renderEmptyCell'>) {
         if (this.isFirst || this.isLast) return;
 
         const { fill, stroke } = style || {};
@@ -86,10 +91,29 @@ export class RecordRowLayout extends GridLayout {
             y: this.y,
             width: this.columnWidth,
             height: this.rowHeight,
-            fill: fill || this.colors.backgroundColor,
+            fill: renderEmptyCell
+                ? this.colors.backgroundColor
+                : fill || this.colors.backgroundColor,
             stroke: stroke || this.colors.lines,
             ...shadowProps,
         });
+
+        if (renderEmptyCell) {
+            this.rect({
+                x: this.x - 1,
+                y: this.y,
+                width: 2,
+                height: this.rowHeight,
+                fill: this.colors.backgroundColor,
+            });
+            this.rect({
+                x: this.x + this.columnWidth - 1,
+                y: this.y,
+                width: 2,
+                height: this.rowHeight,
+                fill: this.colors.backgroundColor,
+            });
+        }
     }
 
     render(props: IFirstCell) {
@@ -101,6 +125,8 @@ export class RecordRowLayout extends GridLayout {
             isDraggingRow,
             isThisCellWillMove,
             shadowProps,
+            style,
+            renderEmptyCell,
         } = props;
 
         let fill = this.colors.backgroundColor;
@@ -118,22 +144,25 @@ export class RecordRowLayout extends GridLayout {
 
         this.renderFirstCell({
             row,
-            style: { fill },
+            style: { fill, stroke: style?.stroke },
             isHoverRow,
             isActiveRow,
             isCheckedRow,
             isDraggingRow,
             isThisCellWillMove,
             shadowProps,
+            renderEmptyCell,
         });
         this.renderCommonCell({
-            style: { fill },
+            style: { fill, stroke: style?.stroke },
             shadowProps,
+            renderEmptyCell,
         });
         this.renderLastCell({
             row,
-            style: { fill },
+            style: { fill, stroke: style?.stroke },
             shadowProps,
+            renderEmptyCell,
         });
     }
 }

@@ -144,6 +144,11 @@ const useGrid = ({
                     isHoverRow,
                     isActiveRow,
                 });
+                const shouldDisplayEmptyCell =
+                    !isFloatingRow &&
+                    columnIndex > 0 &&
+                    floatingRowProps?.record?.id === recordId &&
+                    (floatingRowProps?.isFiltered || floatingRowProps?.isMoved);
 
                 if (
                     (rowInfo.rowType === 'data' || isFloatingRow) &&
@@ -177,6 +182,7 @@ const useGrid = ({
                         isDraggingRow: false,
                         isThisCellWillMove: isFiltered || isMoved,
                         shadowProps,
+                        renderEmptyCell: shouldDisplayEmptyCell,
                         // commentCount,
                         // commentVisible,
                     });
@@ -216,13 +222,7 @@ const useGrid = ({
                     );
                     ctx.restore();
                 } else {
-                    if (
-                        !isFloatingRow &&
-                        columnIndex > 0 &&
-                        floatingRowProps?.record?.id === recordId &&
-                        (floatingRowProps?.isFiltered || floatingRowProps?.isMoved)
-                    )
-                        return;
+                    if (shouldDisplayEmptyCell) return;
 
                     cellsDrawer.renderCell(
                         processRenderPropsRef.current(renderProps, {

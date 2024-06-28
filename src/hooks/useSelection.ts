@@ -15,6 +15,8 @@ import {
 } from '../components/Grid/helpers';
 import { KeyCodes, Direction, MouseButtonCodes, SelectionPolicy } from '../components/Grid/types';
 import { useLatest } from '@bambooapp/bamboo-molecules';
+import type { IRecord, IShadowProps } from '../utils/types';
+import isNil from 'lodash.isnil';
 
 const cellEqualsSelection = (cell: CellInterface | null, selections: SelectionArea[]): boolean => {
     if (cell === null) return false;
@@ -167,6 +169,14 @@ export interface UseSelectionOptions {
      * When active cell changes
      * */
     onActiveCellChange?: (cell: CellInterface | null, prev: CellInterface | null) => void;
+    floatingRowProps?: {
+        rowIndex: number;
+        isFiltered?: boolean;
+        isMoved?: boolean;
+        record: IRecord;
+        height: number;
+        shadowProps?: IShadowProps;
+    };
 }
 
 export type NewSelectionMode = 'clear' | 'modify' | 'append';
@@ -295,6 +305,7 @@ const useSelection = ({
     onBeforeFill,
     isLastColumn,
     isLastRow,
+    floatingRowProps,
 }: UseSelectionOptions): SelectionResults => {
     const [activeCell, _setActiveCell] = useState<CellInterface | null>(initialActiveCell);
     const [selections, setSelections] = useState<SelectionArea[]>(initialSelections);
@@ -602,12 +613,43 @@ const useSelection = ({
             /* Exit early if grid is not initialized */
             if (!gridRef || !gridRef.current) return;
 
-            const coords = gridRef.current.getCellCoordsFromOffset(
+            let coords = gridRef.current.getCellCoordsFromOffset(
                 e.nativeEvent.clientX,
                 e.nativeEvent.clientY,
             );
 
             if (!coords) return;
+
+            if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
+                const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
+                    rowIndex: floatingRowProps?.rowIndex,
+                    columnIndex: coords?.columnIndex,
+                });
+
+                if (
+                    floatingRowOffset &&
+                    !isNil(floatingRowOffset?.x) &&
+                    !isNil(floatingRowOffset?.y)
+                ) {
+                    // TODO - remove hardcode number 150
+                    const floatingRowClientY =
+                        floatingRowOffset.y +
+                        150 -
+                        floatingRowProps.height / 2 -
+                        (gridRef.current?.getScrollPosition().scrollTop || 0);
+
+                    if (
+                        e.nativeEvent.clientY > floatingRowClientY &&
+                        e.nativeEvent.clientY < floatingRowClientY + floatingRowProps.height
+                    ) {
+                        const _columnIndex = coords.columnIndex;
+                        coords = {
+                            rowIndex: floatingRowProps.rowIndex,
+                            columnIndex: _columnIndex,
+                        };
+                    }
+                }
+            }
 
             /* Check if its context menu click */
             const isContextMenuClick = e.nativeEvent.which === MouseButtonCodes.right;
@@ -725,6 +767,10 @@ const useSelection = ({
         },
         [
             gridRef,
+            floatingRowProps?.isFiltered,
+            floatingRowProps?.isMoved,
+            floatingRowProps?.rowIndex,
+            floatingRowProps?.height,
             allowDeselectSelection,
             selections,
             selectionPolicy,
@@ -740,8 +786,8 @@ const useSelection = ({
             appendSelection,
             removeSelectionByIndex,
             getPossibleActiveCellFromSelections,
-            clearSelections,
             setActiveCell,
+            clearSelections,
         ],
     );
 

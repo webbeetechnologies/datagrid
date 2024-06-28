@@ -46,6 +46,7 @@ import {
     UseEditableOptions,
 } from './hooks';
 import { DataGridStateProvider } from './DataGridStateContext';
+import isNil from 'lodash.isnil';
 
 export type CellRendererProps = RendererProps & { useCellValue: Props['useCellValue'] };
 
@@ -322,7 +323,7 @@ const DefaultCellWrapper = memo(
     },
 );
 
-// const useFloatingRowPropsDefault = () => undefined;
+const useFloatingRowPropsDefault = () => undefined;
 
 const DataGrid = (
     {
@@ -388,7 +389,7 @@ const DataGrid = (
         isLastColumn,
         isLastRow,
         scale = 1,
-        useFloatingRowProps,
+        useFloatingRowProps = useFloatingRowPropsDefault,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -409,6 +410,7 @@ const DataGrid = (
     const currentViewPort = useRef<ViewPortProps>();
     const infiniteLoaderRef = useRef(null);
     const wheelingRef = useRef<number | null>(null); // Storage timer to ensure smooth operation
+    const floatingRowProps = useFloatingRowProps();
 
     useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
 
@@ -440,6 +442,7 @@ const DataGrid = (
         onBeforeFill,
         isLastColumn,
         isLastRow,
+        floatingRowProps,
     });
 
     const onAfterSubmit = useCallback(
@@ -531,14 +534,34 @@ const DataGrid = (
             if (wheelingRef.current) return;
 
             wheelingRef.current = requestAnimationFrame(() => {
-                const coords = gridRef.current?.getCellCoordsFromOffset(e.clientX, e.clientY);
+                let coords = gridRef.current?.getCellCoordsFromOffset(e.clientX, e.clientY);
 
-                //    if (floatingRowProps?.rowIndex !== undefined && coords) {
-                //     const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
-                //         rowIndex: floatingRowProps?.rowIndex,
-                //         columnIndex: coords?.columnIndex,
-                //     });
-                //    }
+                if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
+                    const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
+                        rowIndex: floatingRowProps?.rowIndex,
+                        columnIndex: coords?.columnIndex,
+                    });
+
+                    if (
+                        floatingRowOffset &&
+                        !isNil(floatingRowOffset?.x) &&
+                        !isNil(floatingRowOffset?.y)
+                    ) {
+                        // TODO - remove hardcode number 150
+                        const floatingRowClientY =
+                            floatingRowOffset.y +
+                            150 -
+                            floatingRowProps.height / 2 -
+                            (gridRef.current?.getScrollPosition().scrollTop || 0);
+
+                        if (
+                            e.clientY > floatingRowClientY &&
+                            e.clientY < floatingRowClientY + floatingRowProps.height
+                        ) {
+                            coords = null;
+                        }
+                    }
+                }
 
                 if (
                     hoveredCellRef.current === coords ||
@@ -554,7 +577,13 @@ const DataGrid = (
                 wheelingRef.current = null;
             });
         },
-        [hoveredCellRef],
+        [
+            floatingRowProps?.height,
+            floatingRowProps?.isFiltered,
+            floatingRowProps?.isMoved,
+            floatingRowProps?.rowIndex,
+            hoveredCellRef,
+        ],
     );
 
     const onMouseLeave = useCallback(() => {

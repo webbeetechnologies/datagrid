@@ -1237,6 +1237,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             onViewChange,
         ]);
 
+        const floatingRowProps = useFloatingRowProps();
+
         const { cells: headerCells, frozenCells: headerFrozenCells } = renderCellsByRange({
             columnStartIndex,
             columnStopIndex,
@@ -1255,6 +1257,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             frozenColumns,
             hoveredCell: null,
             withCellStates: false,
+            isFloatingRow: true,
+            isRowFiltered: floatingRowProps?.isFiltered,
+            isRowMoved: floatingRowProps?.isMoved,
+            floatingRowId: floatingRowProps?.record?.id,
         });
 
         /**
@@ -1266,7 +1272,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         let activeCellSelectionFrozenRow = null;
         let activeCellSelectionFrozenIntersection = null;
         let activeCellComponent: React.ReactNode = null;
-        const floatingRowProps = useFloatingRowProps();
 
         if (activeCell) {
             const bounds = getCellBounds(activeCell);
@@ -1665,6 +1670,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             isActiveRow,
             isHiddenRow,
             frozenColumns,
+            isFloatingRow: false,
+            isRowFiltered: floatingRowProps?.isFiltered,
+            isRowMoved: floatingRowProps?.isMoved,
+            floatingRowId: floatingRowProps?.record?.id,
         });
 
         const { cells: dynamicReactCells, frozenCells: frozenDynamicReactCells } =
@@ -1686,6 +1695,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 isActiveRow,
                 isHiddenRow,
                 frozenColumns,
+                isFloatingRow: false,
+                isRowFiltered: floatingRowProps?.isFiltered,
+                isRowMoved: floatingRowProps?.isMoved,
+                floatingRowId: floatingRowProps?.record?.id,
             });
 
         const { cells, frozenCells } = useGrid({
