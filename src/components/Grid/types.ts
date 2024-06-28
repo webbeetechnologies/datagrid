@@ -3,7 +3,7 @@ import type { StageConfig, Stage } from 'konva/lib/Stage';
 import type { Key, RefObject, RefCallback, MutableRefObject } from 'react';
 import type { ScrollView, ViewStyle } from 'react-native';
 import type { Align } from './helpers';
-import type { Field, GridColors, IRecord, IRenderProps } from '../../utils/types';
+import type { Field, GridColors, IRecord, IRenderProps, IShadowProps } from '../../utils/types';
 import type { CellsDrawer } from './utils';
 import type Konva from 'konva';
 import type { TDataTableRow } from '@bambooapp/bamboo-molecules';
@@ -340,6 +340,7 @@ export interface GridProps
               isMoved?: boolean;
               record: IRecord;
               height: number;
+              shadowProps?: IShadowProps;
           }
         | undefined;
 

@@ -42,6 +42,15 @@ const returnSame = (props: any) => props;
 const useProcessRenderPropsDefault = () => returnSame;
 const useFloatingRowPropsDefault = () => undefined;
 
+const defaultShadowProps = {
+    shadowBlur: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+        x: 10,
+        y: 10,
+    },
+};
+
 const useGrid = ({
     instance,
     columnCount,
@@ -143,12 +152,8 @@ const useGrid = ({
                     const shadowProps =
                         isFloatingRow && (isMoved || isFiltered)
                             ? {
-                                  shadowBlur: 5,
-                                  shadowColor: '#000',
-                                  shadowOffset: {
-                                      x: 10,
-                                      y: 10,
-                                  },
+                                  ...defaultShadowProps,
+                                  ...floatingRowProps?.shadowProps,
                               }
                             : {};
 
