@@ -219,9 +219,8 @@ const useGrid = ({
                     if (
                         !isFloatingRow &&
                         columnIndex > 0 &&
-                        floatingRowProps?.rowIndex === rowIndex &&
-                        !floatingRowProps.isFiltered &&
-                        !floatingRowProps.isMoved
+                        floatingRowProps?.record?.id === recordId &&
+                        (floatingRowProps?.isFiltered || floatingRowProps?.isMoved)
                     )
                         return;
 
