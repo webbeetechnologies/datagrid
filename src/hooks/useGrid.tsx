@@ -115,16 +115,18 @@ const useGrid = ({
                 isFiltered?: boolean;
                 isMoved?: boolean;
             }) => {
-                const { data, ...rowInfo } = record ?? (records[rowIndex] || {});
+                const _record = record ?? records[rowIndex];
+                const { data, ...rowInfo } = _record || {};
 
-                if (!instance.current) return;
+                if (!instance.current || !_record) return;
 
                 const bounds = instance.current.getCellBounds({ rowIndex, columnIndex });
-                const actualRowIndex = isFloatingRow
-                    ? rowIndex > records.length - 1
-                        ? records.length - 1
-                        : rowIndex
-                    : rowIndex;
+                // const actualRowIndex = isFloatingRow
+                //     ? rowIndex > records.length - 1
+                //         ? records.length - 1
+                //         : rowIndex
+                //     : rowIndex;
+                const actualRowIndex = rowIndex;
                 const actualColumnIndex = columnIndex;
                 const actualBottom = Math.max(rowIndex, bounds.bottom);
                 const actualRight = Math.max(columnIndex, bounds.right);

@@ -331,7 +331,7 @@ const useFloatingRowPropsDefault = () => undefined;
 
 const DataGrid = (
     {
-        rowCount,
+        rowCount: _rowCount,
         columnCount,
         width: widthProp,
         height: heightProp,
@@ -415,6 +415,10 @@ const DataGrid = (
     const infiniteLoaderRef = useRef(null);
     const wheelingRef = useRef<number | null>(null); // Storage timer to ensure smooth operation
     const floatingRowProps = useFloatingRowProps();
+    const rowCount =
+        floatingRowProps && floatingRowProps?.rowIndex + 1 > _rowCount
+            ? floatingRowProps?.rowIndex + 1
+            : _rowCount;
     const rowCountRef = useLatest(rowCount);
 
     useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
@@ -530,10 +534,11 @@ const DataGrid = (
                 );
 
             if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
-                const rowIndex =
-                    floatingRowProps?.rowIndex > rowCountRef.current - 1
-                        ? rowCountRef.current - 1
-                        : floatingRowProps?.rowIndex;
+                // const rowIndex =
+                //     floatingRowProps?.rowIndex > rowCountRef.current - 1
+                //         ? rowCountRef.current - 1
+                //         : floatingRowProps?.rowIndex;
+                const rowIndex = floatingRowProps?.rowIndex;
 
                 const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
                     rowIndex: rowIndex,
@@ -573,7 +578,6 @@ const DataGrid = (
             floatingRowProps?.isMoved,
             floatingRowProps?.rowIndex,
             onClickProp,
-            rowCountRef,
         ],
     );
 

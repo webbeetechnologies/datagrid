@@ -338,7 +338,7 @@ const useSelection = ({
     const onActiveCellChangeRef = useLatest(onActiveCellChange);
     // const mergedCellsRef = useRef(mergedCells);
 
-    const rowCountRef = useLatest(rowCount);
+    // const rowCountRef = useLatest(rowCount);
 
     const setActiveCell = useCallback(
         (cell: CellInterface | null) => {
@@ -619,14 +619,16 @@ const useSelection = ({
                 e.nativeEvent.clientX,
                 e.nativeEvent.clientY,
             );
+            let isFloatingRow = false;
 
             if (!coords) return;
 
             if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
-                const rowIndex =
-                    floatingRowProps?.rowIndex > rowCountRef.current - 1
-                        ? rowCountRef.current - 1
-                        : floatingRowProps?.rowIndex;
+                // const rowIndex =
+                //     floatingRowProps?.rowIndex > rowCountRef.current - 1
+                //         ? rowCountRef.current - 1
+                //         : floatingRowProps?.rowIndex;
+                const rowIndex = floatingRowProps?.rowIndex;
 
                 const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
                     rowIndex: rowIndex,
@@ -655,6 +657,7 @@ const useSelection = ({
                             rowIndex: rowIndex,
                             columnIndex: _columnIndex,
                         };
+                        isFloatingRow = true;
                     }
                 }
             }
@@ -684,8 +687,9 @@ const useSelection = ({
 
             if (
                 mouseDownInterceptor?.(e, coords, selectionStart, selectionEnd) === false ||
-                onBeforeSelection?.(selectionStart.current, selectionEnd.current, coords, e) ===
-                    false
+                (onBeforeSelection?.(selectionStart.current, selectionEnd.current, coords, e) ===
+                    false &&
+                    !isFloatingRow)
             ) {
                 return;
             }
@@ -774,7 +778,6 @@ const useSelection = ({
             newSelection(coords);
         },
         [
-            rowCountRef,
             gridRef,
             floatingRowProps?.isFiltered,
             floatingRowProps?.isMoved,
