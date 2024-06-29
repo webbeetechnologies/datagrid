@@ -338,6 +338,8 @@ const useSelection = ({
     const onActiveCellChangeRef = useLatest(onActiveCellChange);
     // const mergedCellsRef = useRef(mergedCells);
 
+    const rowCountRef = useLatest(rowCount);
+
     const setActiveCell = useCallback(
         (cell: CellInterface | null) => {
             prevActiveCell.current = activeCellRef.current;
@@ -621,8 +623,13 @@ const useSelection = ({
             if (!coords) return;
 
             if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
+                const rowIndex =
+                    floatingRowProps?.rowIndex > rowCountRef.current - 1
+                        ? rowCountRef.current - 1
+                        : floatingRowProps?.rowIndex;
+
                 const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
-                    rowIndex: floatingRowProps?.rowIndex,
+                    rowIndex: rowIndex,
                     columnIndex: coords?.columnIndex,
                 });
 
@@ -631,11 +638,12 @@ const useSelection = ({
                     !isNil(floatingRowOffset?.x) &&
                     !isNil(floatingRowOffset?.y)
                 ) {
+                    const hasDifferentIndex = floatingRowProps?.rowIndex !== rowIndex;
                     // TODO - remove hardcode number 150
                     const floatingRowClientY =
                         floatingRowOffset.y +
                         150 -
-                        floatingRowProps.height / 2 -
+                        (!hasDifferentIndex ? floatingRowProps.height / 2 : 0) -
                         (gridRef.current?.getScrollPosition().scrollTop || 0);
 
                     if (
@@ -644,7 +652,7 @@ const useSelection = ({
                     ) {
                         const _columnIndex = coords.columnIndex;
                         coords = {
-                            rowIndex: floatingRowProps.rowIndex,
+                            rowIndex: rowIndex,
                             columnIndex: _columnIndex,
                         };
                     }
@@ -766,6 +774,7 @@ const useSelection = ({
             newSelection(coords);
         },
         [
+            rowCountRef,
             gridRef,
             floatingRowProps?.isFiltered,
             floatingRowProps?.isMoved,

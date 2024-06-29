@@ -168,7 +168,10 @@ export type Props = Pick<
             | 'useProcessRenderProps'
         > & { width?: number; height?: number };
 
-        onClick?: (e: MouseEvent<HTMLDivElement>, cell: CellInterface | null) => void;
+        onClick?: (
+            e: MouseEvent<HTMLDivElement>,
+            cell: (CellInterface & { isFloatingRow?: boolean }) | null,
+        ) => void;
         isLastRow?: (rowIndex: number) => boolean;
         isLastColumn?: (columnIndex: number) => boolean;
         scale?: number;
@@ -412,6 +415,7 @@ const DataGrid = (
     const infiniteLoaderRef = useRef(null);
     const wheelingRef = useRef<number | null>(null); // Storage timer to ensure smooth operation
     const floatingRowProps = useFloatingRowProps();
+    const rowCountRef = useLatest(rowCount);
 
     useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
 
@@ -519,15 +523,58 @@ const DataGrid = (
 
     const onClick = useCallback(
         (e: MouseEvent<HTMLDivElement>) => {
-            onClickProp?.(
-                e,
+            let coords: (CellInterface & { isFloatingRow?: boolean }) | null | undefined =
                 gridRef.current?.getCellCoordsFromOffset(
                     e.nativeEvent.clientX,
                     e.nativeEvent.clientY,
-                ) || null,
-            );
+                );
+
+            if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
+                const rowIndex =
+                    floatingRowProps?.rowIndex > rowCountRef.current - 1
+                        ? rowCountRef.current - 1
+                        : floatingRowProps?.rowIndex;
+
+                const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
+                    rowIndex: rowIndex,
+                    columnIndex: coords?.columnIndex,
+                });
+
+                if (
+                    floatingRowOffset &&
+                    !isNil(floatingRowOffset?.x) &&
+                    !isNil(floatingRowOffset?.y)
+                ) {
+                    // TODO - remove hardcode number 150
+                    const floatingRowClientY =
+                        floatingRowOffset.y +
+                        150 -
+                        floatingRowProps.height / 2 -
+                        (gridRef.current?.getScrollPosition().scrollTop || 0);
+
+                    if (
+                        e.nativeEvent.clientY > floatingRowClientY &&
+                        e.nativeEvent.clientY < floatingRowClientY + floatingRowProps.height
+                    ) {
+                        const _columnIndex = coords.columnIndex;
+                        coords = {
+                            rowIndex: rowIndex,
+                            columnIndex: _columnIndex,
+                            isFloatingRow: true,
+                        };
+                    }
+                }
+            }
+            onClickProp?.(e, coords || null);
         },
-        [onClickProp],
+        [
+            floatingRowProps?.height,
+            floatingRowProps?.isFiltered,
+            floatingRowProps?.isMoved,
+            floatingRowProps?.rowIndex,
+            onClickProp,
+            rowCountRef,
+        ],
     );
 
     const onMouseMove = useCallback(
@@ -539,8 +586,12 @@ const DataGrid = (
                     gridRef.current?.getCellCoordsFromOffset(e.clientX, e.clientY);
 
                 if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
+                    const rowIndex =
+                        floatingRowProps?.rowIndex > rowCountRef.current - 1
+                            ? rowCountRef.current - 1
+                            : floatingRowProps?.rowIndex;
                     const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
-                        rowIndex: floatingRowProps?.rowIndex,
+                        rowIndex: rowIndex,
                         columnIndex: coords?.columnIndex,
                     });
 
@@ -549,11 +600,12 @@ const DataGrid = (
                         !isNil(floatingRowOffset?.x) &&
                         !isNil(floatingRowOffset?.y)
                     ) {
+                        const hasDifferentIndex = floatingRowProps?.rowIndex !== rowIndex;
                         // TODO - remove hardcode number 150
                         const floatingRowClientY =
                             floatingRowOffset.y +
                             150 -
-                            floatingRowProps.height / 2 -
+                            (!hasDifferentIndex ? floatingRowProps.height / 2 : 0) -
                             (gridRef.current?.getScrollPosition().scrollTop || 0);
 
                         if (
@@ -562,7 +614,7 @@ const DataGrid = (
                         ) {
                             const _columnIndex = coords.columnIndex;
                             coords = {
-                                rowIndex: floatingRowProps.rowIndex,
+                                rowIndex: rowIndex,
                                 columnIndex: _columnIndex,
                                 isFloatingRow: true,
                             };
@@ -590,6 +642,7 @@ const DataGrid = (
             floatingRowProps?.isMoved,
             floatingRowProps?.rowIndex,
             hoveredCellRef,
+            rowCountRef,
         ],
     );
 

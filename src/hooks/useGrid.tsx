@@ -120,14 +120,21 @@ const useGrid = ({
                 if (!instance.current) return;
 
                 const bounds = instance.current.getCellBounds({ rowIndex, columnIndex });
-                const actualRowIndex = rowIndex;
+                const actualRowIndex = isFloatingRow
+                    ? rowIndex > records.length - 1
+                        ? records.length - 1
+                        : rowIndex
+                    : rowIndex;
                 const actualColumnIndex = columnIndex;
                 const actualBottom = Math.max(rowIndex, bounds.bottom);
                 const actualRight = Math.max(columnIndex, bounds.right);
 
                 const _y = instance.current.getRowOffset(actualRowIndex);
                 const height = _height ?? instance.current.getRowHeight(actualBottom);
-                const y = isFiltered || isMoved ? _y - height / 2 : _y;
+                const y =
+                    isFiltered || isMoved
+                        ? _y - (actualRowIndex === rowIndex ? height / 2 : 0)
+                        : _y;
 
                 const x = instance.current.getColumnOffset(actualColumnIndex);
                 const width = instance.current.getColumnWidth(actualRight);
