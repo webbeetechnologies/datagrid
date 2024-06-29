@@ -584,3 +584,5 @@ export interface ScrollSnapRef {
     isHiddenRow?: (rowIndex: number) => boolean;
     isHiddenColumn?: (columnIndex: number) => boolean;
 }
+
+export type HoveredCell = CellInterface & { isFloatingRow?: boolean };

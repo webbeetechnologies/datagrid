@@ -1,11 +1,11 @@
 import { createFastContext } from '@bambooapp/bamboo-molecules/fast-context';
-import type { CellInterface } from './components';
+import type { HoveredCell } from './components';
 
 export const {
     useContextValue: useDataGridState,
     useStoreRef: useDataGridStateStoreRef,
     Provider: DataGridStateProvider,
-} = createFastContext<{ hoveredCell: CellInterface | null }>(
+} = createFastContext<{ hoveredCell: HoveredCell | null }>(
     {
         hoveredCell: null,
     },

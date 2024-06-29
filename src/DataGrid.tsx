@@ -36,6 +36,7 @@ import {
     RendererProps,
     ScrollCoords,
     ViewPortProps,
+    HoveredCell,
 } from './components';
 import {
     useSelection,
@@ -398,7 +399,7 @@ const DataGrid = (
 
     // const floatingRowProps = useFloatingRowProps();
 
-    const [hoveredCell, setHoveredCell] = useState<CellInterface | null>(null);
+    const [hoveredCell, setHoveredCell] = useState<HoveredCell | null>(null);
     const [layout, setLayout] = useState({ width: 0, height: 0 });
 
     const hoveredCellRef = useLatest(hoveredCell);
@@ -534,7 +535,8 @@ const DataGrid = (
             if (wheelingRef.current) return;
 
             wheelingRef.current = requestAnimationFrame(() => {
-                let coords = gridRef.current?.getCellCoordsFromOffset(e.clientX, e.clientY);
+                let coords: HoveredCell | null | undefined =
+                    gridRef.current?.getCellCoordsFromOffset(e.clientX, e.clientY);
 
                 if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
                     const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
@@ -558,7 +560,12 @@ const DataGrid = (
                             e.clientY > floatingRowClientY &&
                             e.clientY < floatingRowClientY + floatingRowProps.height
                         ) {
-                            coords = null;
+                            const _columnIndex = coords.columnIndex;
+                            coords = {
+                                rowIndex: floatingRowProps.rowIndex,
+                                columnIndex: _columnIndex,
+                                isFloatingRow: true,
+                            };
                         }
                     }
                 }

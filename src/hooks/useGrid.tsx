@@ -135,8 +135,12 @@ const useGrid = ({
                 const cellValue = (data as Record<string, any>)?.[field.slug] ?? null;
                 const recordId = rowInfo.id;
 
-                const isHoverRow = rowIndex === hoveredCell?.rowIndex;
-                const isHoverColumn = columnIndex === hoveredCell?.columnIndex;
+                const isHoverRow =
+                    rowIndex === hoveredCell?.rowIndex &&
+                    isFloatingRow === !!hoveredCell?.isFloatingRow;
+                const isHoverColumn =
+                    columnIndex === hoveredCell?.columnIndex &&
+                    isFloatingRow === !!hoveredCell?.isFloatingRow;
                 const isActiveRow = !!instance.current.isActiveRow?.({ rowIndex, recordId });
 
                 cellsDrawer.setState({
@@ -258,8 +262,23 @@ const useGrid = ({
                     }
                     renderCell({ rowIndex, columnIndex, field, isLastColumn });
                 }
+            }
 
-                if (floatingRowProps) {
+            if (floatingRowProps) {
+                for (
+                    let columnIndex = columnStartIndex;
+                    columnIndex <= columnStopIndex;
+                    columnIndex++
+                ) {
+                    if (columnIndex > columnCount - 1) break;
+
+                    if (isHiddenColumn?.(columnIndex)) {
+                        continue;
+                    }
+
+                    const field = fields[columnIndex] || {};
+                    const isLastColumn = columnIndex === fields.length - 1;
+
                     const { rowIndex, record, height, isFiltered, isMoved } = floatingRowProps;
 
                     renderCell({

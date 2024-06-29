@@ -59,6 +59,7 @@ import {
     Direction,
     GridProps,
     GridRef,
+    HoveredCell,
     InstanceInterface,
     OptionalCellInterface,
     OptionalScrollCoords,
@@ -2116,7 +2117,7 @@ type RenderCellsByRangeArgs = {
     isHiddenColumn?: GridProps['isHiddenColumn'];
     isHiddenRow?: GridProps['isHiddenColumn'];
     isActiveRow?: GridProps['isActiveRow'];
-    hoveredCell: CellInterface | null;
+    hoveredCell: HoveredCell | null;
     getCellBounds: GridRef['getCellBounds'];
     getRowOffset: GridRef['getRowOffset'];
     getColumnOffset: GridRef['getColumnOffset'];
@@ -2195,8 +2196,12 @@ const renderCellsByRange = ({
                 key: itemKey({ rowIndex, columnIndex }),
                 ...(withCellStates
                     ? {
-                          isHoverRow: hoveredCell?.rowIndex === rowIndex,
-                          isHoverColumn: hoveredCell?.columnIndex === columnIndex,
+                          isHoverRow:
+                              hoveredCell?.rowIndex === rowIndex &&
+                              isFloatingRow === !!hoveredCell?.isFloatingRow,
+                          isHoverColumn:
+                              hoveredCell?.columnIndex === columnIndex &&
+                              isFloatingRow === !!hoveredCell?.isFloatingRow,
                           isActiveRow: !!isActiveRow?.({ rowIndex }),
                       }
                     : {}),
