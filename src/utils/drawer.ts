@@ -270,8 +270,21 @@ export class KonvaDrawer {
     }
 
     public rect(props: IRectProps) {
-        const { x, y, width, height, radius, fill, stroke, shadowBlur, shadowColor, shadowOffset } =
-            props;
+        const {
+            x,
+            y,
+            width: _width,
+            height: _height,
+            radius,
+            fill,
+            stroke,
+            shadowBlur,
+            shadowColor,
+            shadowOffset,
+        } = props;
+
+        const width = Math.max(0, _width);
+        const height = Math.max(0, _height);
 
         this.ctx.save(); // Save the current state of the context
 
@@ -595,7 +608,10 @@ export class KonvaDrawer {
     }
 
     public image(props: IImageProps, crossOrigin?: boolean, _allowDefault?: boolean) {
-        const { x, y, url, width, height, opacity = 1, clipFunc } = props;
+        const { x, y, url, width: _width, height: _height, opacity = 1, clipFunc } = props;
+        const width = Math.max(0, _width);
+        const height = Math.max(0, _height);
+
         if (!url) {
             return;
         }

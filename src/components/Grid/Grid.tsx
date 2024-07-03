@@ -1052,6 +1052,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         const handleWheel = useCallback(
             (event: WheelEvent) => {
+                event.preventDefault();
                 if (event.ctrlKey) return;
                 /* If user presses shift key, scroll horizontally */
                 const isScrollingHorizontally = event.shiftKey;
@@ -1332,7 +1333,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 y: y + height,
             };
         } else {
-            // eslint-disable-next-line
             activeCellComponent = renderActiveCell?.({
                 activeCell: null,
             });
