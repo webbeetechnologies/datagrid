@@ -92,7 +92,7 @@ export const RESET_SCROLL_EVENTS_DEBOUNCE_INTERVAL = 100;
 /* Placeholder for empty array -> Prevents re-render */
 const EMPTY_ARRAY: any = [];
 
-const defaultWrapper = (children: React.ReactNode): React.ReactNode => children;
+// const defaultWrapper = (children: React.ReactNode): React.ReactNode => children;
 const useFloatingRowPropsDefault = () => undefined;
 
 /**
@@ -133,7 +133,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             borderStyles = EMPTY_ARRAY as StylingProps,
             children,
             stageProps,
-            wrapper = defaultWrapper,
+            wrapper,
             showFillHandle = false,
             fillSelection,
             overscanCount = 1,
@@ -1272,6 +1272,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         let activeCellSelectionFrozenColumn = null;
         let activeCellSelectionFrozenRow = null;
         let activeCellSelectionFrozenIntersection = null;
+        // @ts-ignore
         let activeCellComponent: React.ReactNode = null;
 
         if (activeCell) {
@@ -1331,6 +1332,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 y: y + height,
             };
         } else {
+            // eslint-disable-next-line
             activeCellComponent = renderActiveCell?.({
                 activeCell: null,
             });
@@ -1650,10 +1652,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             });
         }
 
-        const { cells: floatingRowDynamicCells, frozenCells: floatingRowFrozenDynamicCells } =
+        const { cells: _floatingRowDynamicCells, frozenCells: floatingRowFrozenDynamicCells } =
             floatingRowAllDynamicCells;
 
-        const { cells: dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
+        const { cells: _dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
             columnStartIndex,
             columnStopIndex,
             rowStartIndex,
@@ -1763,13 +1765,13 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         clipHeight={containerHeight - frozenRowHeight}>
                         <Group offsetY={scrollTop} offsetX={scrollLeft}>
                             {cells}
-                            {dynamicCells}
-                            {floatingRowDynamicCells}
+                            {/* {dynamicCells}
+                            {floatingRowDynamicCells} */}
                         </Group>
                     </Group>
-                    <Group offsetY={scrollTop} offsetX={scrollLeft}>
+                    {/* <Group offsetY={scrollTop} offsetX={scrollLeft}>
                         {activeCellComponent}
-                    </Group>
+                    </Group> */}
                     <Group
                         clipX={0}
                         clipY={0}
@@ -2073,7 +2075,9 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             listening={listenToEvents}
                             onContextMenu={onContextMenu}
                             {...stageProps}>
-                            {wrapper(stageChildren)}
+                            {wrapper && typeof wrapper === 'function'
+                                ? wrapper(stageChildren)
+                                : stageChildren}
                         </Stage>
                         {selectionChildren}
                     </div>

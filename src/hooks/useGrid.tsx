@@ -158,10 +158,7 @@ const useGrid = ({
                     isActiveRow,
                 });
                 const shouldDisplayEmptyCell =
-                    !isFloatingRow &&
-                    columnIndex > 0 &&
-                    floatingRowProps?.record?.id === recordId &&
-                    (floatingRowProps?.isFiltered || floatingRowProps?.isMoved);
+                    !isFloatingRow && columnIndex > 0 && floatingRowProps?.record?.id === recordId;
 
                 if (
                     (rowInfo.rowType === 'data' || isFloatingRow) &&
