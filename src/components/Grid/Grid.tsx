@@ -1652,10 +1652,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             });
         }
 
-        const { cells: _floatingRowDynamicCells, frozenCells: floatingRowFrozenDynamicCells } =
+        const { cells: floatingRowDynamicCells, frozenCells: floatingRowFrozenDynamicCells } =
             floatingRowAllDynamicCells;
 
-        const { cells: _dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
+        const { cells: dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
             columnStartIndex,
             columnStopIndex,
             rowStartIndex,
@@ -1765,13 +1765,13 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         clipHeight={containerHeight - frozenRowHeight}>
                         <Group offsetY={scrollTop} offsetX={scrollLeft}>
                             {cells}
-                            {/* {dynamicCells}
-                            {floatingRowDynamicCells} */}
+                            {dynamicCells}
+                            {floatingRowDynamicCells}
                         </Group>
                     </Group>
-                    {/* <Group offsetY={scrollTop} offsetX={scrollLeft}>
+                    <Group offsetY={scrollTop} offsetX={scrollLeft}>
                         {activeCellComponent}
-                    </Group> */}
+                    </Group>
                     <Group
                         clipX={0}
                         clipY={0}
