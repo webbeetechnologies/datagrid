@@ -15,8 +15,7 @@ import {
 } from '../components/Grid/helpers';
 import { KeyCodes, Direction, MouseButtonCodes, SelectionPolicy } from '../components/Grid/types';
 import { useLatest } from '@bambooapp/bamboo-molecules';
-import type { IRecord, IShadowProps } from '../utils/types';
-import isNil from 'lodash.isnil';
+import { resolveFloatingRowPosition } from '../utils/resolveFloatingRowPosition';
 
 const cellEqualsSelection = (cell: CellInterface | null, selections: SelectionArea[]): boolean => {
     if (cell === null) return false;
@@ -169,14 +168,10 @@ export interface UseSelectionOptions {
      * When active cell changes
      * */
     onActiveCellChange?: (cell: CellInterface | null, prev: CellInterface | null) => void;
-    floatingRowProps?: {
-        rowIndex: number;
-        isFiltered?: boolean;
-        isMoved?: boolean;
-        record: IRecord;
-        height: number;
-        shadowProps?: IShadowProps;
-    };
+    floatingRowIndex?: number;
+    isFloatingRowMoved?: boolean;
+    isFloatingRowFiltered?: boolean;
+    floatingRowHeight?: number;
 }
 
 export type NewSelectionMode = 'clear' | 'modify' | 'append';
@@ -305,7 +300,10 @@ const useSelection = ({
     onBeforeFill,
     isLastColumn,
     isLastRow,
-    floatingRowProps,
+    floatingRowIndex,
+    isFloatingRowMoved,
+    isFloatingRowFiltered,
+    floatingRowHeight,
 }: UseSelectionOptions): SelectionResults => {
     const [activeCell, _setActiveCell] = useState<CellInterface | null>(initialActiveCell);
     const [selections, setSelections] = useState<SelectionArea[]>(initialSelections);
@@ -623,43 +621,20 @@ const useSelection = ({
 
             if (!coords) return;
 
-            if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
-                // const rowIndex =
-                //     floatingRowProps?.rowIndex > rowCountRef.current - 1
-                //         ? rowCountRef.current - 1
-                //         : floatingRowProps?.rowIndex;
-                const rowIndex = floatingRowProps?.rowIndex;
-
-                const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
-                    rowIndex: rowIndex,
-                    columnIndex: coords?.columnIndex,
-                });
-
-                if (
-                    floatingRowOffset &&
-                    !isNil(floatingRowOffset?.x) &&
-                    !isNil(floatingRowOffset?.y)
-                ) {
-                    // const hasDifferentIndex = floatingRowProps?.rowIndex !== rowIndex;
-                    // TODO - remove hardcode number 150
-                    const floatingRowClientY =
-                        floatingRowOffset.y +
-                        150 +
-                        floatingRowProps.height / 2 -
-                        (gridRef.current?.getScrollPosition().scrollTop || 0);
-
-                    if (
-                        e.nativeEvent.clientY > floatingRowClientY &&
-                        e.nativeEvent.clientY < floatingRowClientY + floatingRowProps.height
-                    ) {
-                        const _columnIndex = coords.columnIndex;
-                        coords = {
-                            rowIndex: rowIndex,
-                            columnIndex: _columnIndex,
-                        };
+            if (floatingRowIndex !== undefined && floatingRowHeight !== undefined) {
+                resolveFloatingRowPosition({
+                    coords,
+                    rowIndex: floatingRowIndex,
+                    height: floatingRowHeight,
+                    clientY: e.clientY,
+                    isFiltered: isFloatingRowFiltered,
+                    isMoved: isFloatingRowMoved,
+                    onResolve: (cell: CellInterface) => {
+                        coords = cell;
                         isFloatingRow = true;
-                    }
-                }
+                    },
+                    gridRef,
+                });
             }
 
             /* Check if its context menu click */
@@ -779,10 +754,8 @@ const useSelection = ({
         },
         [
             gridRef,
-            floatingRowProps?.isFiltered,
-            floatingRowProps?.isMoved,
-            floatingRowProps?.rowIndex,
-            floatingRowProps?.height,
+            floatingRowIndex,
+            floatingRowHeight,
             allowDeselectSelection,
             selections,
             selectionPolicy,
@@ -791,6 +764,8 @@ const useSelection = ({
             activeCell,
             alwaysScrollToActiveCell,
             newSelection,
+            isFloatingRowFiltered,
+            isFloatingRowMoved,
             cellIndexInSelection,
             handleMouseUp,
             handleMouseMove,

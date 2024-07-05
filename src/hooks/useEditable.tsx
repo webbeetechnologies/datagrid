@@ -17,7 +17,7 @@ import {
     getNextFocusableCellByDirection,
 } from '../components/Grid/helpers';
 import { castToString, autoSizerCanvas } from '../utils';
-import isNil from 'lodash.isnil';
+import { resolveFloatingRowPosition } from '../utils/resolveFloatingRowPosition';
 // import { useWhatHasUpdated } from './useWhatHasUpdated';
 
 export type EditorConfig = {
@@ -633,46 +633,21 @@ const useEditable = ({
                 e.nativeEvent.clientY,
             );
             if (!coords) return;
-            const { rowIndex: _rowIndex, columnIndex } = coords;
+            const { rowIndex: _rowIndex } = coords;
 
-            // TODO - abstract this
-            if ((isFloatingRowFiltered || isFloatingRowMoved) && coords) {
-                // const rowIndex =
-                //     floatingRowProps?.rowIndex > rowCountRef.current - 1
-                //         ? rowCountRef.current - 1
-                //         : floatingRowProps?.rowIndex;
-                const rowIndex = floatingRowIndex ?? _rowIndex;
-
-                const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
-                    rowIndex: rowIndex,
-                    columnIndex: columnIndex,
+            if (floatingRowIndex !== undefined && floatingRowHeight !== undefined) {
+                resolveFloatingRowPosition({
+                    coords,
+                    rowIndex: floatingRowIndex ?? _rowIndex,
+                    height: floatingRowHeight,
+                    clientY: e.clientY,
+                    isFiltered: isFloatingRowFiltered,
+                    isMoved: isFloatingRowMoved,
+                    onResolve: (cell: CellInterface) => {
+                        coords = cell;
+                    },
+                    gridRef,
                 });
-
-                if (
-                    floatingRowOffset &&
-                    floatingRowHeight &&
-                    !isNil(floatingRowOffset?.x) &&
-                    !isNil(floatingRowOffset?.y)
-                ) {
-                    // const hasDifferentIndex = floatingRowProps?.rowIndex !== rowIndex;
-                    // TODO - remove hardcode number 150
-                    const floatingRowClientY =
-                        floatingRowOffset.y +
-                        150 +
-                        floatingRowHeight / 2 -
-                        (gridRef.current?.getScrollPosition().scrollTop || 0);
-
-                    if (
-                        e.nativeEvent.clientY > floatingRowClientY &&
-                        e.nativeEvent.clientY < floatingRowClientY + floatingRowHeight
-                    ) {
-                        const _columnIndex = coords.columnIndex;
-                        coords = {
-                            rowIndex: rowIndex,
-                            columnIndex: _columnIndex,
-                        };
-                    }
-                }
             }
 
             makeEditable(coords);

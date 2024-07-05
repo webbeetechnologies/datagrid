@@ -47,7 +47,7 @@ import {
     UseEditableOptions,
 } from './hooks';
 import { DataGridStateProvider } from './DataGridStateContext';
-import isNil from 'lodash.isnil';
+import { resolveFloatingRowPosition } from './utils/resolveFloatingRowPosition';
 
 export type CellRendererProps = RendererProps & { useCellValue: Props['useCellValue'] };
 
@@ -415,6 +415,7 @@ const DataGrid = (
     const infiniteLoaderRef = useRef(null);
     const wheelingRef = useRef<number | null>(null); // Storage timer to ensure smooth operation
     const floatingRowProps = useFloatingRowProps();
+    const floatingRowPropsRef = useLatest(floatingRowProps);
     const rowCount =
         floatingRowProps && floatingRowProps?.rowIndex + 1 > _rowCount
             ? floatingRowProps?.rowIndex + 1
@@ -451,7 +452,10 @@ const DataGrid = (
         onBeforeFill,
         isLastColumn,
         isLastRow,
-        floatingRowProps,
+        floatingRowIndex: floatingRowProps?.rowIndex,
+        isFloatingRowMoved: floatingRowProps?.isMoved,
+        isFloatingRowFiltered: floatingRowProps?.isFiltered,
+        floatingRowHeight: floatingRowProps?.height,
     });
 
     const onAfterSubmit = useCallback(
@@ -537,52 +541,26 @@ const DataGrid = (
                     e.nativeEvent.clientY,
                 );
 
-            if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
-                // const rowIndex =
-                //     floatingRowProps?.rowIndex > rowCountRef.current - 1
-                //         ? rowCountRef.current - 1
-                //         : floatingRowProps?.rowIndex;
-                const rowIndex = floatingRowProps?.rowIndex;
-
-                const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
-                    rowIndex: rowIndex,
-                    columnIndex: coords?.columnIndex,
-                });
-
-                if (
-                    floatingRowOffset &&
-                    !isNil(floatingRowOffset?.x) &&
-                    !isNil(floatingRowOffset?.y)
-                ) {
-                    // TODO - remove hardcode number 150
-                    const floatingRowClientY =
-                        floatingRowOffset.y +
-                        150 +
-                        floatingRowProps.height / 2 -
-                        (gridRef.current?.getScrollPosition().scrollTop || 0);
-
-                    if (
-                        e.clientY > floatingRowClientY &&
-                        e.clientY < floatingRowClientY + floatingRowProps.height
-                    ) {
-                        const _columnIndex = coords.columnIndex;
+            if (floatingRowPropsRef.current) {
+                resolveFloatingRowPosition({
+                    coords,
+                    rowIndex: floatingRowPropsRef.current?.rowIndex,
+                    height: floatingRowPropsRef.current.height,
+                    clientY: e.clientY,
+                    isFiltered: floatingRowPropsRef.current.isFiltered,
+                    isMoved: floatingRowPropsRef.current.isMoved,
+                    onResolve: (cell: CellInterface) => {
                         coords = {
-                            rowIndex: rowIndex,
-                            columnIndex: _columnIndex,
+                            ...cell,
                             isFloatingRow: true,
                         };
-                    }
-                }
+                    },
+                    gridRef,
+                });
             }
             onClickProp?.(e, coords || null);
         },
-        [
-            floatingRowProps?.height,
-            floatingRowProps?.isFiltered,
-            floatingRowProps?.isMoved,
-            floatingRowProps?.rowIndex,
-            onClickProp,
-        ],
+        [floatingRowPropsRef, onClickProp],
     );
 
     const onMouseMove = useCallback(
@@ -593,40 +571,25 @@ const DataGrid = (
                 let coords: HoveredCell | null | undefined =
                     gridRef.current?.getCellCoordsFromOffset(e.clientX, e.clientY);
 
-                if ((floatingRowProps?.isFiltered || floatingRowProps?.isMoved) && coords) {
-                    const rowIndex =
-                        floatingRowProps?.rowIndex > rowCountRef.current - 1
-                            ? rowCountRef.current - 1
-                            : floatingRowProps?.rowIndex;
-                    const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
-                        rowIndex: rowIndex,
-                        columnIndex: coords?.columnIndex,
-                    });
-
-                    if (
-                        floatingRowOffset &&
-                        !isNil(floatingRowOffset?.x) &&
-                        !isNil(floatingRowOffset?.y)
-                    ) {
-                        // TODO - remove hardcode number 150
-                        const floatingRowClientY =
-                            floatingRowOffset.y +
-                            150 +
-                            floatingRowProps.height / 2 -
-                            (gridRef.current?.getScrollPosition().scrollTop || 0);
-
-                        if (
-                            e.clientY > floatingRowClientY &&
-                            e.clientY < floatingRowClientY + floatingRowProps.height
-                        ) {
-                            const _columnIndex = coords.columnIndex;
+                if (floatingRowPropsRef.current) {
+                    resolveFloatingRowPosition({
+                        coords,
+                        rowIndex:
+                            floatingRowPropsRef.current.rowIndex > rowCountRef.current - 1
+                                ? rowCountRef.current - 1
+                                : floatingRowPropsRef.current.rowIndex,
+                        height: floatingRowPropsRef.current.height,
+                        clientY: e.clientY,
+                        isFiltered: floatingRowPropsRef.current.isFiltered,
+                        isMoved: floatingRowPropsRef.current.isMoved,
+                        onResolve: (cell: CellInterface) => {
                             coords = {
-                                rowIndex: rowIndex,
-                                columnIndex: _columnIndex,
+                                ...cell,
                                 isFloatingRow: true,
                             };
-                        }
-                    }
+                        },
+                        gridRef,
+                    });
                 }
 
                 if (
@@ -643,14 +606,7 @@ const DataGrid = (
                 wheelingRef.current = null;
             });
         },
-        [
-            floatingRowProps?.height,
-            floatingRowProps?.isFiltered,
-            floatingRowProps?.isMoved,
-            floatingRowProps?.rowIndex,
-            hoveredCellRef,
-            rowCountRef,
-        ],
+        [floatingRowPropsRef, hoveredCellRef, rowCountRef],
     );
 
     const onMouseLeave = useCallback(() => {
