@@ -498,6 +498,10 @@ const DataGrid = (
         selectionTopBound,
         isLastRow,
         isLastColumn,
+        floatingRowIndex: floatingRowProps?.rowIndex,
+        isFloatingRowMoved: floatingRowProps?.isMoved,
+        isFloatingRowFiltered: floatingRowProps?.isFiltered,
+        floatingRowHeight: floatingRowProps?.height,
     });
 
     const onScroll = useCallback(
@@ -558,8 +562,8 @@ const DataGrid = (
                         (gridRef.current?.getScrollPosition().scrollTop || 0);
 
                     if (
-                        e.nativeEvent.clientY > floatingRowClientY &&
-                        e.nativeEvent.clientY < floatingRowClientY + floatingRowProps.height
+                        e.clientY > floatingRowClientY &&
+                        e.clientY < floatingRowClientY + floatingRowProps.height
                     ) {
                         const _columnIndex = coords.columnIndex;
                         coords = {
@@ -609,6 +613,7 @@ const DataGrid = (
                         const floatingRowClientY =
                             floatingRowOffset.y +
                             150 -
+                            floatingRowProps.height / 2 -
                             (gridRef.current?.getScrollPosition().scrollTop || 0);
 
                         if (

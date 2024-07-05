@@ -17,6 +17,7 @@ import {
     getNextFocusableCellByDirection,
 } from '../components/Grid/helpers';
 import { castToString, autoSizerCanvas } from '../utils';
+import isNil from 'lodash.isnil';
 // import { useWhatHasUpdated } from './useWhatHasUpdated';
 
 export type EditorConfig = {
@@ -150,6 +151,10 @@ export interface UseEditableOptions {
         activeCell: CellInterface,
         nextActiveCell?: CellInterface | null,
     ) => void;
+    floatingRowIndex?: number;
+    isFloatingRowMoved?: boolean;
+    isFloatingRowFiltered?: boolean;
+    floatingRowHeight?: number;
 }
 
 export interface EditableResults {
@@ -460,6 +465,10 @@ const useEditable = ({
     onSubmit: onSubmitValue,
     isLastColumn,
     isLastRow,
+    floatingRowHeight,
+    isFloatingRowFiltered,
+    floatingRowIndex,
+    isFloatingRowMoved,
 }: UseEditableOptions): EditableResults => {
     const [isEditorShown, setShowEditor] = useState<boolean>(false);
     const [position, setPosition] = useState<CellPosition>({
@@ -619,17 +628,58 @@ const useEditable = ({
             if (!gridRef.current || !activeCellRef.current) return;
             if (!editorConfigRef.current?.showOnDoubleClicked) return;
 
-            const coords = gridRef.current.getCellCoordsFromOffset(
+            let coords = gridRef.current.getCellCoordsFromOffset(
                 e.nativeEvent.clientX,
                 e.nativeEvent.clientY,
             );
             if (!coords) return;
-            const { rowIndex, columnIndex } = coords;
-            makeEditable({ rowIndex, columnIndex });
+            const { rowIndex: _rowIndex, columnIndex } = coords;
+
+            // TODO - abstract this
+            if ((isFloatingRowFiltered || isFloatingRowMoved) && coords) {
+                // const rowIndex =
+                //     floatingRowProps?.rowIndex > rowCountRef.current - 1
+                //         ? rowCountRef.current - 1
+                //         : floatingRowProps?.rowIndex;
+                const rowIndex = floatingRowIndex ?? _rowIndex;
+
+                const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({
+                    rowIndex: rowIndex,
+                    columnIndex: columnIndex,
+                });
+
+                if (
+                    floatingRowOffset &&
+                    floatingRowHeight &&
+                    !isNil(floatingRowOffset?.x) &&
+                    !isNil(floatingRowOffset?.y)
+                ) {
+                    // const hasDifferentIndex = floatingRowProps?.rowIndex !== rowIndex;
+                    // TODO - remove hardcode number 150
+                    const floatingRowClientY =
+                        floatingRowOffset.y +
+                        160 -
+                        floatingRowHeight / 2 -
+                        (gridRef.current?.getScrollPosition().scrollTop || 0);
+
+                    if (
+                        e.nativeEvent.clientY > floatingRowClientY &&
+                        e.nativeEvent.clientY < floatingRowClientY + floatingRowHeight
+                    ) {
+                        const _columnIndex = coords.columnIndex;
+                        coords = {
+                            rowIndex: rowIndex,
+                            columnIndex: _columnIndex,
+                        };
+                    }
+                }
+            }
+
+            makeEditable(coords);
         },
         // TODO - remove eslint ignore after testing
         // eslint-disable-next-line
-        [frozenRows, frozenColumns],
+        [frozenRows, frozenColumns, isFloatingRowMoved, isFloatingRowFiltered, floatingRowHeight, floatingRowIndex],
     );
 
     const isSelectionKey = useCallback((keyCode: number) => {

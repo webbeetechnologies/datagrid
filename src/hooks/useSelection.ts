@@ -645,6 +645,7 @@ const useSelection = ({
                     const floatingRowClientY =
                         floatingRowOffset.y +
                         160 -
+                        floatingRowProps.height / 2 -
                         (gridRef.current?.getScrollPosition().scrollTop || 0);
 
                     if (
