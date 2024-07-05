@@ -604,12 +604,11 @@ const DataGrid = (
                         !isNil(floatingRowOffset?.x) &&
                         !isNil(floatingRowOffset?.y)
                     ) {
-                        const hasDifferentIndex = floatingRowProps?.rowIndex !== rowIndex;
+                        // const hasDifferentIndex = floatingRowProps?.rowIndex !== rowIndex;
                         // TODO - remove hardcode number 150
                         const floatingRowClientY =
                             floatingRowOffset.y +
                             150 -
-                            (!hasDifferentIndex ? floatingRowProps.height / 2 : 0) -
                             (gridRef.current?.getScrollPosition().scrollTop || 0);
 
                         if (

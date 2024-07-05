@@ -1617,6 +1617,30 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         const listenToEvents = !isScrolling;
 
+        const { cells: dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
+            columnStartIndex,
+            columnStopIndex,
+            rowStartIndex,
+            rowStopIndex,
+            columnCount,
+            rowCount,
+            getCellBounds,
+            getColumnOffset,
+            getColumnWidth,
+            getRowHeight,
+            getRowOffset,
+            renderCell: renderDynamicCell as RenderCellsByRangeArgs['renderCell'],
+            hoveredCell: datagridStoreRef.current?.hoveredCell,
+            isHiddenColumn,
+            isActiveRow,
+            isHiddenRow,
+            frozenColumns,
+            isFloatingRow: false,
+            isRowFiltered: floatingRowProps?.isFiltered,
+            isRowMoved: floatingRowProps?.isMoved,
+            floatingRowId: floatingRowProps?.record?.id,
+        });
+
         let floatingRowAllDynamicCells = {
             cells: [] as ReactNode[],
             frozenCells: [] as ReactNode[],
@@ -1654,30 +1678,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
         const { cells: floatingRowDynamicCells, frozenCells: floatingRowFrozenDynamicCells } =
             floatingRowAllDynamicCells;
-
-        const { cells: dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
-            columnStartIndex,
-            columnStopIndex,
-            rowStartIndex,
-            rowStopIndex,
-            columnCount,
-            rowCount,
-            getCellBounds,
-            getColumnOffset,
-            getColumnWidth,
-            getRowHeight,
-            getRowOffset,
-            renderCell: renderDynamicCell as RenderCellsByRangeArgs['renderCell'],
-            hoveredCell: datagridStoreRef.current?.hoveredCell,
-            isHiddenColumn,
-            isActiveRow,
-            isHiddenRow,
-            frozenColumns,
-            isFloatingRow: false,
-            isRowFiltered: floatingRowProps?.isFiltered,
-            isRowMoved: floatingRowProps?.isMoved,
-            floatingRowId: floatingRowProps?.record?.id,
-        });
 
         const { cells: dynamicReactCells, frozenCells: frozenDynamicReactCells } =
             renderCellsByRange({
