@@ -146,10 +146,10 @@ const useGrid = ({
 
                 const isHoverRow =
                     rowIndex === hoveredCell?.rowIndex &&
-                    isFloatingRow === !!hoveredCell?.isFloatingRow;
+                    (isFloatingRow || isFloatingRow === !!hoveredCell?.isFloatingRow);
                 const isHoverColumn =
                     columnIndex === hoveredCell?.columnIndex &&
-                    isFloatingRow === !!hoveredCell?.isFloatingRow;
+                    (isFloatingRow || isFloatingRow === !!hoveredCell?.isFloatingRow);
                 const isActiveRow = !!instance.current.isActiveRow?.({ rowIndex, recordId });
 
                 cellsDrawer.setState({
@@ -190,7 +190,8 @@ const useGrid = ({
                         isCheckedRow: isActiveRow,
                         isActiveRow: false,
                         isDraggingRow: false,
-                        isThisCellWillMove: isFiltered || isMoved,
+                        isFiltered,
+                        isMoved,
                         shadowProps,
                         renderEmptyCell: shouldDisplayEmptyCell,
                         // commentCount,

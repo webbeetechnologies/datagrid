@@ -658,7 +658,7 @@ const useEditable = ({
                     // TODO - remove hardcode number 150
                     const floatingRowClientY =
                         floatingRowOffset.y +
-                        160 -
+                        150 +
                         floatingRowHeight / 2 -
                         (gridRef.current?.getScrollPosition().scrollTop || 0);
 

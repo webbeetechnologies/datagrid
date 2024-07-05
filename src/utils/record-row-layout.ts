@@ -9,7 +9,8 @@ interface IFirstCell {
     isCheckedRow: boolean;
     isHoverRow: boolean;
     isDraggingRow: boolean;
-    isThisCellWillMove: boolean;
+    isFiltered: boolean;
+    isMoved: boolean;
     shadowProps?: IShadowProps;
     renderEmptyCell?: boolean;
 }
@@ -123,7 +124,8 @@ export class RecordRowLayout extends GridLayout {
             isCheckedRow,
             isActiveRow,
             isDraggingRow,
-            isThisCellWillMove,
+            isFiltered,
+            isMoved,
             shadowProps,
             style,
             renderEmptyCell,
@@ -131,12 +133,14 @@ export class RecordRowLayout extends GridLayout {
 
         let fill = this.colors.backgroundColor;
 
-        if (isHoverRow || isCheckedRow || isActiveRow || isThisCellWillMove) {
+        if (isHoverRow || isCheckedRow || isActiveRow || isFiltered || isMoved) {
             fill = this.colors.rowSelectedBg;
             if (isDraggingRow) {
                 fill = this.colors.lowestBg;
-            } else if (isThisCellWillMove) {
-                fill = this.colors.warnLight;
+            } else if (isFiltered) {
+                fill = this.colors.rowFilteredColor;
+            } else if (isMoved) {
+                fill = this.colors.rowMovedColor;
             } else if (isCheckedRow) {
                 fill = this.colors.cellSelectedColorSolid;
             }
@@ -149,9 +153,10 @@ export class RecordRowLayout extends GridLayout {
             isActiveRow,
             isCheckedRow,
             isDraggingRow,
-            isThisCellWillMove,
             shadowProps,
             renderEmptyCell,
+            isFiltered,
+            isMoved,
         });
         this.renderCommonCell({
             style: { fill, stroke: style?.stroke },
