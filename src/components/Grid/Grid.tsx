@@ -1286,9 +1286,13 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             const isInFrozenIntersection = isInFrozenRow && isInFrozenColumn;
             const _rowHeight = floatingRowProps?.height ?? getRowHeight(actualBottom);
             const isFloating = floatingRowProps?.isFiltered || floatingRowProps?.isMoved;
-            const y = getRowOffset(top) - (isFloating ? _rowHeight / 2 : 0);
+            const y =
+                getRowOffset(top) - (isFloating && activeCell.rowIndex > 1 ? _rowHeight / 2 : 0);
             const height =
-                getRowOffset(actualBottom) - y + _rowHeight - (isFloating ? _rowHeight / 2 : 0);
+                getRowOffset(actualBottom) -
+                y +
+                _rowHeight -
+                (isFloating && activeCell.rowIndex > 1 ? _rowHeight / 2 : 0);
 
             const x = getColumnOffset(left);
 
@@ -1661,7 +1665,9 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 getCellBounds,
                 getColumnOffset,
                 getColumnWidth,
-                getRowOffset: (top: number) => getRowOffset(top) - floatingRowProps.height / 2,
+                getRowOffset: (top: number) =>
+                    getRowOffset(top) -
+                    (floatingRowProps.rowIndex > 1 ? floatingRowProps.height / 2 : 0),
                 getRowHeight: () => floatingRowProps.height,
                 renderCell: renderDynamicCell as RenderCellsByRangeArgs['renderCell'],
                 hoveredCell: datagridStoreRef.current?.hoveredCell,

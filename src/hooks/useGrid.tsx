@@ -133,10 +133,7 @@ const useGrid = ({
 
                 const _y = instance.current.getRowOffset(actualRowIndex);
                 const height = _height ?? instance.current.getRowHeight(actualBottom);
-                const y =
-                    isFiltered || isMoved
-                        ? _y - (actualRowIndex === rowIndex ? height / 2 : 0)
-                        : _y;
+                const y = isFiltered || isMoved ? _y - (rowIndex > 1 ? height / 2 : 0) : _y;
 
                 const x = instance.current.getColumnOffset(actualColumnIndex);
                 const width = instance.current.getColumnWidth(actualRight);

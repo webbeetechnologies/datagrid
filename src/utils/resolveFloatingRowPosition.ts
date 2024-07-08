@@ -32,7 +32,7 @@ export const resolveFloatingRowPosition = ({
             const floatingRowClientY =
                 floatingRowOffset.y +
                 150 +
-                height / 2 -
+                (rowIndex > 1 ? height / 2 : 0) -
                 (gridRef.current?.getScrollPosition().scrollTop || 0);
 
             if (clientY > floatingRowClientY && clientY < floatingRowClientY + height) {
