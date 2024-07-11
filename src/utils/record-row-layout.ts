@@ -13,6 +13,7 @@ interface IFirstCell {
     isMoved: boolean;
     shadowProps?: IShadowProps;
     renderEmptyCell?: boolean;
+    rowState?: string;
 }
 
 export class RecordRowLayout extends GridLayout {
@@ -129,6 +130,7 @@ export class RecordRowLayout extends GridLayout {
             shadowProps,
             style,
             renderEmptyCell,
+            rowState,
         } = props;
 
         let fill = this.colors.backgroundColor;
@@ -144,6 +146,10 @@ export class RecordRowLayout extends GridLayout {
             } else if (isCheckedRow) {
                 fill = this.colors.cellSelectedColorSolid;
             }
+        }
+
+        if (rowState) {
+            fill = this.colors[rowState] || this.colors.backgroundColor;
         }
 
         this.renderFirstCell({

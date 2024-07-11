@@ -191,6 +191,12 @@ const useGrid = ({
                         isMoved,
                         shadowProps,
                         renderEmptyCell: shouldDisplayEmptyCell,
+                        rowState:
+                            rowInfo.state === 'rowUpdated'
+                                ? rowInfo.updatedColumnIds?.includes?.(field.slug)
+                                    ? 'rowUpdated'
+                                    : undefined
+                                : rowInfo.state,
                         // commentCount,
                         // commentVisible,
                     });
