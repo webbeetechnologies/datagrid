@@ -1059,7 +1059,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
                 const { deltaX, deltaY, deltaMode } = event;
                 const vScrollDirection = deltaY >= 0 ? 'bottom' : 'top';
-                const hScrollDirection = deltaX >= 0 ? 'right' : 'left';
+                // const hScrollDirection = deltaX >= 0 ? 'right' : 'left';
 
                 const dx = isScrollingHorizontally ? deltaY : deltaX;
                 let dy = deltaY;
@@ -1087,19 +1087,19 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 }
 
                 // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
-                if (hScrollDirection === 'left') {
-                    if (horizontalScrollRef.current.scrollLeft + deltaX >= 0) {
-                        event.preventDefault();
-                    }
-                } else {
-                    if (
-                        horizontalScrollRef.current.scrollLeft + deltaX <=
-                        horizontalScrollRef.current.scrollWidth -
-                            (horizontalScrollRef.current as HTMLDivElement).clientWidth
-                    ) {
-                        event.preventDefault();
-                    }
-                }
+                // if (hScrollDirection === 'left') {
+                //     if (horizontalScrollRef.current.scrollLeft + deltaX >= 0) {
+                //         event.preventDefault();
+                //     }
+                // } else {
+                //     if (
+                //         horizontalScrollRef.current.scrollLeft + deltaX <=
+                //         horizontalScrollRef.current.scrollWidth -
+                //             (horizontalScrollRef.current as HTMLDivElement).clientWidth
+                //     ) {
+                //         event.preventDefault();
+                //     }
+                // }
 
                 /* Prevent browser back in Mac */
                 // event.preventDefault();
