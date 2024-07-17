@@ -1052,7 +1052,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         const handleWheel = useCallback(
             (event: WheelEvent) => {
-                event.preventDefault();
+                // event.preventDefault();
                 if (event.ctrlKey) return;
                 /* If user presses shift key, scroll horizontally */
                 const isScrollingHorizontally = event.shiftKey;
@@ -1060,6 +1060,16 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 const { deltaX, deltaY, deltaMode } = event;
                 const vScrollDirection = deltaY >= 0 ? 'bottom' : 'top';
                 const hScrollDirection = deltaX >= 0 ? 'right' : 'left';
+
+                const dx = isScrollingHorizontally ? deltaY : deltaX;
+                let dy = deltaY;
+
+                /* Scroll only in one direction */
+                const isHorizontal = isScrollingHorizontally || Math.abs(dx) > Math.abs(dy);
+
+                if (isHorizontal) {
+                    event.preventDefault();
+                }
 
                 // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
                 if (vScrollDirection === 'top') {
@@ -1095,12 +1105,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 // event.preventDefault();
                 /* Scroll natively */
                 if (wheelingRef.current) return;
-
-                const dx = isScrollingHorizontally ? deltaY : deltaX;
-                let dy = deltaY;
-
-                /* Scroll only in one direction */
-                const isHorizontal = isScrollingHorizontally || Math.abs(dx) > Math.abs(dy);
 
                 /* If snaps are active */
                 if (snap) {
