@@ -1053,6 +1053,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const handleWheel = useCallback(
             (event: WheelEvent) => {
                 // event.preventDefault();
+                // event.stopImmediatePropagation();
                 if (event.ctrlKey) return;
                 /* If user presses shift key, scroll horizontally */
                 const isScrollingHorizontally = event.shiftKey;
@@ -1069,12 +1070,14 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
                 if (isHorizontal) {
                     event.preventDefault();
+                    event.stopImmediatePropagation();
                 }
 
                 // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
                 if (vScrollDirection === 'top') {
                     if (verticalScrollRef.current.scrollTop + deltaY >= 0) {
                         event.preventDefault();
+                        event.stopImmediatePropagation();
                     }
                 } else {
                     if (
@@ -1083,6 +1086,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             (verticalScrollRef.current as HTMLDivElement).clientHeight
                     ) {
                         event.preventDefault();
+                        event.stopImmediatePropagation();
                     }
                 }
 
@@ -1649,7 +1653,37 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             floatingRowId: floatingRowProps?.record?.id,
         });
 
+        const { cells: dynamicReactCells, frozenCells: frozenDynamicReactCells } =
+            renderCellsByRange({
+                columnStartIndex,
+                columnStopIndex,
+                rowStartIndex,
+                rowStopIndex,
+                columnCount,
+                rowCount,
+                getCellBounds,
+                getColumnOffset,
+                getColumnWidth,
+                getRowHeight,
+                getRowOffset,
+                renderCell: renderDynamicReactCell as RenderCellsByRangeArgs['renderCell'],
+                hoveredCell: datagridStoreRef.current?.hoveredCell,
+                isHiddenColumn,
+                isActiveRow,
+                isHiddenRow,
+                frozenColumns,
+                isFloatingRow: false,
+                isRowFiltered: floatingRowProps?.isFiltered,
+                isRowMoved: floatingRowProps?.isMoved,
+                floatingRowId: floatingRowProps?.record?.id,
+            });
+
         let floatingRowAllDynamicCells = {
+            cells: [] as ReactNode[],
+            frozenCells: [] as ReactNode[],
+        };
+
+        let floatingRowAllDynamicReactCells = {
             cells: [] as ReactNode[],
             frozenCells: [] as ReactNode[],
         };
@@ -1684,35 +1718,40 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 isRowMoved: floatingRowProps.isMoved,
                 floatingRowId: floatingRowProps.record?.id,
             });
-        }
 
-        const { cells: floatingRowDynamicCells, frozenCells: floatingRowFrozenDynamicCells } =
-            floatingRowAllDynamicCells;
-
-        const { cells: dynamicReactCells, frozenCells: frozenDynamicReactCells } =
-            renderCellsByRange({
+            floatingRowAllDynamicReactCells = renderCellsByRange({
                 columnStartIndex,
                 columnStopIndex,
-                rowStartIndex,
-                rowStopIndex,
+                rowStartIndex: floatingRowProps.rowIndex,
+                rowStopIndex: floatingRowProps.rowIndex,
                 columnCount,
-                rowCount,
+                rowCount: floatingRowProps.rowIndex + 1,
                 getCellBounds,
                 getColumnOffset,
                 getColumnWidth,
-                getRowHeight,
-                getRowOffset,
+                getRowOffset: (top: number) =>
+                    getRowOffset(top) -
+                    (floatingRowProps.rowIndex > 1 ? floatingRowProps.height / 2 : 0),
+                getRowHeight: () => floatingRowProps.height,
                 renderCell: renderDynamicReactCell as RenderCellsByRangeArgs['renderCell'],
                 hoveredCell: datagridStoreRef.current?.hoveredCell,
                 isHiddenColumn,
                 isActiveRow,
                 isHiddenRow,
                 frozenColumns,
-                isFloatingRow: false,
-                isRowFiltered: floatingRowProps?.isFiltered,
-                isRowMoved: floatingRowProps?.isMoved,
-                floatingRowId: floatingRowProps?.record?.id,
+                isFloatingRow: true,
+                isRowFiltered: floatingRowProps.isFiltered,
+                isRowMoved: floatingRowProps.isMoved,
+                floatingRowId: floatingRowProps.record?.id,
             });
+        }
+
+        const { cells: floatingRowDynamicCells, frozenCells: floatingRowFrozenDynamicCells } =
+            floatingRowAllDynamicCells;
+        const {
+            cells: floatingRowReactDynamicCells,
+            frozenCells: floatingRowFrozenReactDynamicCells,
+        } = floatingRowAllDynamicReactCells;
 
         const { cells, frozenCells } = useGrid({
             instance: gridRef!,
@@ -1896,6 +1935,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         {activeCellSelection}
                         {fillhandleComponent}
                         {dynamicReactCells}
+                        {floatingRowReactDynamicCells}
                     </View>
                 </View>
                 {frozenColumns ? (
@@ -1906,6 +1946,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             {activeCellSelectionFrozenColumn}
                             {fillhandleComponent}
                             {frozenDynamicReactCells}
+                            {floatingRowFrozenReactDynamicCells}
                         </View>
                     </View>
                 ) : null}
