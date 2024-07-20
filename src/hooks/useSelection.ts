@@ -1028,7 +1028,7 @@ const useSelection = ({
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
-            if (!gridRef?.current) return;
+            if (!gridRef?.current || gridRef?.current) return;
 
             const isShiftKey = e.nativeEvent.shiftKey;
             const isAltKey = e.nativeEvent.altKey;
