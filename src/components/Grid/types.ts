@@ -6,7 +6,6 @@ import type { Align } from './helpers';
 import type { Field, GridColors, IRecord, IRenderProps, IShadowProps } from '../../utils/types';
 import type { CellsDrawer } from './utils';
 import type Konva from 'konva';
-import type { TDataTableRow } from '@bambooapp/bamboo-molecules';
 import type { KonvaEventObject } from 'konva/lib/Node';
 
 export enum KeyCodes {
@@ -93,6 +92,8 @@ export enum MouseButtonCodes {
 }
 
 export type SelectionPolicy = 'single' | 'range' | 'multiple';
+
+export type TDataTableRow = string | number;
 
 export interface GridProps
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onScroll' | 'children' | 'onContextMenu'> {
@@ -366,6 +367,7 @@ export interface GridProps
     };
 
     onContextMenu?: (e: KonvaEventObject<PointerEvent>) => void;
+    getRowStateById?: (id: TDataTableRow, index: number, columnId: string) => string | undefined;
 }
 
 export interface CellRangeArea extends CellInterface {

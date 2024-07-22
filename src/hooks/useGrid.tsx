@@ -7,7 +7,7 @@ import { recordRowLayout } from '../utils/record-row-layout';
 import { useLatest } from '@bambooapp/bamboo-molecules';
 import { useDataGridState } from '../DataGridStateContext';
 import { gridEventEmitter } from '../utils/grid-eventemitter';
-import type { Field, IRecord } from 'src/utils/types';
+import type { Field, IRecord } from '../utils/types';
 
 export type UseGridProps = Pick<
     GridProps,
@@ -20,6 +20,7 @@ export type UseGridProps = Pick<
     | 'renderDynamicCell'
     | 'scale'
     | 'useFloatingRowProps'
+    | 'getRowStateById'
 > & {
     instance: React.RefObject<GridRef>;
     rowStartIndex: number;
@@ -70,6 +71,7 @@ const useGrid = ({
     useProcessRenderProps = useProcessRenderPropsDefault,
     useFloatingRowProps = useFloatingRowPropsDefault,
     scale = 1,
+    getRowStateById,
 }: UseGridProps) => {
     const records = useRecords({
         columnStartIndex,
@@ -181,6 +183,8 @@ const useGrid = ({
                         // viewType,
                     });
 
+                    const rowState = getRowStateById?.(recordId, rowIndex, field.slug);
+
                     recordRowLayout.render({
                         row: rowInfo,
                         isHoverRow,
@@ -191,12 +195,7 @@ const useGrid = ({
                         isMoved,
                         shadowProps,
                         renderEmptyCell: shouldDisplayEmptyCell,
-                        rowState:
-                            rowInfo.state === 'rowUpdated'
-                                ? rowInfo.updatedColumnIds?.includes?.(field.slug)
-                                    ? 'rowUpdated'
-                                    : undefined
-                                : rowInfo.state,
+                        rowState,
                         // commentCount,
                         // commentVisible,
                     });

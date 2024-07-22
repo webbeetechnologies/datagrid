@@ -169,6 +169,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             initialScrollPosition,
             renderDynamicReactCell,
             useFloatingRowProps = useFloatingRowPropsDefault,
+            getRowStateById,
             ...rest
         } = props;
 
@@ -1772,6 +1773,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             useProcessRenderProps,
             scale,
             useFloatingRowProps,
+            getRowStateById,
         });
 
         const rowEndCells: React.ReactNode[] = [];
