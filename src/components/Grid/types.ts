@@ -367,7 +367,12 @@ export interface GridProps
     };
 
     onContextMenu?: (e: KonvaEventObject<PointerEvent>) => void;
-    getRowStateById?: (id: TDataTableRow, index: number, columnId: string) => string | undefined;
+    getRowStateById?: (
+        id: TDataTableRow,
+        index: number,
+        columnId: string,
+        cellValue: any,
+    ) => string | undefined;
 }
 
 export interface CellRangeArea extends CellInterface {

@@ -183,7 +183,7 @@ const useGrid = ({
                         // viewType,
                     });
 
-                    const rowState = getRowStateById?.(recordId, rowIndex, field.slug);
+                    const rowState = getRowStateById?.(recordId, rowIndex, field.slug, cellValue);
 
                     recordRowLayout.render({
                         row: rowInfo,
