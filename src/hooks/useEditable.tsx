@@ -594,8 +594,11 @@ const useEditable = ({
                 hasInitialValue.current = _hasInitialValue;
 
                 /* Trigger onChange handlers */
-                setValueRef.current(value);
-                onChange?.(value, coords);
+                if (initialValue !== undefined) {
+                    setValueRef.current(value);
+                    onChange?.(value, coords);
+                }
+
                 setAutoFocus(autoFocus);
                 setScrollPosition(scrollPosition);
                 setPosition(cellPosition);

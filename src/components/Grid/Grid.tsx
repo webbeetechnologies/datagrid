@@ -189,43 +189,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
         const hasHeader = !!headerCellRenderer;
 
-        /* Expose some methods in ref */
-        useImperativeHandle(gridRef, () => {
-            return {
-                scrollTo,
-                scrollBy,
-                scrollToItem,
-                stage: stageRef.current,
-                container: containerRef.current,
-                resetAfterIndices,
-                getScrollPosition,
-                getCellBounds,
-                getCellCoordsFromOffset,
-                getCellOffsetFromCoords,
-                getActualCellCoords,
-                focus: focusContainer,
-                resizeColumns,
-                resizeRows,
-                getViewPort,
-                getRelativePositionFromOffset,
-                scrollToTop,
-                scrollToBottom,
-                getDimensions,
-                getRowOffset,
-                getColumnOffset,
-                verticalScrollRef,
-                horizontalScrollRef,
-                getRowHeight,
-                getColumnWidth,
-                stageRef,
-                isActiveColumn,
-                isActiveRow,
-                activeCell,
-            };
-        });
-
-        useImperativeHandle(forwardedRef, () => gridRef.current as GridRef);
-
         const instanceProps = useRef<InstanceInterface>({
             columnMetadataMap: {},
             rowMetadataMap: {},
@@ -236,8 +199,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             recalcColumnIndices: [],
             recalcRowIndices: [],
         });
-
-        useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current);
 
         const snapToRowThrottler = useRef<({ deltaY }: SnapRowProps) => void>();
         const snapToColumnThrottler = useRef<({ deltaX }: SnapColumnProps) => void>();
@@ -2087,6 +2048,73 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             },
             [_onTouchStart, onDoubleClick],
         );
+
+        /* Expose some methods in ref */
+        useImperativeHandle(
+            gridRef,
+            () => {
+                return {
+                    scrollTo,
+                    scrollBy,
+                    scrollToItem,
+                    stage: stageRef.current,
+                    container: containerRef.current,
+                    resetAfterIndices,
+                    getScrollPosition,
+                    getCellBounds,
+                    getCellCoordsFromOffset,
+                    getCellOffsetFromCoords,
+                    getActualCellCoords,
+                    focus: focusContainer,
+                    resizeColumns,
+                    resizeRows,
+                    getViewPort,
+                    getRelativePositionFromOffset,
+                    scrollToTop,
+                    scrollToBottom,
+                    getDimensions,
+                    getRowOffset,
+                    getColumnOffset,
+                    verticalScrollRef,
+                    horizontalScrollRef,
+                    getRowHeight,
+                    getColumnWidth,
+                    stageRef,
+                    isActiveColumn,
+                    isActiveRow,
+                    activeCell,
+                };
+            },
+            [
+                activeCell,
+                focusContainer,
+                getActualCellCoords,
+                getCellBounds,
+                getCellCoordsFromOffset,
+                getCellOffsetFromCoords,
+                getColumnOffset,
+                getColumnWidth,
+                getDimensions,
+                getRelativePositionFromOffset,
+                getRowHeight,
+                getRowOffset,
+                getScrollPosition,
+                getViewPort,
+                isActiveColumn,
+                isActiveRow,
+                resetAfterIndices,
+                resizeColumns,
+                resizeRows,
+                scrollBy,
+                scrollTo,
+                scrollToBottom,
+                scrollToItem,
+                scrollToTop,
+            ],
+        );
+
+        useImperativeHandle(forwardedRef, () => gridRef.current as GridRef, []);
+        useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current, []);
 
         return (
             <View style={containerStyle}>

@@ -424,7 +424,7 @@ const DataGrid = (
             : _rowCount;
     const rowCountRef = useLatest(rowCount);
 
-    useImperativeHandle(gridRefProp, () => gridRef.current as GridRef);
+    useImperativeHandle(gridRefProp, () => gridRef.current as GridRef, []);
 
     const {
         selections,
@@ -666,15 +666,26 @@ const DataGrid = (
         [hoveredCell],
     );
 
-    useImperativeHandle(ref, () => ({
-        selections,
-        activeCell,
-        setActiveCell,
-        isEditInProgress,
-        hideEditor,
-        setSelections: selectionProps.setSelections,
-        infiniteLoader: infiniteLoaderRef.current,
-    }));
+    useImperativeHandle(
+        ref,
+        () => ({
+            selections,
+            activeCell,
+            setActiveCell,
+            isEditInProgress,
+            hideEditor,
+            setSelections: selectionProps.setSelections,
+            infiniteLoader: infiniteLoaderRef.current,
+        }),
+        [
+            activeCell,
+            hideEditor,
+            isEditInProgress,
+            selectionProps.setSelections,
+            selections,
+            setActiveCell,
+        ],
+    );
 
     return (
         <View style={styles.innerContainer} {...rest}>
