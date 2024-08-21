@@ -2050,71 +2050,42 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         );
 
         /* Expose some methods in ref */
-        useImperativeHandle(
-            gridRef,
-            () => {
-                return {
-                    scrollTo,
-                    scrollBy,
-                    scrollToItem,
-                    stage: stageRef.current,
-                    container: containerRef.current,
-                    resetAfterIndices,
-                    getScrollPosition,
-                    getCellBounds,
-                    getCellCoordsFromOffset,
-                    getCellOffsetFromCoords,
-                    getActualCellCoords,
-                    focus: focusContainer,
-                    resizeColumns,
-                    resizeRows,
-                    getViewPort,
-                    getRelativePositionFromOffset,
-                    scrollToTop,
-                    scrollToBottom,
-                    getDimensions,
-                    getRowOffset,
-                    getColumnOffset,
-                    verticalScrollRef,
-                    horizontalScrollRef,
-                    getRowHeight,
-                    getColumnWidth,
-                    stageRef,
-                    isActiveColumn,
-                    isActiveRow,
-                    activeCell,
-                };
-            },
-            [
-                activeCell,
-                focusContainer,
-                getActualCellCoords,
+        useImperativeHandle(gridRef, () => {
+            return {
+                scrollTo,
+                scrollBy,
+                scrollToItem,
+                stage: stageRef.current,
+                container: containerRef.current,
+                resetAfterIndices,
+                getScrollPosition,
                 getCellBounds,
                 getCellCoordsFromOffset,
                 getCellOffsetFromCoords,
-                getColumnOffset,
-                getColumnWidth,
-                getDimensions,
-                getRelativePositionFromOffset,
-                getRowHeight,
-                getRowOffset,
-                getScrollPosition,
-                getViewPort,
-                isActiveColumn,
-                isActiveRow,
-                resetAfterIndices,
+                getActualCellCoords,
+                focus: focusContainer,
                 resizeColumns,
                 resizeRows,
-                scrollBy,
-                scrollTo,
-                scrollToBottom,
-                scrollToItem,
+                getViewPort,
+                getRelativePositionFromOffset,
                 scrollToTop,
-            ],
-        );
+                scrollToBottom,
+                getDimensions,
+                getRowOffset,
+                getColumnOffset,
+                verticalScrollRef,
+                horizontalScrollRef,
+                getRowHeight,
+                getColumnWidth,
+                stageRef,
+                isActiveColumn,
+                isActiveRow,
+                activeCell,
+            };
+        });
 
-        useImperativeHandle(forwardedRef, () => gridRef.current as GridRef, []);
-        useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current, []);
+        useImperativeHandle(forwardedRef, () => gridRef.current as GridRef);
+        useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current);
 
         return (
             <View style={containerStyle}>
