@@ -21,6 +21,7 @@ export type UseGridProps = Pick<
     | 'scale'
     | 'useFloatingRowProps'
     | 'getRowStateById'
+    | 'useGridInit'
 > & {
     instance: React.RefObject<GridRef>;
     rowStartIndex: number;
@@ -42,6 +43,7 @@ const returnSame = (props: any) => props;
 
 const useProcessRenderPropsDefault = () => returnSame;
 const useFloatingRowPropsDefault = () => undefined;
+const useGridInitDefault = () => undefined;
 
 const defaultShadowProps = {
     shadowBlur: 5,
@@ -72,6 +74,7 @@ const useGrid = ({
     useFloatingRowProps = useFloatingRowPropsDefault,
     scale = 1,
     getRowStateById,
+    useGridInit = useGridInitDefault,
 }: UseGridProps) => {
     const records = useRecords({
         columnStartIndex,
@@ -88,6 +91,8 @@ const useGrid = ({
     const floatingRowProps = useFloatingRowProps();
 
     const hoveredCell = useDataGridState(store => store.hoveredCell);
+
+    useGridInit({ records, columnStartIndex, columnStopIndex, rowStartIndex, rowStopIndex });
 
     const drawCells = useCallback(
         (ctx: Context, columnStartIndex: number, columnStopIndex: number) => {

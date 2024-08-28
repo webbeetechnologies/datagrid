@@ -106,6 +106,7 @@ export type Props = Pick<
         | 'renderDynamicReactCell'
         | 'useFloatingRowProps'
         | 'getRowStateById'
+        | 'useGridInit'
     > &
     ViewProps & {
         width?: number;
@@ -396,6 +397,7 @@ const DataGrid = (
         scale = 1,
         useFloatingRowProps = useFloatingRowPropsDefault,
         getRowStateById,
+        useGridInit,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -732,6 +734,7 @@ const DataGrid = (
                             onMouseLeave={onMouseLeave}
                             useFloatingRowProps={useFloatingRowProps}
                             getRowStateById={getRowStateById}
+                            useGridInit={useGridInit}
                         />
                     </DataGridStateProvider>
                 </InfiniteLoader>

@@ -345,6 +345,14 @@ export interface GridProps
         otherProps: { fieldsMap: Record<string, Field>; records: IRecord[] },
     ) => IRenderProps & { [key: string]: any };
 
+    useGridInit?: (args: {
+        records: IRecord[];
+        columnStartIndex: number;
+        columnStopIndex: number;
+        rowStartIndex: number;
+        rowStopIndex: number;
+    }) => void;
+
     useFloatingRowProps?: () =>
         | {
               rowIndex: number;
