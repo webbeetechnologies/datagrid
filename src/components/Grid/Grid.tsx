@@ -1113,13 +1113,14 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         );
 
         useEffect(() => {
+            if (initialScrollPosition?.processing === true) return;
             if (horizontalScrollRef.current)
                 horizontalScrollRef.current.scrollLeft = initialScrollLeft;
 
             if (verticalScrollRef.current) verticalScrollRef.current.scrollTop = initialScrollTop;
 
             // eslint-disable-next-line
-        }, []);
+        }, [initialScrollPosition?.processing]);
 
         /**
          * Handle mouse wheeel

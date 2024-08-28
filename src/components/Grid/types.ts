@@ -372,6 +372,7 @@ export interface GridProps
     initialScrollPosition?: {
         top: number;
         left: number;
+        processing?: boolean;
     };
 
     onContextMenu?: (e: KonvaEventObject<PointerEvent>) => void;
