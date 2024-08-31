@@ -181,7 +181,7 @@ export type Props = Pick<
 
 export type DataGridRef = Pick<
     SelectionResults,
-    'selections' | 'activeCell' | 'setActiveCell' | 'setSelections'
+    'selections' | 'activeCell' | 'setActiveCell' | 'setSelections' | 'keyNavigate'
 > &
     Pick<EditableResults, 'isEditInProgress' | 'hideEditor'> & {
         infiniteLoader: InfiniteLoader | null;
@@ -434,6 +434,7 @@ const DataGrid = (
         setActiveCell,
         onKeyDown: onSelectionKeyDown,
         onMouseDown: onSelectionMouseDown,
+        keyNavigate,
         ...selectionProps
     } = useSelection({
         gridRef,
@@ -676,6 +677,7 @@ const DataGrid = (
         hideEditor,
         setSelections: selectionProps.setSelections,
         infiniteLoader: infiniteLoaderRef.current,
+        keyNavigate,
     }));
 
     return (

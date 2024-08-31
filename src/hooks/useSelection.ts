@@ -263,6 +263,8 @@ export interface SelectionResults {
      * the drag
      */
     initialDraggedSelection?: SelectionArea;
+
+    keyNavigate: (direction: Direction, modify?: boolean, metaKeyPressed?: boolean) => void;
 }
 
 const EMPTY_SELECTION: SelectionArea[] = [];
@@ -1500,6 +1502,7 @@ const useSelection = ({
         onSelectionMouseDown: handleSelectionMouseDown,
         onMouseDown: handleMouseDown,
         onKeyDown: handleKeyDown,
+        keyNavigate,
         newSelection,
         setSelections,
         setActiveCell: handleSetActiveCell,

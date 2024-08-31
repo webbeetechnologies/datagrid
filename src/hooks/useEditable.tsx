@@ -944,12 +944,24 @@ const useEditable = ({
     const frozenRowOffset = gridRef.current?.getRowOffset(frozenRows);
     const frozenColumnOffset = gridRef.current?.getColumnOffset(frozenColumns);
 
+    const isEditorShowRef = useLatest(isEditorShown);
+
     useEffect(() => {
         if (!activeCell) return;
 
+        if (
+            activeCell &&
+            currentActiveCellRef.current &&
+            (activeCell.columnIndex !== currentActiveCellRef.current.columnIndex ||
+                activeCell.rowIndex !== currentActiveCellRef.current.rowIndex) &&
+            isEditorShowRef.current
+        ) {
+            hideEditor();
+        }
+
         if (!editorConfigRef.current?.showOnFocused) return;
         makeEditableRef.current(activeCell);
-    }, [activeCell, makeEditableRef, editorConfigRef]);
+    }, [activeCell, makeEditableRef, editorConfigRef, hideEditor, isEditorShowRef]);
 
     const editorComponent =
         isEditorShown && Editor ? (
