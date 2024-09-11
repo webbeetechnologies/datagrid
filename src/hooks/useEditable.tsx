@@ -812,8 +812,8 @@ const useEditable = ({
 
             if (
                 !nextActiveCell ||
-                isHiddenColumn(nextActiveCell.rowIndex) ||
-                isHiddenRow(nextActiveCell.columnIndex)
+                isHiddenColumn(nextActiveCell.columnIndex) ||
+                isHiddenRow(nextActiveCell.rowIndex)
             ) {
                 nextActiveCell = null;
             }
