@@ -180,6 +180,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         // TODO - correct the type
         const containerRef = useRef<any>(null);
 
+        const disabledScrollRef = useRef(false);
+
         const scrollContainerRef = useRef<any>(null);
         const verticalScrollRef = useRef<any>(null);
         const wheelingRef = useRef<number | null>(null);
@@ -809,6 +811,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         /* Handle vertical scroll */
         const handleScroll = useCallback(
             (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+                if (disabledScrollRef.current) return;
+
                 const { y: scrollTop } = e.nativeEvent.contentOffset;
 
                 setScrollState(prev => ({
@@ -831,6 +835,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         /* Handle horizontal scroll */
         const handleScrollLeft = useCallback(
             (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+                if (disabledScrollRef.current) return;
+
                 const { x: scrollLeft } = e.nativeEvent.contentOffset;
                 setScrollState(prev => ({
                     ...prev,
@@ -851,7 +857,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
         /* Scroll based on left, top position */
         const scrollTo = useCallback(
-            ({ scrollTop, scrollLeft }: OptionalScrollCoords) => {
+            ({ scrollTop, scrollLeft }: OptionalScrollCoords & { updateState?: boolean }) => {
                 /* If scrollbar is visible, lets update it which triggers a state change */
                 if (showScrollbar) {
                     if (horizontalScrollRef.current && scrollLeft !== void 0)
@@ -2084,6 +2090,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 isActiveColumn,
                 isActiveRow,
                 activeCell,
+                scrollDisabled: disabledScrollRef,
             };
         });
 
