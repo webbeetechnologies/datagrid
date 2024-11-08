@@ -14,4 +14,13 @@ module.exports = {
     },
     framework: '@storybook/react',
     core: { builder: 'webpack5' },
+    webpackFinal: async (config) => {
+        // Provide fallback for Node.js modules
+        config.resolve.fallback = {
+            ...(config.resolve.fallback || {}),
+            fs: false, // Ignore the 'fs' module
+        };
+
+        return config;
+    },
 };

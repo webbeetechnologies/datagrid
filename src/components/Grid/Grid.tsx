@@ -8,8 +8,8 @@ import React, {
     useReducer,
     memo,
     useEffect,
-    CSSProperties,
     ReactNode,
+    MutableRefObject,
 } from 'react';
 import {
     NativeScrollEvent,
@@ -18,11 +18,17 @@ import {
     ScrollView,
     View,
     StyleSheet,
+    Platform,
+    PanResponder,
+    GestureResponderEvent,
+    PanResponderInstance,
+    Pressable,
 } from 'react-native';
-import { Stage, Layer, Group } from 'react-konva';
 import type Konva from 'konva';
 import invariant from 'tiny-invariant';
+import { useLatest } from '@bambooapp/bamboo-molecules';
 
+import { Stage, Layer, Group } from '../../canvas';
 import { useMobileScroller } from '../../hooks';
 import useGrid from '../../hooks/useGrid';
 import { useDataGridStateStoreRef } from '../../DataGridStateContext';
@@ -183,9 +189,9 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const disabledScrollRef = useRef(false);
 
         const scrollContainerRef = useRef<any>(null);
-        const verticalScrollRef = useRef<any>(null);
+        const verticalScrollRef = useRef<ScrollView>(null);
         const wheelingRef = useRef<number | null>(null);
-        const horizontalScrollRef = useRef<any>(null);
+        const horizontalScrollRef = useRef<ScrollView>(null);
         const gridRef = useRef<GridRef | null>(null);
 
         const datagridStoreRef = useDataGridStateStoreRef().store;
@@ -206,7 +212,14 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         const snapToRowThrottler = useRef<({ deltaY }: SnapRowProps) => void>();
         const snapToColumnThrottler = useRef<({ deltaX }: SnapColumnProps) => void>();
 
-        const [_, forceRender] = useReducer(() => ({}), {});
+        const [_, _forceRender] = useReducer(() => ({}), {});
+
+        const forceRender = useCallback(() => {
+            if (Platform.OS !== 'web') {
+                (stageRef.current as any)?.redraw?.();
+            }
+            _forceRender();
+        }, []);
 
         const estimatedTotalHeight =
             getEstimatedTotalHeight(rowCount, instanceProps.current) + overshootScrollHeight;
@@ -239,13 +252,12 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             verticalScrollDirection,
             horizontalScrollDirection,
         } = scrollState;
-        const isMounted = useRef(false);
 
-        useMobileScroller({
-            gridRef,
-            initialScrollLeft,
-            initialScrollTop,
-        });
+        const scrollTopRef = useLatest(scrollTop);
+        const scrollLeftRef = useLatest(scrollLeft);
+        const scrollPositionRef = useLatest({ scrollTop, scrollLeft });
+
+        const isMounted = useRef(false);
 
         /* Focus container */
         const focusContainer = useCallback(() => {
@@ -340,7 +352,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 }
                 if (shouldForceUpdate) forceRender();
             },
-            [],
+            [forceRender],
         );
 
         /* Get top, left bounds of a cell */
@@ -541,11 +553,13 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
                     const rowHeight = getRowHeight(nextRowIndex);
 
-                    verticalScrollRef.current.scrollTop +=
-                        (direction === Direction.Up ? -1 : 1) * rowHeight;
+                    verticalScrollRef.current.scrollTo({
+                        y: scrollTopRef.current + (direction === Direction.Up ? -1 : 1) * rowHeight,
+                        animated: false,
+                    });
                 }
             },
-            [getRowHeight],
+            [getRowHeight, scrollTopRef],
         );
 
         /**
@@ -570,11 +584,15 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
                     const columnWidth = getColumnWidth(nextColumnIndex);
 
-                    horizontalScrollRef.current.scrollLeft +=
-                        (direction === Direction.Left ? -1 : 1) * columnWidth;
+                    horizontalScrollRef.current.scrollTo({
+                        x:
+                            scrollLeftRef.current +
+                            (direction === Direction.Left ? -1 : 1) * columnWidth,
+                        animated: false,
+                    });
                 }
             },
-            [getColumnWidth],
+            [getColumnWidth, scrollLeftRef],
         );
 
         /**
@@ -617,22 +635,22 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     'Top and left should be a number',
                 );
 
-                if (!stageRef.current) return null;
+                let pos = { x: left, y: top };
 
-                const stage = stageRef.current.getStage();
-                const rect = containerRef.current?.getBoundingClientRect();
+                if (Platform.OS === 'web') {
+                    if (!stageRef.current) return null;
 
-                if (rect) {
-                    left = left - rect.x;
-                    top = top - rect.y;
+                    const stage = stageRef.current.getStage();
+                    const rect = containerRef.current?.getBoundingClientRect();
+
+                    if (rect) {
+                        left = left - rect.x;
+                        top = top - rect.y;
+                    }
+                    pos = stage.getAbsoluteTransform().copy().invert().point({ x: left, y: top });
                 }
-                const { x, y } = stage
-                    .getAbsoluteTransform()
-                    .copy()
-                    .invert()
-                    .point({ x: left, y: top });
 
-                return { x, y };
+                return pos;
             },
             [],
         );
@@ -731,7 +749,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 resetAfterIndices({ columnIndex: leftMost }, false);
                 forceRender();
             },
-            [resetAfterIndices],
+            [forceRender, resetAfterIndices],
         );
 
         /**
@@ -744,7 +762,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 resetAfterIndices({ rowIndex: topMost }, false);
                 forceRender();
             },
-            [resetAfterIndices],
+            [forceRender, resetAfterIndices],
         );
 
         /* Always if the viewport changes */
@@ -855,27 +873,39 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             [onImmediateScroll, resetIsScrollingDebounced, scrollTop],
         );
 
+        const { onTouchStart, onTouchMove, onTouchEnd } = useMobileScroller({
+            gridRef,
+            initialScrollLeft,
+            initialScrollTop,
+        });
+
         /* Scroll based on left, top position */
-        const scrollTo = useCallback(
-            ({ scrollTop, scrollLeft }: OptionalScrollCoords & { updateState?: boolean }) => {
-                /* If scrollbar is visible, lets update it which triggers a state change */
-                if (showScrollbar) {
-                    if (horizontalScrollRef.current && scrollLeft !== void 0)
-                        horizontalScrollRef.current.scrollLeft = scrollLeft;
-                    if (verticalScrollRef.current && scrollTop !== void 0)
-                        verticalScrollRef.current.scrollTop = scrollTop;
-                } else {
-                    setScrollState(prev => {
-                        return {
-                            ...prev,
-                            scrollLeft: scrollLeft == void 0 ? prev.scrollLeft : scrollLeft,
-                            scrollTop: scrollTop == void 0 ? prev.scrollTop : scrollTop,
-                        };
-                    });
-                }
-            },
-            [showScrollbar],
-        );
+        const scrollTo = useCallback(({ scrollTop, scrollLeft }: OptionalScrollCoords) => {
+            /* If scrollbar is visible, lets update it which triggers a state change */
+            // if (showScrollbar) {
+            //     if (horizontalScrollRef.current && scrollLeft !== void 0) {
+            //         horizontalScrollRef.current.scrollTo({ x: scrollLeft, animated: false });
+            //     }
+            //     if (verticalScrollRef.current && scrollTop !== void 0) {
+            //         verticalScrollRef.current.scrollTo({ y: scrollTop, animated: false });
+            //     }
+            // } else {
+            //     setScrollState(prev => {
+            //         return {
+            //             ...prev,
+            //             scrollLeft: scrollLeft == void 0 ? prev.scrollLeft : scrollLeft,
+            //             scrollTop: scrollTop == void 0 ? prev.scrollTop : scrollTop,
+            //         };
+            //     });
+            // }
+            setScrollState(prev => {
+                return {
+                    ...prev,
+                    scrollLeft: scrollLeft == void 0 ? prev.scrollLeft : scrollLeft,
+                    scrollTop: scrollTop == void 0 ? prev.scrollTop : scrollTop,
+                };
+            });
+        }, []);
 
         /* Scroll grid to top */
         const scrollToTop = useCallback(() => {
@@ -894,10 +924,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             ({ x, y }: PosXY) => {
                 if (showScrollbar) {
                     if (horizontalScrollRef.current && x !== void 0)
-                        horizontalScrollRef.current.scrollLeft += x;
+                        horizontalScrollRef.current.scrollTo({ x: scrollLeftRef.current + x });
 
                     if (verticalScrollRef.current && y !== void 0)
-                        verticalScrollRef.current.scrollTop += y;
+                        verticalScrollRef.current.scrollTo({ y: scrollTopRef.current + y });
                 } else {
                     setScrollState(prev => {
                         return {
@@ -908,7 +938,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     });
                 }
             },
-            [showScrollbar],
+            [scrollLeftRef, scrollTopRef, showScrollbar],
         );
 
         /**
@@ -1021,6 +1051,11 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          */
         const handleWheel = useCallback(
             (event: WheelEvent) => {
+                const _horizontalScrollRef =
+                    horizontalScrollRef as unknown as MutableRefObject<HTMLDivElement>;
+                const _verticalScrollRef =
+                    verticalScrollRef as unknown as MutableRefObject<HTMLDivElement>;
+
                 // event.preventDefault();
                 // event.stopImmediatePropagation();
                 if (event.ctrlKey) return;
@@ -1044,15 +1079,15 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
                 // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
                 if (vScrollDirection === 'top') {
-                    if (verticalScrollRef.current.scrollTop + deltaY >= 0) {
+                    if (_verticalScrollRef.current.scrollTop + deltaY >= 0) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
                     }
                 } else {
                     if (
-                        verticalScrollRef.current.scrollTop + deltaY <=
-                        verticalScrollRef.current.scrollHeight -
-                            (verticalScrollRef.current as HTMLDivElement).clientHeight
+                        _verticalScrollRef.current.scrollTop + deltaY <=
+                        _verticalScrollRef.current.scrollHeight -
+                            _verticalScrollRef.current.clientHeight
                     ) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
@@ -1100,18 +1135,18 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 if (!horizontalScrollRef.current || !verticalScrollRef.current) return;
 
                 const currentScroll = isHorizontal
-                    ? horizontalScrollRef.current?.scrollLeft
-                    : verticalScrollRef.current?.scrollTop;
+                    ? _horizontalScrollRef.current?.scrollLeft
+                    : _verticalScrollRef.current?.scrollTop;
 
                 wheelingRef.current = window.requestAnimationFrame(() => {
                     wheelingRef.current = null;
 
                     if (isHorizontal) {
                         if (horizontalScrollRef.current)
-                            horizontalScrollRef.current.scrollLeft = currentScroll + dx;
+                            _horizontalScrollRef.current.scrollLeft = currentScroll + dx;
                     } else {
                         if (verticalScrollRef.current)
-                            verticalScrollRef.current.scrollTop = currentScroll + dy;
+                            _verticalScrollRef.current.scrollTop = currentScroll + dy;
                     }
                 });
             },
@@ -1121,9 +1156,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         useEffect(() => {
             if (initialScrollPosition?.processing === true) return;
             if (horizontalScrollRef.current)
-                horizontalScrollRef.current.scrollLeft = initialScrollLeft;
+                horizontalScrollRef.current.scrollTo({ x: initialScrollLeft, animated: false });
 
-            if (verticalScrollRef.current) verticalScrollRef.current.scrollTop = initialScrollTop;
+            if (verticalScrollRef.current)
+                verticalScrollRef.current.scrollTo({ y: initialScrollTop, animated: false });
 
             // eslint-disable-next-line
         }, [initialScrollPosition?.processing]);
@@ -1132,56 +1168,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          * Handle mouse wheeel
          */
         useEffect(() => {
+            if (Platform.OS !== 'web') return;
             const scrollContainerEl = scrollContainerRef.current;
-
-            // var xDown: number | null = null;
-            // var yDown: number | null = null;
-
-            // function getTouches(evt: any) {
-            //     return (
-            //         evt.touches || // browser API
-            //         evt.originalEvent.touches
-            //     );
-            // }
-
-            // function handleTouchStart(evt: TouchEvent) {
-            //     const firstTouch = getTouches(evt)[0];
-            //     xDown = firstTouch.clientX;
-            //     yDown = firstTouch.clientY;
-            // }
-
-            // function handleTouchMove(evt: TouchEvent) {
-            //     if (!xDown || !yDown) {
-            //         return;
-            //     }
-
-            //     var xUp = evt.touches[0].clientX;
-            //     var yUp = evt.touches[0].clientY;
-
-            //     var xDiff = xDown - xUp;
-            //     var yDiff = yDown - yUp;
-
-            //     if (Math.abs(xDiff) > Math.abs(yDiff)) {
-            //         /*most significant*/
-            //         if (xDiff > 0) {
-            //             /* right swipe */
-            //         } else {
-            //             /* left swipe */
-            //         }
-            //     } else {
-            //         if (yDiff > 0) {
-            //             /* down swipe */
-            //         } else {
-            //             /* up swipe */
-            //         }
-            //     }
-            //     /* reset values */
-            //     xDown = null;
-            //     yDown = null;
-            // }
-
-            // scrollContainerEl?.addEventListener('touchstart', handleTouchStart, false);
-            // scrollContainerEl?.addEventListener('touchmove', handleTouchMove, false);
 
             scrollContainerEl?.addEventListener('wheel', handleWheel, {
                 passive: false,
@@ -1842,8 +1830,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     right: 0,
                     bottom: 0,
                     overflow: 'hidden',
+                    pointerEvents: 'none',
                 } as ViewStyle,
                 tableSelectionContainerInner: {
+                    pointerEvents: 'none',
                     transform: [
                         {
                             translateX: -(scrollLeft + frozenColumnWidth),
@@ -1863,6 +1853,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     left: 0,
                     bottom: 0,
                     overflow: 'hidden',
+                    pointerEvents: 'none',
                 } as ViewStyle,
                 frozenColumnsSelectionContainerInner: {
                     transform: [{ translateX: 0 }, { translateY: -(scrollTop + frozenRowHeight) }],
@@ -1875,6 +1866,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     right: 0,
                     top: 0,
                     overflow: 'hidden',
+                    pointerEvents: 'none',
                 } as ViewStyle,
                 frozenRowsSelectionContainerInner: {
                     transform: [
@@ -1896,9 +1888,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             [frozenColumnWidth, frozenRowHeight, scrollLeft, scrollTop],
         );
 
-        // TODO -replace with VIew
         const selectionChildren = (
-            <div style={selectionContainer}>
+            <>
                 <View style={tableSelectionContainer}>
                     <View style={tableSelectionContainerInner} testID="table-selection-container">
                         {borderStyleCells}
@@ -1940,7 +1931,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         {fillhandleComponent}
                     </View>
                 ) : null}
-            </div>
+            </>
         );
 
         const {
@@ -1963,6 +1954,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 innerContainerStyle: StyleSheet.flatten([
                     {
                         outline: 'none',
+                        position: 'relative',
                     },
                     // isScrolling ? { pointerEvents: 'none' } : {},
                     style,
@@ -2029,22 +2021,27 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             onTouchStart: _onTouchStart,
             scrollTo: _scrollTo,
             scrollToTop: _scrollToTop,
+            onClick,
             ...restContainerProps
         } = rest as any;
 
         const lastClickRef = useRef(0);
 
-        const onTouchStart = useCallback(
-            (e: globalThis.TouchEvent) => {
+        const onTouch = useCallback(
+            (e: GestureResponderEvent) => {
                 _onTouchStart?.(e);
 
                 e.preventDefault(); // to disable browser default zoom on double tap
 
                 const newEvent = Object.assign({}, e);
                 Object.assign((newEvent as any).nativeEvent, {
-                    clientX: e.touches[0].clientX,
-                    clientY: e.touches[0].clientY,
+                    clientX: e.nativeEvent.touches[0].locationX,
+                    clientY: e.nativeEvent.touches[0].locationY,
                 });
+
+                if (Platform.OS !== 'web') {
+                    onClick?.(newEvent);
+                }
 
                 const date = new Date();
                 const time = date.getTime();
@@ -2055,7 +2052,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 }
                 lastClickRef.current = time;
             },
-            [_onTouchStart, onDoubleClick],
+            [_onTouchStart, onDoubleClick, onClick],
         );
 
         /* Expose some methods in ref */
@@ -2095,10 +2092,29 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         });
 
         useImperativeHandle(forwardedRef, () => gridRef.current as GridRef);
-        useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current);
+        useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current as ScrollView);
+
+        const panResponder = useRef<PanResponderInstance>(null);
+
+        useEffect(() => {
+            if (Platform.OS === 'web') return;
+            (panResponder.current as Writable<PanResponderInstance>) = PanResponder.create({
+                onStartShouldSetPanResponder: () => true,
+                onMoveShouldSetPanResponder: () => true,
+                onPanResponderGrant: onTouchStart,
+                onPanResponderMove: onTouchMove,
+                onPanResponderRelease: onTouchEnd,
+                onPanResponderTerminationRequest: () => false,
+                onShouldBlockNativeResponder: () => false,
+            });
+        }, [onTouchEnd, onTouchMove, onTouchStart]);
+
+        const InnerContainer = Platform.OS === 'web' ? 'div' : Pressable;
 
         return (
-            <View style={containerStyle}>
+            <View
+                style={containerStyle}
+                {...(Platform.OS !== 'web' ? panResponder.current?.panHandlers : {})}>
                 {hasHeader && (
                     <Stage width={containerWidth} height={headerHeight} listening={listenToEvents}>
                         <Layer>
@@ -2123,12 +2139,25 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                     </Stage>
                 )}
                 <View style={containerStyle} ref={scrollContainerRef}>
-                    <div
+                    <InnerContainer
                         {...{ tabIndex: 0 }}
                         ref={containerRef}
                         style={innerContainerStyle}
-                        onTouchStart={onTouchStart}
+                        onTouchStart={onTouch}
                         onDoubleClick={onDoubleClick}
+                        {...Platform.select({
+                            web: { onClick },
+                            default: {
+                                onPress: (e: GestureResponderEvent) => {
+                                    restContainerProps.onMouseDown({
+                                        nativeEvent: Object.assign(e.nativeEvent, {
+                                            clientX: e.nativeEvent.locationX,
+                                            clientY: e.nativeEvent.locationY,
+                                        }),
+                                    });
+                                },
+                            },
+                        })}
                         {...restContainerProps}>
                         <Stage
                             width={containerWidth}
@@ -2136,13 +2165,14 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                             ref={stageRef}
                             listening={listenToEvents}
                             onContextMenu={onContextMenu}
+                            scrollPositionRef={scrollPositionRef}
                             {...stageProps}>
                             {wrapper && typeof wrapper === 'function'
                                 ? wrapper(stageChildren)
                                 : stageChildren}
                         </Stage>
                         {selectionChildren}
-                    </div>
+                    </InnerContainer>
                     {showScrollbar ? (
                         <>
                             <ScrollView
@@ -2343,9 +2373,11 @@ const renderCellsByRange = ({
 
 const headerIsHiddenRow = () => false;
 
-const selectionContainer = {
-    pointerEvents: 'none',
-    outline: 'none',
-} as CSSProperties;
+// const selectionContainer = {
+//     outline: 'none',
+//     position: undefined,
+// } as ViewStyle;
+
+type Writable<T> = { -readonly [K in keyof T]: T[K] };
 
 export default Grid;

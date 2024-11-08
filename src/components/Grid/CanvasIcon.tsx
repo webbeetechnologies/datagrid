@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Text } from 'react-konva';
+import { Text } from '../../canvas';
 import type Konva from 'konva';
 
 // TODO - load icon packs based on type

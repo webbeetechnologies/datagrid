@@ -16,6 +16,7 @@ import {
 import { KeyCodes, Direction, MouseButtonCodes, SelectionPolicy } from '../components/Grid/types';
 import { useLatest } from '@bambooapp/bamboo-molecules';
 import { resolveFloatingRowPosition } from '../utils/resolveFloatingRowPosition';
+import { Platform } from 'react-native';
 
 const cellEqualsSelection = (cell: CellInterface | null, selections: SelectionArea[]): boolean => {
     if (cell === null) return false;
@@ -585,9 +586,11 @@ const useSelection = ({
         /* Reset selection mode */
         isSelecting.current = false;
 
-        /* Remove listener */
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        if (Platform.OS === 'web') {
+            /* Remove listener */
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        }
 
         onSelectionEnd?.(selectionStart.current, selectionEnd.current);
 
@@ -619,6 +622,14 @@ const useSelection = ({
                 e.nativeEvent.clientX,
                 e.nativeEvent.clientY,
             );
+            // console.log(
+            //     'coords',
+            //     JSON.stringify({
+            //         coords,
+            //         clientX: e.nativeEvent.clientX,
+            //         clientY: e.nativeEvent.clientY,
+            //     }),
+            // );
             let isFloatingRow = false;
 
             if (!coords) return;
@@ -654,7 +665,7 @@ const useSelection = ({
             const hasSelections = selections.length > 0;
             const isDeselecting = isMetaKey && allowDeselect;
 
-            if (!isContextMenuClick && selectionPolicy !== 'single') {
+            if (Platform.OS === 'web' && !isContextMenuClick && selectionPolicy !== 'single') {
                 document.addEventListener('mouseup', handleMouseUp);
                 document.addEventListener('mousemove', handleMouseMove);
             }
@@ -1248,9 +1259,11 @@ const useSelection = ({
         (_e: globalThis.MouseEvent) => {
             isFilling.current = false;
 
-            /* Remove listener */
-            document.removeEventListener('mousemove', handleFillHandleMouseMove);
-            document.removeEventListener('mouseup', handleFillHandleMouseUp);
+            if (Platform.OS === 'web') {
+                /* Remove listener */
+                document.removeEventListener('mousemove', handleFillHandleMouseMove);
+                document.removeEventListener('mouseup', handleFillHandleMouseUp);
+            }
 
             /* Exit early */
             if (!gridRef || !activeCellRef.current) return;
@@ -1301,8 +1314,10 @@ const useSelection = ({
 
             isFilling.current = true;
 
-            document.addEventListener('mousemove', handleFillHandleMouseMove);
-            document.addEventListener('mouseup', handleFillHandleMouseUp);
+            if (Platform.OS === 'web') {
+                document.addEventListener('mousemove', handleFillHandleMouseMove);
+                document.addEventListener('mouseup', handleFillHandleMouseUp);
+            }
         },
         [handleFillHandleMouseMove, handleFillHandleMouseUp],
     );
@@ -1417,9 +1432,11 @@ const useSelection = ({
         draggedSelectionIndex.current = void 0;
         hasUserMovedSelection.current = false;
 
-        /* Remove event handlers */
-        document.removeEventListener('mouseup', handleSelectionMouseUp);
-        document.removeEventListener('mousemove', handleSelectionMouseMove);
+        if (Platform.OS === 'web') {
+            /* Remove event handlers */
+            document.removeEventListener('mouseup', handleSelectionMouseUp);
+            document.removeEventListener('mousemove', handleSelectionMouseMove);
+        }
 
         /* Force render */
         forceRender();
@@ -1471,15 +1488,19 @@ const useSelection = ({
             /* Set dragging flag */
             isDragging.current = true;
 
-            /* Listen to mousemove and mousedown events */
-            document.addEventListener('mouseup', handleSelectionMouseUp);
-            document.addEventListener('mousemove', handleSelectionMouseMove);
+            if (Platform.OS === 'web') {
+                /* Listen to mousemove and mousedown events */
+                document.addEventListener('mouseup', handleSelectionMouseUp);
+                document.addEventListener('mousemove', handleSelectionMouseMove);
+            }
 
             /* Force a re-render */
             forceRender();
         },
         [gridRef, handleSelectionMouseUp, handleSelectionMouseMove],
     );
+
+    // console.log('activecell', JSON.stringify({ activeCell }));
 
     useEffect(() => {
         if (

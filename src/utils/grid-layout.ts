@@ -1,6 +1,6 @@
 import range from 'lodash/range';
 import { ADD_FIELD_COL_WIDTH, DEFAULT_NESTED_GROUP_GAP } from './constants';
-import { KonvaDrawer } from './drawer';
+import { CanvasDrawer } from './drawer';
 import type { Row } from './types';
 
 interface ILayout {
@@ -15,7 +15,7 @@ interface ILayout {
     // viewType: ViewType;
 }
 
-export class GridLayout extends KonvaDrawer {
+export class GridLayout extends CanvasDrawer {
     protected x = 0;
     protected y = 0;
     protected rowHeight = 0;

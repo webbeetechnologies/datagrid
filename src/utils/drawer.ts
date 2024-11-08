@@ -74,7 +74,7 @@ const binarySearchMaxTextIndex = ({
 /**
  * Some business methods based on the native canvas API wrapper
  */
-export class KonvaDrawer {
+export class CanvasDrawer {
     ctx: Context = autoSizerCanvas.context! as unknown as Context;
     needDraw = false;
     colors: GridColors = {
@@ -144,6 +144,10 @@ export class KonvaDrawer {
         }
     }
 
+    public getTextWidth(text: string, font: string = '') {
+        return getTextWidth(text, font);
+    }
+
     public numberWithScale(value: number) {
         return value * this.constants.scale;
     }
@@ -164,7 +168,7 @@ export class KonvaDrawer {
         if (!maxWidth) {
             return {
                 text,
-                textWidth: getTextWidth(text, fontStyle),
+                textWidth: this.getTextWidth(text, fontStyle),
                 isEllipsis: false,
             };
         }
@@ -176,8 +180,8 @@ export class KonvaDrawer {
         // const guessText = text.substr(0, guessSize);
         // const guessWidth = getTextWidth(this.ctx, guessText, fontStyle);
 
-        const guessWidth = getTextWidth(text, fontStyle);
-        const ellipsisWidth = getTextWidth(ellipsis, fontStyle);
+        const guessWidth = this.getTextWidth(text, fontStyle);
+        const ellipsisWidth = this.getTextWidth(ellipsis, fontStyle);
 
         if (guessWidth <= maxWidth || guessWidth <= ellipsisWidth) {
             return {
@@ -189,7 +193,7 @@ export class KonvaDrawer {
 
         const index = binarySearchMaxTextIndex({
             max: text.length,
-            getValue: guess => getTextWidth(text.substring(0, guess), fontStyle),
+            getValue: guess => this.getTextWidth(text.substring(0, guess), fontStyle),
             match: maxWidth - ellipsisWidth,
         });
 
@@ -587,7 +591,7 @@ export class KonvaDrawer {
         const fontStyle = `${fontWeight} ${fontSize}px ${fontFamily}`;
 
         if (textDecoration === 'underline') {
-            const textWidth = getTextWidth(text, fontStyle);
+            const textWidth = this.getTextWidth(text, fontStyle);
             this.line({
                 x: x,
                 y: y + 0.5,
@@ -1490,4 +1494,4 @@ export class KonvaDrawer {
     }
 }
 
-export const konvaDrawer = new KonvaDrawer();
+export const konvaDrawer = new CanvasDrawer();

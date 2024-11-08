@@ -198,6 +198,7 @@ export type GridColors = {
 export type GridConstants = {
     scale: number;
     groupCount: number;
+    fonts?: any;
 };
 
 enum RowType {

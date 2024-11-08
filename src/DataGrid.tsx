@@ -12,10 +12,10 @@ import React, {
     RefObject,
     useMemo,
 } from 'react';
-import { LayoutChangeEvent, StyleSheet } from 'react-native';
-import { Rect, Text, Group } from 'react-konva';
+import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import { Rect, Text, Group } from './canvas';
 import type { ViewProps } from '@bambooapp/bamboo-atoms';
-import { useLatest, useMergedRefs, useMolecules } from '@bambooapp/bamboo-molecules';
+import { useLatest, useMergedRefs } from '@bambooapp/bamboo-molecules';
 import type { Vector2d } from 'konva/lib/types';
 import type { RectConfig } from 'konva/lib/shapes/Rect';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -108,13 +108,13 @@ export type Props = Pick<
         | 'getRowStateById'
         | 'useGridInit'
     > &
-    ViewProps & {
+    Omit<ViewProps, 'ref'> & {
         width?: number;
         height?: number;
         useCellValue: <T>(cell: CellInterface | null) => [T, (newValue: T) => void];
         rowCount: number;
         columnCount: number;
-        innerContainerProps?: ViewProps;
+        innerContainerProps?: Omit<ViewProps, 'ref'>;
         cellRenderer?: (props: CellRendererProps) => React.ReactNode;
         headerCellRenderer?: (props: RendererProps) => ReactNode;
         rowCountCellRenderer?: (props: RendererProps) => ReactNode;
@@ -274,6 +274,7 @@ export const HeaderCell = ({
                 strokeWidth={0.5}
             />
             {children}
+            <CanvasIcon x={x + 10} y={y + 5} text={'󰀪'} verticalAlign="middle" size={18} />
             <Text
                 x={x}
                 y={y}
@@ -402,8 +403,6 @@ const DataGrid = (
     }: Props,
     ref: ForwardedRef<DataGridRef>,
 ) => {
-    const { View } = useMolecules();
-
     // const floatingRowProps = useFloatingRowProps();
 
     const [hoveredCell, setHoveredCell] = useState<HoveredCell | null>(null);

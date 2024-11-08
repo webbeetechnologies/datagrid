@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Group, Rect, Text } from 'react-konva';
+import { Group, Rect, Text } from '../../canvas';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { TextConfig } from 'konva/lib/shapes/Text';
 
