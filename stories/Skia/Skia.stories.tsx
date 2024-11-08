@@ -2,7 +2,7 @@ import { View, Text } from 'react-native';
 import { WithSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
 // import { version } from 'canvaskit-wasm/package.json';
 
-export const DataGridExample = () => {
+export const SkiaExample = () => {
     return (
         <View>
             <WithSkiaWeb
@@ -11,7 +11,7 @@ export const DataGridExample = () => {
                     locateFile: file =>
                         `https://cdn.jsdelivr.net/npm/canvaskit-wasm@${'0.39.1'}/bin/full/${file}`,
                 }}
-                getComponent={() => import('./GridExample')}
+                getComponent={() => import('./SkiaExample')}
                 fallback={<Text>Loading Skia...</Text>}
             />
         </View>
@@ -19,6 +19,6 @@ export const DataGridExample = () => {
 };
 
 export default {
-    title: 'DataGrid',
-    component: DataGridExample,
+    title: 'Skia',
+    component: SkiaExample,
 };
