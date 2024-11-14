@@ -60,8 +60,8 @@ export const _Stage = memo(
             (e: GestureResponderEvent) => {
                 const { locationX: x, locationY: y } = e.nativeEvent.touches[0];
                 emitter.emit('touch', {
-                    x: x - (scrollPositionRef?.current?.scrollLeft ?? 0),
-                    y: y - (scrollPositionRef?.current?.scrollTop ?? 0),
+                    x: x + (scrollPositionRef?.current?.scrollLeft ?? 0),
+                    y: y + (scrollPositionRef?.current?.scrollTop ?? 0),
                 });
             },
             [scrollPositionRef],

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { CellInterface, SelectionProps } from './types';
 import { View } from '@bambooapp/bamboo-atoms';
-import type { ViewStyle } from 'react-native';
+import { Platform, type ViewStyle } from 'react-native';
 import { CanvasDrawer } from '../../utils/drawer';
 import type { IRenderProps } from '../../utils/types';
 import type { Context } from 'konva/lib/Context';
@@ -197,19 +197,18 @@ export const createHTMLBox = ({
         <React.Fragment key={key}>
             {fill && (
                 <View
-                    style={
-                        {
-                            position: 'absolute',
-                            top: y,
-                            left: x,
-                            height,
-                            width,
-                            backgroundColor: fill,
-                            opacity: fillOpacity,
-                            userSelect: 'none',
-                            pointerEvents: 'none',
-                        } as ViewStyle
-                    }
+                    // eslint-disable-next-line react-native/no-inline-styles
+                    style={{
+                        position: 'absolute',
+                        top: y,
+                        left: x,
+                        height,
+                        width,
+                        backgroundColor: fill,
+                        opacity: fillOpacity,
+                        ...(Platform.OS === 'web' ? { userSelect: 'none' } : {}),
+                        pointerEvents: 'none',
+                    }}
                 />
             )}
             {lines}
