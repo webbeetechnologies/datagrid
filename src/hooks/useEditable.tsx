@@ -863,14 +863,14 @@ const useEditable = ({
             }
             if (currentActiveCellRef.current) {
                 if (isDirtyRef.current) {
-                    handleSubmit(currentValueRef.current, currentActiveCellRef.current);
+                    // handleSubmit(currentValueRef.current, currentActiveCellRef.current);
                 } else {
                     handleCancel();
                 }
             }
             initialActiveCell.current = undefined;
         },
-        [hideOnBlur, handleSubmit, currentValueRef, handleCancel],
+        [hideOnBlur, handleCancel],
     );
 
     const handleChange = useCallback(
