@@ -106,10 +106,9 @@
   ],
   "dependencies": {
     "@bambooapp/bamboo-molecules": "^0.3.33",
-    "@types/lru-cache": "5.1.1",
     "grapheme-splitter": "^1.0.4",
     "konva": "^9.2.3",
-    "lru-cache": "5.1.1",
+    "lru-cache": "^11.0.2",
     "react-konva": "^18.2.10",
     "scroller": "^0.0.3",
     "tiny-invariant": "^1.3.1"

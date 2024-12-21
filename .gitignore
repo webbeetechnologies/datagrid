@@ -27,6 +27,8 @@ DerivedData
 *.xcuserstate
 project.xcworkspace
 
+.yarn/install-state.gz
+
 # Android/IJ
 #
 .idea
