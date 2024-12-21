@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { Scroller } from 'scroller';
 import type { GridRef, ScrollCoords } from '../components/Grid/types';
 import { canUseDOM } from '../utils';
+import { GestureResponderEvent, Platform } from 'react-native';
 
 export interface TouchProps {
     /**
@@ -17,6 +18,9 @@ export interface TouchResults {
     isTouchDevice: boolean;
     scrollTo: (scrollState: ScrollCoords) => void;
     scrollToTop: () => void;
+    onTouchStart: (e: GestureResponderEvent) => boolean;
+    onTouchMove: (e: GestureResponderEvent) => void;
+    onTouchEnd: (e: GestureResponderEvent) => void;
 }
 
 /**
@@ -85,28 +89,29 @@ const useTouch = ({ gridRef, initialScrollLeft, initialScrollTop }: TouchProps):
 
     useEffect(() => {
         const _gridRef = gridRef;
-        isTouchDevice.current = canUseDOM && 'ontouchstart' in window;
-        /* Update dimension */
-        if (isTouchDevice.current) {
-            const options = {
-                scrollingX: true,
-                scrollingY: true,
-                decelerationRate: 0.95,
-                penetrationAcceleration: 0.08,
-            };
+        isTouchDevice.current = Platform.OS === 'web' && canUseDOM && 'ontouchstart' in window;
 
-            /* Add listeners */
-            _gridRef.current?.container?.addEventListener('touchstart', handleTouchStart);
-            _gridRef.current?.container?.addEventListener('touchend', handleTouchEnd);
-            _gridRef.current?.container?.addEventListener('touchmove', handleTouchMove);
+        const options = {
+            scrollingX: true,
+            scrollingY: true,
+            decelerationRate: 0.95,
+            penetrationAcceleration: 0.08,
+            animationDuration: 250,
+        };
 
-            /* Add scroller */
-            scrollerRef.current = new Scroller(handleTouchScroll, options);
+        /* Add scroller */
+        scrollerRef.current = new Scroller(handleTouchScroll, options);
 
-            const dims = gridRef.current?.getDimensions();
-            /* Update dimensions */
-            if (dims) updateScrollDimensions(dims);
-        }
+        const dims = gridRef.current?.getDimensions();
+        /* Update dimensions */
+        if (dims) updateScrollDimensions(dims);
+
+        if (!isTouchDevice.current) return;
+
+        /* Add listeners */
+        _gridRef.current?.container?.addEventListener('touchstart', handleTouchStart);
+        _gridRef.current?.container?.addEventListener('touchend', handleTouchEnd);
+        _gridRef.current?.container?.addEventListener('touchmove', handleTouchMove);
 
         return () => {
             _gridRef.current?.container?.removeEventListener('touchstart', handleTouchStart);
@@ -122,6 +127,26 @@ const useTouch = ({ gridRef, initialScrollLeft, initialScrollTop }: TouchProps):
         updateScrollDimensions,
     ]);
 
+    const onTouchStart = useCallback((e: GestureResponderEvent) => {
+        scrollerRef.current.doTouchStart(
+            e.nativeEvent.touches,
+            e.nativeEvent.timestamp ?? e.timeStamp,
+        );
+
+        return true;
+    }, []);
+
+    const onTouchMove = useCallback((e: GestureResponderEvent) => {
+        scrollerRef.current.doTouchMove(
+            e.nativeEvent.touches,
+            e.nativeEvent.timestamp ?? e.timeStamp,
+        );
+    }, []);
+
+    const onTouchEnd = useCallback((e: GestureResponderEvent) => {
+        scrollerRef.current.doTouchEnd(e.nativeEvent.timestamp ?? e.timeStamp);
+    }, []);
+
     useEffect(() => {
         if (scrollerRef.current) {
             scrollerRef.current.scrollTo(initialScrollLeft, initialScrollTop);
@@ -134,6 +159,9 @@ const useTouch = ({ gridRef, initialScrollLeft, initialScrollTop }: TouchProps):
         isTouchDevice: isTouchDevice.current,
         scrollTo,
         scrollToTop,
+        onTouchStart,
+        onTouchMove,
+        onTouchEnd,
     };
 };
 

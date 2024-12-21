@@ -1,6 +1,6 @@
 import type { Context } from 'konva/lib/Context';
 import React, { useCallback, useEffect, useMemo, useReducer } from 'react';
-import { Shape } from 'react-konva';
+import { makeRectPath, Shape } from '../canvas';
 import type { GridProps, GridRef } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
 import { recordRowLayout } from '../utils/record-row-layout';
@@ -8,6 +8,8 @@ import { useLatest } from '@bambooapp/bamboo-molecules';
 import { useDataGridState } from '../DataGridStateContext';
 import { gridEventEmitter } from '../utils/grid-eventemitter';
 import type { Field, IRecord } from '../utils/types';
+import { useFontsContext } from '../contexts/FontContext';
+import { Platform } from 'react-native';
 
 export type UseGridProps = Pick<
     GridProps,
@@ -91,12 +93,17 @@ const useGrid = ({
     const floatingRowProps = useFloatingRowProps();
 
     const hoveredCell = useDataGridState(store => store.hoveredCell);
+    const fonts = useFontsContext();
 
     useGridInit({ records, columnStartIndex, columnStopIndex, rowStartIndex, rowStopIndex });
 
     const drawCells = useCallback(
         (ctx: Context, columnStartIndex: number, columnStopIndex: number) => {
-            cellsDrawer.initCtx(ctx, themeColors, { scale, groupCount: groupingLevel });
+            cellsDrawer.initCtx(ctx, themeColors, {
+                scale,
+                groupCount: groupingLevel,
+                fonts,
+            });
             recordRowLayout.initCtx(ctx, themeColors);
 
             if (!instance.current) return;
@@ -229,8 +236,17 @@ const useGrid = ({
 
                 if (isLastColumn && cellValue != null) {
                     ctx.save();
-                    ctx.rect(x, y, width, height);
-                    ctx.clip();
+                    if (Platform.OS === 'web') {
+                        ctx.rect(x, y, width, height);
+                        ctx.clip();
+                    } else {
+                        const rectPath = makeRectPath();
+                        // @ts-ignore
+                        rectPath.addRect({ x, y, width, height });
+                        // @ts-ignore
+                        ctx.clipPath(rectPath, 1, true);
+                    }
+
                     cellsDrawer.renderCell(
                         processRenderPropsRef.current(renderProps, {
                             fieldsMap: fieldsMap,

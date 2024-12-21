@@ -44,7 +44,9 @@ export interface UseEditableOptions {
     /**
      * Value getter
      */
-    useValue: (cell: CellInterface | null) => [any, (newValue: any) => void];
+    useValue: (
+        cell: CellInterface | null,
+    ) => [any, (newValue: any, _?: unknown, _2?: unknown, isInitialValue?: boolean) => void];
     /**
      * Callback when user cancels editing
      */
@@ -595,7 +597,7 @@ const useEditable = ({
 
                 /* Trigger onChange handlers */
                 if (initialValue !== undefined) {
-                    setValueRef.current(value);
+                    setValueRef.current(value, undefined, undefined, true);
                     onChange?.(value, coords);
                 }
 
@@ -806,7 +808,7 @@ const useEditable = ({
 
     const onSubmit = useCallback(
         (value: any, activeCell: CellInterface, _nextActiveCell?: CellInterface | null) => {
-            setValueRef.current(value);
+            // setValueRef.current(value);
 
             let nextActiveCell = _nextActiveCell;
 
@@ -822,7 +824,7 @@ const useEditable = ({
 
             onAfterSubmit?.(value, activeCell, nextActiveCell);
         },
-        [isHiddenColumn, isHiddenRow, onAfterSubmit, onSubmitValue, setValueRef],
+        [isHiddenColumn, isHiddenRow, onAfterSubmit, onSubmitValue],
     );
 
     /* Save the value */
@@ -863,14 +865,14 @@ const useEditable = ({
             }
             if (currentActiveCellRef.current) {
                 if (isDirtyRef.current) {
-                    handleSubmit(currentValueRef.current, currentActiveCellRef.current);
+                    // handleSubmit(currentValueRef.current, currentActiveCellRef.current);
                 } else {
                     handleCancel();
                 }
             }
             initialActiveCell.current = undefined;
         },
-        [hideOnBlur, handleSubmit, currentValueRef, handleCancel],
+        [hideOnBlur, handleCancel],
     );
 
     const handleChange = useCallback(

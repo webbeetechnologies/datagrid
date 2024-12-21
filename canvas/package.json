@@ -1,0 +1,12 @@
+{
+    "name": "@bambooapp/datagrid/canvas",
+    "version": "1.0.0",
+    "description": "",
+    "main": "../lib/commonjs/datagrid/canvas",
+    "module": "../lib/module/datagrid/canvas",
+    "types": "../lib/typescript/datagrid/canvas/index.d.ts",
+    "author": "Thet Aung <thetaung.dev@gmail.com>",
+    "license": "MIT",
+    "sideEffects": false
+  }
+  

@@ -27,9 +27,9 @@ const FillHandle: React.FC<ShapeConfig> = ({
                 borderColor,
                 backgroundColor: '#fff',
                 cursor: 'crosshair',
-                pointerEvents: 'all',
+                pointerEvents: 'auto',
                 borderRadius: 2,
-            } as ViewStyle),
+            } as unknown as ViewStyle),
         [borderColor, size, strokeWidth, x, y],
     );
 

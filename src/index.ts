@@ -7,6 +7,7 @@ export {
     RowCountCell,
 } from './DataGrid';
 export * from './components/Grid';
+export * from './contexts';
 export {
     useEditable,
     useSelection,
@@ -17,5 +18,6 @@ export {
     SelectionResults,
 } from './hooks';
 export * from './utils';
+export * from './canvas';
 
 export { useDataGridState, useDataGridStateStoreRef } from './DataGridStateContext';

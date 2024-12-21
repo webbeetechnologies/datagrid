@@ -510,7 +510,7 @@ export interface PosXYRequired {
 }
 
 export type GridRef = Pick<GridProps, 'isActiveRow' | 'isActiveColumn'> & {
-    scrollTo: (scrollPosition: OptionalScrollCoords) => void;
+    scrollTo: (scrollPosition: OptionalScrollCoords & { updateStateOnly?: boolean }) => void;
     scrollBy: (pos: PosXY) => void;
     stage: Stage | null;
     container: HTMLDivElement | null;
