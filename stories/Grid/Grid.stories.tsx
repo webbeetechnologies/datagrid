@@ -221,7 +221,19 @@ const DataGridInner = () => {
 };
 
 const useFields = () =>
-    useMemo(() => new Array(columnsCount).fill(' ').map(_ => ({ slug: 'slug' } as Field)), []);
+    useMemo(() => {
+        const visibleFields = new Array(columnsCount)
+            .fill(' ')
+            .map(_ => ({ slug: 'slug' } as Field));
+
+        return {
+            visibleFields,
+            fieldsMap: visibleFields.reduce((acc, field) => {
+                acc[field.slug] = field;
+                return acc;
+            }, {}),
+        };
+    }, []);
 
 const useRecords = ({}: Pick<
     ViewPortProps,
