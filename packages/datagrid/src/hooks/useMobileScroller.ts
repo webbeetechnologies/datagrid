@@ -3,7 +3,12 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { Scroller } from 'scroller';
 import type { GridRef, ScrollCoords } from '../components/Grid/types';
 import { canUseDOM } from '../utils';
-import { GestureResponderEvent, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import {
+    GestureStateChangeEvent,
+    GestureUpdateEvent,
+    PanGestureHandlerEventPayload,
+} from 'react-native-gesture-handler';
 
 export interface TouchProps {
     /**
@@ -18,9 +23,9 @@ export interface TouchResults {
     isTouchDevice: boolean;
     scrollTo: (scrollState: ScrollCoords) => void;
     scrollToTop: () => void;
-    onTouchStart: (e: GestureResponderEvent) => boolean;
-    onTouchMove: (e: GestureResponderEvent) => void;
-    onTouchEnd: (e: GestureResponderEvent) => void;
+    onTouchStart: (e: GestureStateChangeEvent<PanGestureHandlerEventPayload>) => boolean;
+    onTouchMove: (e: GestureUpdateEvent<PanGestureHandlerEventPayload>) => void;
+    onTouchEnd: (e: GestureStateChangeEvent<PanGestureHandlerEventPayload>) => void;
 }
 
 /**
@@ -98,9 +103,9 @@ const useTouch = ({ gridRef, initialScrollLeft, initialScrollTop }: TouchProps):
         const options = {
             scrollingX: true,
             scrollingY: true,
-            decelerationRate: 0.95,
+            decelerationRate: 0.8,
             penetrationAcceleration: 0.08,
-            animationDuration: 250,
+            animationDuration: 150,
         };
 
         /* Add scroller */
@@ -132,29 +137,48 @@ const useTouch = ({ gridRef, initialScrollLeft, initialScrollTop }: TouchProps):
     ]);
 
     // for mobile
+    // const onTouchStart = useCallback(
+    //     (e: GestureResponderEvent) => {
+    //         const dims = gridRef.current?.getDimensions();
+    //         if (dims) updateScrollDimensions(dims);
+    //         scrollerRef.current.doTouchStart(
+    //             e.nativeEvent.touches,
+    //             e.nativeEvent.timestamp ?? e.timeStamp,
+    //         );
+
+    //         return true;
+    //     },
+    //     [gridRef, updateScrollDimensions],
+    // );
+
+    // const onTouchMove = useCallback((e: GestureResponderEvent) => {
+    //     scrollerRef.current.doTouchMove(
+    //         e.nativeEvent.touches,
+    //         e.nativeEvent.timestamp ?? e.timeStamp,
+    //     );
+    // }, []);
+
+    // const onTouchEnd = useCallback((e: GestureResponderEvent) => {
+    //     scrollerRef.current.doTouchEnd(e.nativeEvent.timestamp ?? e.timeStamp);
+    // }, []);
+
     const onTouchStart = useCallback(
-        (e: GestureResponderEvent) => {
+        (e: GestureStateChangeEvent<PanGestureHandlerEventPayload>) => {
             const dims = gridRef.current?.getDimensions();
             if (dims) updateScrollDimensions(dims);
-            scrollerRef.current.doTouchStart(
-                e.nativeEvent.touches,
-                e.nativeEvent.timestamp ?? e.timeStamp,
-            );
+            scrollerRef.current.doTouchStart([{ pageX: e.x, pageY: e.y }], Date.now());
 
             return true;
         },
         [gridRef, updateScrollDimensions],
     );
 
-    const onTouchMove = useCallback((e: GestureResponderEvent) => {
-        scrollerRef.current.doTouchMove(
-            e.nativeEvent.touches,
-            e.nativeEvent.timestamp ?? e.timeStamp,
-        );
+    const onTouchMove = useCallback((e: GestureUpdateEvent<PanGestureHandlerEventPayload>) => {
+        scrollerRef.current.doTouchMove([{ pageX: e.x, pageY: e.y }], Date.now());
     }, []);
 
-    const onTouchEnd = useCallback((e: GestureResponderEvent) => {
-        scrollerRef.current.doTouchEnd(e.nativeEvent.timestamp ?? e.timeStamp);
+    const onTouchEnd = useCallback((_e: GestureStateChangeEvent<PanGestureHandlerEventPayload>) => {
+        scrollerRef.current.doTouchEnd(Date.now());
     }, []);
 
     useEffect(() => {
