@@ -1000,7 +1000,7 @@ const useEditable = ({
         onDoubleClick: handleDoubleClick,
         onKeyDown: handleKeyDown,
         nextFocusableCell,
-        isEditInProgress: !!editingCell && !editorConfigRef.current?.showOnFocused,
+        isEditInProgress: isEditorShown && !editorConfigRef.current?.showOnFocused,
         editingCell,
         makeEditable,
         setValue: handleChange,
