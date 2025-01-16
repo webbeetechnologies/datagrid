@@ -99,7 +99,6 @@ const useGrid = ({
 
     const drawCells = useCallback(
         (ctx: Context, columnStartIndex: number, columnStopIndex: number) => {
-            if (!fonts) return;
             cellsDrawer.initCtx(ctx, themeColors, {
                 scale,
                 groupCount: groupingLevel,

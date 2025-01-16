@@ -11,7 +11,7 @@ import type {
 import { KeyCodes, Direction } from '../components/Grid/types';
 import {
     findNextCellWithinBounds,
-    isEqualCells,
+    // isEqualCells,
     HiddenType,
     isArrowKey,
     getNextFocusableCellByDirection,
@@ -480,7 +480,7 @@ const useEditable = ({
         height: 0,
     });
 
-    const currentActiveCellRef = useRef<CellInterface | null>(null);
+    // const currentActiveCellRef = useRef<CellInterface | null>(null);
     const initialActiveCell = useRef<CellInterface | null>();
     const [scrollPosition, setScrollPosition] = useState<ScrollCoords>({
         scrollLeft: 0,
@@ -505,7 +505,7 @@ const useEditable = ({
 
     const hideEditor = useCallback(() => {
         setShowEditor(false);
-        currentActiveCellRef.current = null;
+        // activeCellRef.current = null;
     }, []);
 
     const focusGrid = useCallback(() => {
@@ -513,10 +513,9 @@ const useEditable = ({
     }, [gridRef]);
 
     /* Frozen flags */
-    const isFrozenRow =
-        currentActiveCellRef.current && currentActiveCellRef.current?.rowIndex < frozenRows;
+    const isFrozenRow = activeCellRef.current && activeCellRef.current?.rowIndex < frozenRows;
     const isFrozenColumn =
-        currentActiveCellRef.current && currentActiveCellRef.current?.columnIndex < frozenColumns;
+        activeCellRef.current && activeCellRef.current?.columnIndex < frozenColumns;
 
     /**
      * Get current cell position based on scroll position
@@ -525,14 +524,14 @@ const useEditable = ({
      */
     const getCellPosition = useCallback(
         (position: CellPosition, scrollPosition: ScrollCoords) => {
-            if (!currentActiveCellRef.current) return { x: 0, y: 0 };
+            if (!activeCellRef.current) return { x: 0, y: 0 };
             return {
                 ...position,
                 x: (position.x as number) - (isFrozenColumn ? 0 : scrollPosition.scrollLeft),
                 y: (position.y as number) - (isFrozenRow ? 0 : scrollPosition.scrollTop),
             };
         },
-        [isFrozenColumn, isFrozenRow],
+        [isFrozenColumn, isFrozenRow, activeCellRef],
     );
 
     /**
@@ -552,9 +551,9 @@ const useEditable = ({
             coords = gridRef.current.getActualCellCoords(coords);
 
             /* Check if its the same cell */
-            if (isEqualCells(coords, currentActiveCellRef.current)) {
-                return;
-            }
+            // if (isEqualCells(coords, activeCellRef.current)) {
+            //     return;
+            // }
 
             /* Call on before edit */
             if (editorConfigRef.current && canEdit(coords)) {
@@ -564,7 +563,7 @@ const useEditable = ({
                 /*  Focus */
                 gridRef.current?.scrollToItem(coords);
 
-                currentActiveCellRef.current = coords;
+                // activeCellRef.current = coords;
 
                 /* Get offsets */
                 const pos = gridRef.current.getCellOffsetFromCoords(coords);
@@ -863,7 +862,7 @@ const useEditable = ({
             if (!hideOnBlur) {
                 return;
             }
-            if (currentActiveCellRef.current) {
+            if (activeCellRef.current) {
                 if (isDirtyRef.current) {
                     // handleSubmit(currentValueRef.current, currentActiveCellRef.current);
                 } else {
@@ -872,7 +871,7 @@ const useEditable = ({
             }
             initialActiveCell.current = undefined;
         },
-        [hideOnBlur, handleCancel],
+        [hideOnBlur, handleCancel, activeCellRef],
     );
 
     const handleChange = useCallback(
@@ -886,22 +885,25 @@ const useEditable = ({
                 initialValueRef.current = void 0;
                 return;
             }
-            if (!currentActiveCellRef.current) return;
+            if (!activeCellRef.current) return;
             /* Check if the value has changed. Used to conditionally submit if editor is not in focus */
             isDirtyRef.current = newValue !== value;
             setValueRef.current(newValue);
             onChange?.(newValue, activeCell);
         },
-        [onChange, setValueRef, value],
+        [onChange, setValueRef, value, activeCellRef],
     );
 
-    const handleScroll = useCallback((scrollPos: ScrollCoords) => {
-        if (!currentActiveCellRef.current) return;
-        setScrollPosition(scrollPos);
-    }, []);
+    const handleScroll = useCallback(
+        (scrollPos: ScrollCoords) => {
+            if (!activeCellRef.current) return;
+            setScrollPosition(scrollPos);
+        },
+        [activeCellRef],
+    );
 
     /* Editor */
-    const editingCell = currentActiveCellRef.current;
+    const editingCell = activeCellRef.current;
 
     const Editor = useMemo(() => {
         if (editingCell) {
@@ -913,12 +915,12 @@ const useEditable = ({
 
     const handleBlur = useCallback(
         (_e: React.FocusEvent) => {
-            if (currentActiveCellRef.current) {
+            if (activeCellRef.current) {
                 /* Keep the focus */
                 focusGrid();
             }
         },
-        [focusGrid],
+        [focusGrid, activeCellRef],
     );
 
     const finalCellPosition = useMemo(() => {
@@ -953,9 +955,9 @@ const useEditable = ({
 
         if (
             activeCell &&
-            currentActiveCellRef.current &&
-            (activeCell.columnIndex !== currentActiveCellRef.current.columnIndex ||
-                activeCell.rowIndex !== currentActiveCellRef.current.rowIndex) &&
+            activeCellRef.current &&
+            (activeCell.columnIndex !== activeCellRef.current.columnIndex ||
+                activeCell.rowIndex !== activeCellRef.current.rowIndex) &&
             isEditorShowRef.current
         ) {
             hideEditor();
@@ -963,7 +965,7 @@ const useEditable = ({
 
         if (!editorConfigRef.current?.showOnFocused) return;
         makeEditableRef.current(activeCell);
-    }, [activeCell, makeEditableRef, editorConfigRef, hideEditor, isEditorShowRef]);
+    }, [activeCell, makeEditableRef, editorConfigRef, hideEditor, isEditorShowRef, activeCellRef]);
 
     const editorComponent =
         isEditorShown && Editor ? (
@@ -998,7 +1000,7 @@ const useEditable = ({
         onDoubleClick: handleDoubleClick,
         onKeyDown: handleKeyDown,
         nextFocusableCell,
-        isEditInProgress: !!editingCell && !editorConfigRef.current?.showOnFocused,
+        isEditInProgress: isEditorShown && !editorConfigRef.current?.showOnFocused,
         editingCell,
         makeEditable,
         setValue: handleChange,
