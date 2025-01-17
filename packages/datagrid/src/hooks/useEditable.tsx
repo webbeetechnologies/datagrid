@@ -953,13 +953,7 @@ const useEditable = ({
     useEffect(() => {
         if (!activeCell) return;
 
-        if (
-            activeCell &&
-            activeCellRef.current &&
-            (activeCell.columnIndex !== activeCellRef.current.columnIndex ||
-                activeCell.rowIndex !== activeCellRef.current.rowIndex) &&
-            isEditorShowRef.current
-        ) {
+        if (activeCell && isEditorShowRef.current) {
             hideEditor();
         }
 
