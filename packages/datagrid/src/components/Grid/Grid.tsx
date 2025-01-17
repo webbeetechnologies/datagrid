@@ -21,12 +21,11 @@ import {
     GestureResponderEvent,
     Pressable,
     StyleProp,
-    PanResponderInstance,
-    PanResponder,
 } from 'react-native';
 import type Konva from 'konva';
 import invariant from 'tiny-invariant';
 import { useLatest } from '@bambooapp/bamboo-molecules';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
 import { Stage, Layer, Group } from '../../canvas';
 import { useMobileScroller } from '../../hooks';
@@ -1562,20 +1561,20 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         useImperativeHandle(forwardedRef, () => gridRef.current as GridRef);
         useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current as ScrollView);
 
-        const panResponder = useRef<PanResponderInstance>(null);
+        // const panResponder = useRef<PanResponderInstance>(null);
 
-        useEffect(() => {
-            if (Platform.OS === 'web') return;
-            (panResponder.current as Writable<PanResponderInstance>) = PanResponder.create({
-                onStartShouldSetPanResponder: () => true,
-                onMoveShouldSetPanResponder: () => true,
-                onPanResponderGrant: onTouchStart,
-                onPanResponderMove: onTouchMove,
-                onPanResponderRelease: onTouchEnd,
-                onPanResponderTerminationRequest: () => false,
-                onShouldBlockNativeResponder: () => false,
-            });
-        }, [onTouchEnd, onTouchMove, onTouchStart]);
+        // useEffect(() => {
+        //     if (Platform.OS === 'web') return;
+        //     (panResponder.current as Writable<PanResponderInstance>) = PanResponder.create({
+        //         onStartShouldSetPanResponder: () => true,
+        //         onMoveShouldSetPanResponder: () => true,
+        //         onPanResponderGrant: onTouchStart,
+        //         onPanResponderMove: onTouchMove,
+        //         onPanResponderRelease: onTouchEnd,
+        //         onPanResponderTerminationRequest: () => false,
+        //         onShouldBlockNativeResponder: () => false,
+        //     });
+        // }, [onTouchEnd, onTouchMove, onTouchStart]);
 
         const InnerContainer = Platform.OS === 'web' ? 'div' : Pressable;
 
@@ -1610,103 +1609,109 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             [onMouseDown, onClick],
         );
 
-        // const panGesture = Gesture.Pan()
-        //     .onBegin(e => {
-        //         onTouchStart(e);
-        //     })
-        //     .onUpdate(e => {
-        //         onTouchMove(e);
-        //     })
-        //     .onEnd(e => {
-        //         onTouchEnd(e);
-        //     })
-        //     .maxPointers(1)
-        //     .minDistance(1)
-        //     .shouldCancelWhenOutside(false)
-        //     .hitSlop(Platform.OS === 'android' ? { left: 0, top: 0 } : undefined) // Adjust hitSlop if necessary
-        //     .enableTrackpadTwoFingerGesture(false)
-        //     .runOnJS(true);
+        const panGesture = Gesture.Pan()
+            .onBegin(e => {
+                onTouchStart(e);
+            })
+            .onUpdate(e => {
+                onTouchMove(e);
+            })
+            .onEnd(e => {
+                onTouchEnd(e);
+            })
+            .maxPointers(1)
+            .minDistance(1)
+            .shouldCancelWhenOutside(false)
+            .hitSlop(Platform.OS === 'android' ? { left: 0, top: 0 } : undefined) // Adjust hitSlop if necessary
+            .enableTrackpadTwoFingerGesture(false)
+            .runOnJS(true);
 
         return (
-            <View
-                style={containerStyle}
-                {...(Platform.OS !== 'web' ? panResponder.current?.panHandlers : {})}>
-                {hasHeader && (
-                    <Stage width={containerWidth} height={headerHeight} listening={listenToEvents}>
-                        <Layer>
-                            <Group
-                                clipX={frozenColumnWidth}
-                                clipY={frozenRowHeight}
-                                clipWidth={containerWidth - frozenColumnWidth}
-                                clipHeight={headerHeight}>
-                                <Group offsetY={0} offsetX={scrollLeft}>
-                                    {headerCells}
-                                </Group>
-                            </Group>
-
-                            <Group
-                                clipX={0}
-                                clipY={0}
-                                clipWidth={frozenColumnWidth + frozenSpacing}
-                                clipHeight={headerHeight}>
-                                <Group offsetY={0}>{headerFrozenCells}</Group>
-                            </Group>
-                        </Layer>
-                    </Stage>
-                )}
-                <View style={containerStyle} ref={scrollContainerRef}>
-                    <InnerContainer
-                        {...{ tabIndex: 0 }}
-                        ref={containerRef}
-                        style={innerContainerStyle}
-                        onTouchStart={onTouch}
-                        onDoubleClick={onDoubleClick}
-                        {...restContainerProps}
-                        {...Platform.select({
-                            web: { onClick, onMouseDown },
-                            default: {
-                                onPress: onClickMobile,
-                            },
-                        })}>
+            <GestureDetector gesture={panGesture}>
+                <View
+                    style={containerStyle}
+                    // {...(Platform.OS !== 'web' ? panResponder.current?.panHandlers : {})}
+                >
+                    {hasHeader && (
                         <Stage
                             width={containerWidth}
-                            height={containerHeight}
-                            ref={stageRef}
-                            listening={listenToEvents}
-                            onContextMenu={onContextMenu}
-                            scrollPositionRef={scrollPositionRef}
-                            {...stageProps}>
-                            {wrapper && typeof wrapper === 'function'
-                                ? wrapper(stageChildren)
-                                : stageChildren}
+                            height={headerHeight}
+                            listening={listenToEvents}>
+                            <Layer>
+                                <Group
+                                    clipX={frozenColumnWidth}
+                                    clipY={frozenRowHeight}
+                                    clipWidth={containerWidth - frozenColumnWidth}
+                                    clipHeight={headerHeight}>
+                                    <Group offsetY={0} offsetX={scrollLeft}>
+                                        {headerCells}
+                                    </Group>
+                                </Group>
+
+                                <Group
+                                    clipX={0}
+                                    clipY={0}
+                                    clipWidth={frozenColumnWidth + frozenSpacing}
+                                    clipHeight={headerHeight}>
+                                    <Group offsetY={0}>{headerFrozenCells}</Group>
+                                </Group>
+                            </Layer>
                         </Stage>
-                        {selectionChildren}
-                    </InnerContainer>
-                    {showScrollbar ? (
-                        <>
-                            <ScrollView
-                                scrollEventThrottle={16}
-                                // for typescript to stop complaining
-                                {...{ tabIndex: -1 }}
-                                style={verticalScrollbarStyle}
-                                onScroll={handleScroll}
-                                contentContainerStyle={verticalScrollbarHandleStyle}
-                                ref={verticalScrollRef}
-                            />
-                            <ScrollView
-                                horizontal
-                                scrollEventThrottle={16}
-                                // for typescript to stop complaining
-                                {...{ tabIndex: -1 }}
-                                style={horizontalScrollbarStyle}
-                                contentContainerStyle={horizontalScrollbarHandleStyle}
-                                onScroll={handleScrollLeft}
-                                ref={horizontalScrollRef}
-                            />
-                        </>
-                    ) : null}
+                    )}
+                    <View style={containerStyle} ref={scrollContainerRef}>
+                        <InnerContainer
+                            {...{ tabIndex: 0 }}
+                            ref={containerRef}
+                            style={innerContainerStyle}
+                            onTouchStart={onTouch}
+                            onDoubleClick={onDoubleClick}
+                            {...restContainerProps}
+                            {...Platform.select({
+                                web: { onClick, onMouseDown },
+                                default: {
+                                    onPress: onClickMobile,
+                                },
+                            })}>
+                            <Stage
+                                width={containerWidth}
+                                height={containerHeight}
+                                ref={stageRef}
+                                listening={listenToEvents}
+                                onContextMenu={onContextMenu}
+                                scrollPositionRef={scrollPositionRef}
+                                {...stageProps}>
+                                {wrapper && typeof wrapper === 'function'
+                                    ? wrapper(stageChildren)
+                                    : stageChildren}
+                            </Stage>
+                            {selectionChildren}
+                        </InnerContainer>
+                        {showScrollbar ? (
+                            <>
+                                <ScrollView
+                                    scrollEventThrottle={16}
+                                    // for typescript to stop complaining
+                                    {...{ tabIndex: -1 }}
+                                    style={verticalScrollbarStyle}
+                                    onScroll={handleScroll}
+                                    contentContainerStyle={verticalScrollbarHandleStyle}
+                                    ref={verticalScrollRef}
+                                />
+                                <ScrollView
+                                    horizontal
+                                    scrollEventThrottle={16}
+                                    // for typescript to stop complaining
+                                    {...{ tabIndex: -1 }}
+                                    style={horizontalScrollbarStyle}
+                                    contentContainerStyle={horizontalScrollbarHandleStyle}
+                                    onScroll={handleScrollLeft}
+                                    ref={horizontalScrollRef}
+                                />
+                            </>
+                        ) : null}
+                    </View>
                 </View>
-            </View>
+            </GestureDetector>
         );
     }),
 );
@@ -1718,6 +1723,6 @@ const headerIsHiddenRow = () => false;
 //     position: undefined,
 // } as ViewStyle;
 
-type Writable<T> = { -readonly [K in keyof T]: T[K] };
+// type Writable<T> = { -readonly [K in keyof T]: T[K] };
 
 export default Grid;
