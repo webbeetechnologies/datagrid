@@ -1,4 +1,7 @@
 import GraphemeSplitter from 'grapheme-splitter';
+import { resolveContrastColor } from '@bambooapp/bamboo-molecules';
+import type { Context } from 'konva/lib/Context';
+
 import { autoSizerCanvas } from '../utils/autoSizerCanvas';
 import { getTextWidth, textDataCache } from './getTextWidth';
 import { imageCache } from './image-cache';
@@ -19,9 +22,7 @@ import type {
     GridConstants,
 } from './types';
 import { SegmentType } from './types';
-import type { Context } from 'konva/lib/Context';
 import { IconPacks } from '../components/Grid/CanvasIcon';
-import { resolveContrastColor } from '@bambooapp/bamboo-molecules';
 
 const extractFirstAndSecondWordArrays = (text: string) => {
     const [firstWord, secondWord = []] = text

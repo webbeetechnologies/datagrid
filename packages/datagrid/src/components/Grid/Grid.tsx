@@ -8,7 +8,6 @@ import React, {
     useReducer,
     memo,
     useEffect,
-    ReactNode,
     MutableRefObject,
 } from 'react';
 import {
@@ -22,6 +21,8 @@ import {
     GestureResponderEvent,
     Pressable,
     StyleProp,
+    PanResponderInstance,
+    PanResponder,
 } from 'react-native';
 import type Konva from 'konva';
 import invariant from 'tiny-invariant';
@@ -31,7 +32,7 @@ import { Stage, Layer, Group } from '../../canvas';
 import { useMobileScroller } from '../../hooks';
 import useGrid from '../../hooks/useGrid';
 import { useDataGridStateStoreRef } from '../../DataGridStateContext';
-import { canUseDOM, gridEventEmitter } from '../../utils';
+import { canUseDOM } from '../../utils';
 import {
     getRowStartIndexForOffset,
     getRowStopIndexForStartIndex,
@@ -54,9 +55,6 @@ import {
     clampIndex,
 } from './helpers';
 // import { CellRenderer as defaultItemRenderer } from './Cell';
-import Selection from './Selection';
-import FillHandle from './FillHandle';
-import { createHTMLBox } from './utils';
 import {
     AreaProps,
     CellInterface,
@@ -64,33 +62,27 @@ import {
     Direction,
     GridProps,
     GridRef,
-    HoveredCell,
     InstanceInterface,
     OptionalCellInterface,
     OptionalScrollCoords,
     PosXY,
     PosXYRequired,
     RefAttribute,
-    RenderCellProps,
     ScrollSnapRef,
     ScrollState,
     SelectionArea,
-    SelectionProps,
     SnapColumnProps,
     SnapRowProps,
-    StylingProps,
     ViewPortProps,
 } from './types';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { renderCellsByRange, RenderCellsByRangeArgs } from './renderCellsByRange';
+import { useSelectionBox } from './SelectionBoxInner';
 
 const DEFAULT_ESTIMATED_COLUMN_SIZE = 100;
 const DEFAULT_ESTIMATED_ROW_SIZE = 50;
 
 const defaultRowHeight = () => 20;
 const defaultColumnWidth = () => 60;
-const defaultSelectionRenderer = (props: SelectionProps) => {
-    return <Selection {...props} />;
-};
 // const defaultGridLineRenderer = (props: ShapeConfig) => {
 //     return <GridLine {...props} />;
 // };
@@ -134,9 +126,9 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             snap = false,
             scrollThrottleTimeout = 80,
             onViewChange,
-            selectionRenderer = defaultSelectionRenderer,
+            selectionRenderer,
             // onBeforeRenderRow,
-            borderStyles = EMPTY_ARRAY as StylingProps,
+            borderStyles,
             children,
             stageProps,
             wrapper,
@@ -1206,6 +1198,13 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         ]);
 
         const floatingRowProps = useFloatingRowProps();
+        const records = useRecords({
+            rowStartIndex,
+            rowStopIndex,
+            columnStartIndex,
+            columnStopIndex,
+        });
+        const getRecordIdByIndex = useCallback((index: number) => records[index]?.id, [records]);
 
         const { cells: headerCells, frozenCells: headerFrozenCells } = renderCellsByRange({
             columnStartIndex,
@@ -1229,356 +1228,55 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             isRowFiltered: floatingRowProps?.isFiltered,
             isRowMoved: floatingRowProps?.isMoved,
             floatingRowId: floatingRowProps?.record?.id,
+            getRecordIdByIndex: () => undefined,
         });
 
-        /**
-         * Renders active cell
-         */
-        let fillHandleDimension = {};
-        let activeCellSelection = null;
-        let activeCellSelectionFrozenColumn = null;
-        let activeCellSelectionFrozenRow = null;
-        let activeCellSelectionFrozenIntersection = null;
-        // @ts-ignore
-        let activeCellComponent: React.ReactNode = null;
-
-        if (activeCell) {
-            const bounds = getCellBounds(activeCell);
-            const { top, left, right, bottom } = bounds;
-            const actualBottom = Math.min(rowStopIndex, bottom);
-            const actualRight = Math.min(columnStopIndex, right);
-            const isInFrozenColumn = left < frozenColumns;
-            const isInFrozenRow = top < frozenRows;
-            const isInFrozenIntersection = isInFrozenRow && isInFrozenColumn;
-            const _rowHeight = floatingRowProps?.height ?? getRowHeight(actualBottom);
-            const isFloating = floatingRowProps?.isFiltered || floatingRowProps?.isMoved;
-            const y =
-                getRowOffset(top) - (isFloating && activeCell.rowIndex > 1 ? _rowHeight / 2 : 0);
-            const height =
-                getRowOffset(actualBottom) -
-                y +
-                _rowHeight -
-                (isFloating && activeCell.rowIndex > 1 ? _rowHeight / 2 : 0);
-
-            const x = getColumnOffset(left);
-
-            const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-            activeCellComponent = renderActiveCell?.({
-                x: x,
-                y: y,
-                width: width,
-                height: height,
-                activeCell,
-            });
-
-            const cell = selectionRenderer({
-                stroke: selectionBorderColor,
-                strokeWidth: activeCellStrokeWidth,
-                fill: 'transparent',
-                x: x,
-                y: y,
-                width: width,
-                height: height,
-                type: 'activeCell',
-                key: 0,
-                activeCell,
-                isDragging: isDraggingSelection,
-                /* Active cell is draggable only there are no other selections */
-                draggable: enableSelectionDrag && !selections.length,
-            });
-
-            if (isInFrozenIntersection) {
-                activeCellSelectionFrozenIntersection = cell;
-            } else if (isInFrozenRow) {
-                activeCellSelectionFrozenRow = cell;
-            } else if (isInFrozenColumn) {
-                activeCellSelectionFrozenColumn = cell;
-            } else {
-                activeCellSelection = cell;
-            }
-
-            fillHandleDimension = {
-                x: x + width,
-                y: y + height,
-            };
-        } else {
-            activeCellComponent = renderActiveCell?.({
-                activeCell: null,
-            });
-        }
-
-        /**
-         * Convert selections to area
-         * Removed useMemo as changes to lastMeasureRowIndex, lastMeasuredColumnIndex,
-         * does not trigger useMemo
-         * Dependencies : [selections, rowStopIndex, columnStopIndex, instanceProps]
-         */
-
-        const isSelectionInProgress = false;
-        const selectionAreas = [];
-        const selectionAreasFrozenColumns = [];
-        const selectionAreasFrozenRows = [];
-        const selectionAreasIntersection = [];
-
-        for (let i = 0; i < selections.length; i++) {
-            const selection = selections[i];
-            const { bounds, inProgress, style } = selection;
-            const { top, left, right, bottom } = bounds;
-            const selectionBounds = { x: 0, y: 0, width: 0, height: 0 };
-            const actualBottom = Math.min(rowStopIndex, bottom);
-            const actualRight = Math.min(columnStopIndex, right);
-            const isLeftBoundFrozen = left < frozenColumns;
-            const isTopBoundFrozen = top < frozenRows;
-            const isIntersectionFrozen = top < frozenRows && left < frozenColumns;
-            const isLast = i === selections.length - 1;
-            const styles = {
-                stroke: inProgress ? selectionBackgroundColor : selectionBorderColor,
-                fill: selectionBackgroundColor,
-                strokeWidth: isDraggingSelection ? 0 : 1,
-                isDragging: isDraggingSelection,
-                draggable: inProgress ? false : enableSelectionDrag,
-                ...style,
-            };
-            /**
-             * If selection is in progress,
-             * use this variable to hide fill handle
-             */
-            // if (inProgress) {
-            //     isSelectionInProgress = true;
-            // }
-            selectionBounds.y = getRowOffset(top);
-            selectionBounds.height =
-                getRowOffset(actualBottom) - selectionBounds.y + getRowHeight(actualBottom);
-
-            selectionBounds.x = getColumnOffset(left);
-
-            selectionBounds.width =
-                getColumnOffset(actualRight) - selectionBounds.x + getColumnWidth(actualRight);
-
-            if (isLeftBoundFrozen) {
-                const frozenColumnSelectionWidth =
-                    getColumnOffset(Math.min(right + 1, frozenColumns)) - getColumnOffset(left);
-                selectionAreasFrozenColumns.push(
-                    selectionRenderer({
-                        ...styles,
-                        type: 'selection',
-                        key: i,
-                        x: selectionBounds.x,
-                        y: selectionBounds.y,
-                        width: frozenColumnSelectionWidth,
-                        height: selectionBounds.height,
-                        strokeRightWidth:
-                            frozenColumnSelectionWidth === selectionBounds.width &&
-                            !isDraggingSelection
-                                ? selectionStrokeWidth
-                                : 0,
-                        selection,
-                        inProgress,
-                    }),
-                );
-            }
-
-            if (isTopBoundFrozen) {
-                const frozenRowSelectionHeight =
-                    getRowOffset(Math.min(bottom + 1, frozenRows)) - getRowOffset(top);
-                selectionAreasFrozenRows.push(
-                    selectionRenderer({
-                        ...styles,
-                        type: 'selection',
-                        key: i,
-                        x: selectionBounds.x,
-                        y: selectionBounds.y,
-                        width: selectionBounds.width,
-                        height: frozenRowSelectionHeight,
-                        strokeBottomWidth:
-                            frozenRowSelectionHeight === selectionBounds.height &&
-                            !isDraggingSelection
-                                ? selectionStrokeWidth
-                                : 0,
-                        selection,
-                        inProgress,
-                    }),
-                );
-            }
-
-            if (isIntersectionFrozen) {
-                const frozenIntersectionSelectionHeight =
-                    getRowOffset(Math.min(bottom + 1, frozenRows)) - getRowOffset(top);
-
-                const frozenIntersectionSelectionWidth =
-                    getColumnOffset(Math.min(right + 1, frozenColumns)) - getColumnOffset(left);
-
-                selectionAreasIntersection.push(
-                    selectionRenderer({
-                        ...styles,
-                        type: 'selection',
-                        key: i,
-                        x: selectionBounds.x,
-                        y: selectionBounds.y,
-                        width: frozenIntersectionSelectionWidth,
-                        height: frozenIntersectionSelectionHeight,
-                        strokeBottomWidth:
-                            frozenIntersectionSelectionHeight === selectionBounds.height &&
-                            !isDraggingSelection
-                                ? selectionStrokeWidth
-                                : 0,
-                        strokeRightWidth:
-                            frozenIntersectionSelectionWidth === selectionBounds.width &&
-                            !isDraggingSelection
-                                ? selectionStrokeWidth
-                                : 0,
-                        selection,
-                        inProgress,
-                    }),
-                );
-            }
-            selectionAreas.push(
-                selectionRenderer({
-                    ...styles,
-                    type: 'selection',
-                    key: i,
-                    x: selectionBounds.x,
-                    y: selectionBounds.y,
-                    width: selectionBounds.width,
-                    height: selectionBounds.height,
-                    selection,
-                    inProgress,
-                }),
-            );
-
-            if (isLast) {
-                fillHandleDimension = {
-                    x: selectionBounds.x + selectionBounds.width,
-                    y: selectionBounds.y + selectionBounds.height,
-                };
-            }
-        }
-
-        /**
-         * Fillselection
-         */
-        let fillSelections = null;
-        if (fillSelection) {
-            const { bounds } = fillSelection;
-            const { top, left, right, bottom } = bounds;
-            const actualBottom = Math.min(rowStopIndex, bottom);
-            const actualRight = Math.min(columnStopIndex, right);
-            const x = getColumnOffset(left);
-            const y = getRowOffset(top);
-            const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
-            const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-            fillSelections = selectionRenderer({
-                type: 'fill',
-                x,
-                y,
-                width,
-                height,
-                key: -1,
-                stroke: 'gray',
-                strokeStyle: 'dashed',
-            });
-        }
-
-        const borderStyleCells = [];
-        const borderStyleCellsFrozenColumns = [];
-        const borderStyleCellsFrozenRows = [];
-        const borderStyleCellsIntersection = [];
-
-        for (let i = 0; i < borderStyles.length; i++) {
-            const { bounds, style, title: _, ..._rest } = borderStyles[i];
-            const { top, right, bottom, left } = bounds;
-            const isLeftBoundFrozen = left < frozenColumns;
-            const isTopBoundFrozen = top < frozenRows;
-            const isIntersectionFrozen = top < frozenRows && left < frozenColumns;
-            const x = getColumnOffset(left);
-            const y = getRowOffset(top);
-            const width = getColumnOffset(Math.min(columnCount, right + 1)) - x;
-            const height = getRowOffset(Math.min(rowCount, bottom + 1)) - y;
-
-            borderStyleCells.push(
-                createHTMLBox({
-                    ..._rest,
-                    ...style,
-                    x,
-                    y,
-                    key: i,
-                    width,
-                    height,
-                    type: 'border',
-                }),
-            );
-
-            if (isLeftBoundFrozen) {
-                const frozenColumnSelectionWidth =
-                    getColumnOffset(Math.min(right + 1, frozenColumns)) - getColumnOffset(left);
-
-                borderStyleCellsFrozenColumns.push(
-                    createHTMLBox({
-                        ..._rest,
-                        ...style,
-                        type: 'border',
-                        x,
-                        y,
-                        key: i,
-                        width: frozenColumnSelectionWidth,
-                        height,
-                        strokeRightWidth:
-                            frozenColumnSelectionWidth === width
-                                ? style?.strokeRightWidth || style?.strokeWidth
-                                : 0,
-                    }),
-                );
-            }
-
-            if (isTopBoundFrozen) {
-                const frozenRowSelectionHeight =
-                    getRowOffset(Math.min(bottom + 1, frozenRows)) - getRowOffset(top);
-
-                borderStyleCellsFrozenRows.push(
-                    createHTMLBox({
-                        ..._rest,
-                        ...style,
-                        type: 'border',
-                        x,
-                        y,
-                        key: i,
-                        width,
-                        height: frozenRowSelectionHeight,
-                        strokeBottomWidth:
-                            frozenRowSelectionHeight === height
-                                ? style?.strokeBottomWidth || style?.strokeWidth
-                                : 0,
-                    }),
-                );
-            }
-
-            if (isIntersectionFrozen) {
-                const frozenIntersectionSelectionHeight =
-                    getRowOffset(Math.min(bottom + 1, frozenRows)) - getRowOffset(top);
-
-                const frozenIntersectionSelectionWidth =
-                    getColumnOffset(Math.min(right + 1, frozenColumns)) - getColumnOffset(left);
-
-                borderStyleCellsIntersection.push(
-                    createHTMLBox({
-                        ..._rest,
-                        ...style,
-                        type: 'border',
-                        x,
-                        y,
-                        key: i,
-                        width: frozenIntersectionSelectionWidth,
-                        height: frozenIntersectionSelectionHeight,
-                        strokeBottomWidth:
-                            frozenIntersectionSelectionHeight === height ? selectionStrokeWidth : 0,
-                        strokeRightWidth:
-                            frozenIntersectionSelectionWidth === width ? selectionStrokeWidth : 0,
-                    }),
-                );
-            }
-        }
+        const {
+            activeCellComponent,
+            floatingRowDynamicCells,
+            floatingRowFrozenDynamicCells,
+            selectionChildren,
+        } = useSelectionBox({
+            frozenColumnWidth,
+            frozenRowHeight,
+            frozenColumns,
+            frozenRows,
+            floatingRowProps,
+            fillhandleBorderColor,
+            fillHandleProps,
+            fillSelection,
+            scrollLeft,
+            scrollTop,
+            selectionBackgroundColor,
+            selectionBorderColor,
+            selectionRenderer,
+            selections,
+            selectionStrokeWidth,
+            isActiveRow,
+            isDraggingSelection,
+            isHiddenColumn,
+            isHiddenRow,
+            renderActiveCell,
+            rowCount,
+            rowStartIndex,
+            rowStopIndex,
+            renderDynamicCell,
+            renderDynamicReactCell,
+            activeCell,
+            activeCellStrokeWidth,
+            borderStyles,
+            columnCount,
+            columnStartIndex,
+            columnStopIndex,
+            enableSelectionDrag,
+            getCellBounds,
+            getColumnOffset,
+            getColumnWidth,
+            getRowHeight,
+            getRowOffset,
+            showFillHandle,
+            getRecordIdByIndex,
+        });
 
         /* Spacing for frozen row/column clip */
         const frozenSpacing = 1;
@@ -1609,110 +1307,12 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             isRowFiltered: floatingRowProps?.isFiltered,
             isRowMoved: floatingRowProps?.isMoved,
             floatingRowId: floatingRowProps?.record?.id,
+            getRecordIdByIndex,
         });
-
-        const { cells: dynamicReactCells, frozenCells: frozenDynamicReactCells } =
-            renderCellsByRange({
-                columnStartIndex,
-                columnStopIndex,
-                rowStartIndex,
-                rowStopIndex,
-                columnCount,
-                rowCount,
-                getCellBounds,
-                getColumnOffset,
-                getColumnWidth,
-                getRowHeight,
-                getRowOffset,
-                renderCell: renderDynamicReactCell as RenderCellsByRangeArgs['renderCell'],
-                hoveredCell: datagridStoreRef.current?.hoveredCell,
-                isHiddenColumn,
-                isActiveRow,
-                isHiddenRow,
-                frozenColumns,
-                isFloatingRow: false,
-                isRowFiltered: floatingRowProps?.isFiltered,
-                isRowMoved: floatingRowProps?.isMoved,
-                floatingRowId: floatingRowProps?.record?.id,
-            });
-
-        let floatingRowAllDynamicCells = {
-            cells: [] as ReactNode[],
-            frozenCells: [] as ReactNode[],
-        };
-
-        let floatingRowAllDynamicReactCells = {
-            cells: [] as ReactNode[],
-            frozenCells: [] as ReactNode[],
-        };
-
-        if (
-            floatingRowProps &&
-            floatingRowProps.record &&
-            (floatingRowProps.isMoved || floatingRowProps.isFiltered)
-        ) {
-            floatingRowAllDynamicCells = renderCellsByRange({
-                columnStartIndex,
-                columnStopIndex,
-                rowStartIndex: floatingRowProps.rowIndex,
-                rowStopIndex: floatingRowProps.rowIndex,
-                columnCount,
-                rowCount: floatingRowProps.rowIndex + 1,
-                getCellBounds,
-                getColumnOffset,
-                getColumnWidth,
-                getRowOffset: (top: number) =>
-                    getRowOffset(top) -
-                    (floatingRowProps.rowIndex > 1 ? floatingRowProps.height / 2 : 0),
-                getRowHeight: () => floatingRowProps.height,
-                renderCell: renderDynamicCell as RenderCellsByRangeArgs['renderCell'],
-                hoveredCell: datagridStoreRef.current?.hoveredCell,
-                isHiddenColumn,
-                isActiveRow,
-                isHiddenRow,
-                frozenColumns,
-                isFloatingRow: true,
-                isRowFiltered: floatingRowProps.isFiltered,
-                isRowMoved: floatingRowProps.isMoved,
-                floatingRowId: floatingRowProps.record?.id,
-            });
-
-            floatingRowAllDynamicReactCells = renderCellsByRange({
-                columnStartIndex,
-                columnStopIndex,
-                rowStartIndex: floatingRowProps.rowIndex,
-                rowStopIndex: floatingRowProps.rowIndex,
-                columnCount,
-                rowCount: floatingRowProps.rowIndex + 1,
-                getCellBounds,
-                getColumnOffset,
-                getColumnWidth,
-                getRowOffset: (top: number) =>
-                    getRowOffset(top) -
-                    (floatingRowProps.rowIndex > 1 ? floatingRowProps.height / 2 : 0),
-                getRowHeight: () => floatingRowProps.height,
-                renderCell: renderDynamicReactCell as RenderCellsByRangeArgs['renderCell'],
-                hoveredCell: datagridStoreRef.current?.hoveredCell,
-                isHiddenColumn,
-                isActiveRow,
-                isHiddenRow,
-                frozenColumns,
-                isFloatingRow: true,
-                isRowFiltered: floatingRowProps.isFiltered,
-                isRowMoved: floatingRowProps.isMoved,
-                floatingRowId: floatingRowProps.record?.id,
-            });
-        }
-
-        const { cells: floatingRowDynamicCells, frozenCells: floatingRowFrozenDynamicCells } =
-            floatingRowAllDynamicCells;
-        const {
-            cells: floatingRowReactDynamicCells,
-            frozenCells: floatingRowFrozenReactDynamicCells,
-        } = floatingRowAllDynamicReactCells;
 
         const { cells, frozenCells } = useGrid({
             instance: gridRef!,
+            records,
             columnCount,
             columnStartIndex,
             columnStopIndex,
@@ -1724,7 +1324,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             frozenColumns,
             cellsDrawer,
             groupingLevel,
-            useRecords,
             useFields,
             themeColors,
             useProcessRenderProps,
@@ -1799,138 +1398,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                           scrollTop,
                       })
                     : null}
-            </>
-        );
-        const fillHandleWidth = 8;
-        const fillhandleComponent =
-            showFillHandle && !isSelectionInProgress ? (
-                <FillHandle
-                    {...fillHandleDimension}
-                    // stroke={selectionBorderColor}
-                    size={fillHandleWidth}
-                    borderColor={fillhandleBorderColor}
-                    {...fillHandleProps}
-                />
-            ) : null;
-
-        const {
-            tableSelectionContainer,
-            tableSelectionContainerInner,
-            frozenColumnsSelectionContainer,
-            frozenColumnsSelectionContainerInner,
-            frozenRowsSelectionContainer,
-            frozenRowsSelectionContainerInner,
-            frozenRowsAndColumnsSelectionArea,
-        } = useMemo(
-            () => ({
-                tableSelectionContainer: {
-                    position: 'absolute',
-                    left: frozenColumnWidth,
-                    top: frozenRowHeight,
-                    right: 0,
-                    bottom: 0,
-                    overflow: 'hidden',
-                    pointerEvents: 'none',
-                } as ViewStyle,
-                tableSelectionContainerInner: {
-                    pointerEvents: 'none',
-                    transform: [
-                        {
-                            translateX: -(scrollLeft + frozenColumnWidth),
-                        },
-                        {
-                            translateY: -(scrollTop + frozenRowHeight),
-                        },
-                    ],
-                    // transform: `translate(-${scrollLeft + frozenColumnWidth}px, -${
-                    //     scrollTop + frozenRowHeight
-                    // }px)`,
-                } as ViewStyle,
-                frozenColumnsSelectionContainer: {
-                    position: 'absolute',
-                    width: frozenColumnWidth + fillHandleWidth,
-                    top: frozenRowHeight,
-                    left: 0,
-                    bottom: 0,
-                    overflow: 'hidden',
-                    pointerEvents: 'none',
-                } as ViewStyle,
-                frozenColumnsSelectionContainerInner: {
-                    transform: [{ translateX: 0 }, { translateY: -(scrollTop + frozenRowHeight) }],
-                    // transform: `translate(0, -${scrollTop + frozenRowHeight}px)`,
-                } as ViewStyle,
-                frozenRowsSelectionContainer: {
-                    position: 'absolute',
-                    height: frozenRowHeight + fillHandleWidth,
-                    left: frozenColumnWidth,
-                    right: 0,
-                    top: 0,
-                    overflow: 'hidden',
-                    pointerEvents: 'none',
-                } as ViewStyle,
-                frozenRowsSelectionContainerInner: {
-                    transform: [
-                        { translateX: -(scrollLeft + frozenColumnWidth) },
-                        { translateY: 0 },
-                    ],
-                    // transform: `translate(-${scrollLeft + frozenColumnWidth}px, 0)`,
-                } as ViewStyle,
-                frozenRowsAndColumnsSelectionArea: {
-                    position: 'absolute',
-                    height: frozenRowHeight + fillHandleWidth,
-                    width: frozenColumnWidth + fillHandleWidth,
-                    left: 0,
-                    top: 0,
-                    overflow: 'hidden',
-                    pointerEvents: 'none',
-                } as ViewStyle,
-            }),
-            [frozenColumnWidth, frozenRowHeight, scrollLeft, scrollTop],
-        );
-
-        const selectionChildren = (
-            <>
-                <View style={tableSelectionContainer}>
-                    <View style={tableSelectionContainerInner} testID="table-selection-container">
-                        {borderStyleCells}
-                        {fillSelections}
-                        {selectionAreas}
-                        {activeCellSelection}
-                        {fillhandleComponent}
-                        {dynamicReactCells}
-                        {floatingRowReactDynamicCells}
-                    </View>
-                </View>
-                {frozenColumns ? (
-                    <View style={frozenColumnsSelectionContainer}>
-                        <View style={frozenColumnsSelectionContainerInner}>
-                            {borderStyleCellsFrozenColumns}
-                            {selectionAreasFrozenColumns}
-                            {activeCellSelectionFrozenColumn}
-                            {fillhandleComponent}
-                            {frozenDynamicReactCells}
-                            {floatingRowFrozenReactDynamicCells}
-                        </View>
-                    </View>
-                ) : null}
-                {frozenRows ? (
-                    <View style={frozenRowsSelectionContainer}>
-                        <View style={frozenRowsSelectionContainerInner}>
-                            {borderStyleCellsFrozenRows}
-                            {selectionAreasFrozenRows}
-                            {activeCellSelectionFrozenRow}
-                            {fillhandleComponent}
-                        </View>
-                    </View>
-                ) : null}
-                {frozenRows && frozenColumns ? (
-                    <View style={frozenRowsAndColumnsSelectionArea}>
-                        {borderStyleCellsIntersection}
-                        {selectionAreasIntersection}
-                        {activeCellSelectionFrozenIntersection}
-                        {fillhandleComponent}
-                    </View>
-                ) : null}
             </>
         );
 
@@ -2022,6 +1489,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             scrollTo: _scrollTo,
             scrollToTop: _scrollToTop,
             onClick,
+            onMouseDown,
             ...restContainerProps
         } = rest as any;
 
@@ -2087,327 +1555,161 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 isActiveRow,
                 activeCell,
                 scrollDisabled: disabledScrollRef,
+                getRecordIdByIndex,
             };
         });
 
         useImperativeHandle(forwardedRef, () => gridRef.current as GridRef);
         useImperativeHandle(verticalScrollRefProp, () => verticalScrollRef.current as ScrollView);
 
-        // const panResponder = useRef<PanResponderInstance>(null);
+        const panResponder = useRef<PanResponderInstance>(null);
 
-        // useEffect(() => {
-        //     if (Platform.OS === 'web') return;
-        //     (panResponder.current as Writable<PanResponderInstance>) = PanResponder.create({
-        //         onStartShouldSetPanResponder: () => true,
-        //         onMoveShouldSetPanResponder: () => true,
-        //         onPanResponderGrant: onTouchStart,
-        //         onPanResponderMove: onTouchMove,
-        //         onPanResponderRelease: onTouchEnd,
-        //         onPanResponderTerminationRequest: () => false,
-        //         onShouldBlockNativeResponder: () => false,
-        //     });
-        // }, [onTouchEnd, onTouchMove, onTouchStart]);
+        useEffect(() => {
+            if (Platform.OS === 'web') return;
+            (panResponder.current as Writable<PanResponderInstance>) = PanResponder.create({
+                onStartShouldSetPanResponder: () => true,
+                onMoveShouldSetPanResponder: () => true,
+                onPanResponderGrant: onTouchStart,
+                onPanResponderMove: onTouchMove,
+                onPanResponderRelease: onTouchEnd,
+                onPanResponderTerminationRequest: () => false,
+                onShouldBlockNativeResponder: () => false,
+            });
+        }, [onTouchEnd, onTouchMove, onTouchStart]);
 
         const InnerContainer = Platform.OS === 'web' ? 'div' : Pressable;
 
-        const onPressStage = useCallback(
+        // const onPressStage = useCallback(
+        //     (e: GestureResponderEvent) => {
+        //         const { locationX: x, locationY: y } = e.nativeEvent;
+        //         const scrollX = scrollPositionRef?.current?.scrollLeft ?? 0;
+        //         const scrollY = scrollPositionRef?.current?.scrollTop ?? 0;
+        //         gridEventEmitter.emit('touch', {
+        //             x: x + scrollX,
+        //             y: y + scrollY,
+        //         });
+        //     },
+        //     [scrollPositionRef],
+        // );
+
+        const onClickMobile = useCallback(
             (e: GestureResponderEvent) => {
-                const { locationX: x, locationY: y } = e.nativeEvent;
-                const scrollX = scrollPositionRef?.current?.scrollLeft ?? 0;
-                const scrollY = scrollPositionRef?.current?.scrollTop ?? 0;
-                gridEventEmitter.emit('touch', {
-                    x: x + scrollX,
-                    y: y + scrollY,
+                onMouseDown({
+                    nativeEvent: Object.assign(e.nativeEvent, {
+                        clientX: e.nativeEvent.locationX,
+                        clientY: e.nativeEvent.locationY,
+                    }),
+                });
+                onClick({
+                    nativeEvent: Object.assign(e.nativeEvent, {
+                        clientX: e.nativeEvent.locationX,
+                        clientY: e.nativeEvent.locationY,
+                    }),
                 });
             },
-            [scrollPositionRef],
+            [onMouseDown, onClick],
         );
 
-        const panGesture = Gesture.Pan()
-            .onBegin(e => {
-                onTouchStart(e);
-            })
-            .onUpdate(e => {
-                onTouchMove(e);
-            })
-            .onEnd(e => {
-                onTouchEnd(e);
-            })
-            .onTouchesDown(() => {
-                // Equivalent to onStartShouldSetPanResponder
-                return true;
-            })
-            .shouldCancelWhenOutside(false)
-            // .hitSlop({ width: 0, height: 0 }) // Adjust hitSlop if necessary
-            .enableTrackpadTwoFingerGesture(false)
-            .runOnJS(true); // Disable if not needed
+        // const panGesture = Gesture.Pan()
+        //     .onBegin(e => {
+        //         onTouchStart(e);
+        //     })
+        //     .onUpdate(e => {
+        //         onTouchMove(e);
+        //     })
+        //     .onEnd(e => {
+        //         onTouchEnd(e);
+        //     })
+        //     .maxPointers(1)
+        //     .minDistance(1)
+        //     .shouldCancelWhenOutside(false)
+        //     .hitSlop(Platform.OS === 'android' ? { left: 0, top: 0 } : undefined) // Adjust hitSlop if necessary
+        //     .enableTrackpadTwoFingerGesture(false)
+        //     .runOnJS(true);
 
         return (
-            <GestureDetector gesture={panGesture}>
-                <View
-                    style={containerStyle}
-                    // {...(Platform.OS !== 'web' ? panResponder.current?.panHandlers : {})}
-                >
-                    {hasHeader && (
+            <View
+                style={containerStyle}
+                {...(Platform.OS !== 'web' ? panResponder.current?.panHandlers : {})}>
+                {hasHeader && (
+                    <Stage width={containerWidth} height={headerHeight} listening={listenToEvents}>
+                        <Layer>
+                            <Group
+                                clipX={frozenColumnWidth}
+                                clipY={frozenRowHeight}
+                                clipWidth={containerWidth - frozenColumnWidth}
+                                clipHeight={headerHeight}>
+                                <Group offsetY={0} offsetX={scrollLeft}>
+                                    {headerCells}
+                                </Group>
+                            </Group>
+
+                            <Group
+                                clipX={0}
+                                clipY={0}
+                                clipWidth={frozenColumnWidth + frozenSpacing}
+                                clipHeight={headerHeight}>
+                                <Group offsetY={0}>{headerFrozenCells}</Group>
+                            </Group>
+                        </Layer>
+                    </Stage>
+                )}
+                <View style={containerStyle} ref={scrollContainerRef}>
+                    <InnerContainer
+                        {...{ tabIndex: 0 }}
+                        ref={containerRef}
+                        style={innerContainerStyle}
+                        onTouchStart={onTouch}
+                        onDoubleClick={onDoubleClick}
+                        {...restContainerProps}
+                        {...Platform.select({
+                            web: { onClick, onMouseDown },
+                            default: {
+                                onPress: onClickMobile,
+                            },
+                        })}>
                         <Stage
                             width={containerWidth}
-                            height={headerHeight}
-                            listening={listenToEvents}>
-                            <Layer>
-                                <Group
-                                    clipX={frozenColumnWidth}
-                                    clipY={frozenRowHeight}
-                                    clipWidth={containerWidth - frozenColumnWidth}
-                                    clipHeight={headerHeight}>
-                                    <Group offsetY={0} offsetX={scrollLeft}>
-                                        {headerCells}
-                                    </Group>
-                                </Group>
-
-                                <Group
-                                    clipX={0}
-                                    clipY={0}
-                                    clipWidth={frozenColumnWidth + frozenSpacing}
-                                    clipHeight={headerHeight}>
-                                    <Group offsetY={0}>{headerFrozenCells}</Group>
-                                </Group>
-                            </Layer>
+                            height={containerHeight}
+                            ref={stageRef}
+                            listening={listenToEvents}
+                            onContextMenu={onContextMenu}
+                            scrollPositionRef={scrollPositionRef}
+                            {...stageProps}>
+                            {wrapper && typeof wrapper === 'function'
+                                ? wrapper(stageChildren)
+                                : stageChildren}
                         </Stage>
-                    )}
-                    <View style={containerStyle} ref={scrollContainerRef}>
-                        <InnerContainer
-                            {...{ tabIndex: 0 }}
-                            ref={containerRef}
-                            style={innerContainerStyle}
-                            onTouchStart={onTouch}
-                            onDoubleClick={onDoubleClick}
-                            {...restContainerProps}
-                            {...Platform.select({
-                                web: { onClick },
-                                default: {
-                                    onPress: (e: GestureResponderEvent) => {
-                                        restContainerProps.onMouseDown({
-                                            nativeEvent: Object.assign(e.nativeEvent, {
-                                                clientX: e.nativeEvent.locationX,
-                                                clientY: e.nativeEvent.locationY,
-                                            }),
-                                        });
-                                        onPressStage(e);
-                                    },
-                                },
-                            })}>
-                            <Stage
-                                width={containerWidth}
-                                height={containerHeight}
-                                ref={stageRef}
-                                listening={listenToEvents}
-                                onContextMenu={onContextMenu}
-                                scrollPositionRef={scrollPositionRef}
-                                {...stageProps}>
-                                {wrapper && typeof wrapper === 'function'
-                                    ? wrapper(stageChildren)
-                                    : stageChildren}
-                            </Stage>
-                            {selectionChildren}
-                        </InnerContainer>
-                        {showScrollbar ? (
-                            <>
-                                <ScrollView
-                                    scrollEventThrottle={16}
-                                    // for typescript to stop complaining
-                                    {...{ tabIndex: -1 }}
-                                    style={verticalScrollbarStyle}
-                                    onScroll={handleScroll}
-                                    contentContainerStyle={verticalScrollbarHandleStyle}
-                                    ref={verticalScrollRef}
-                                />
-                                <ScrollView
-                                    horizontal
-                                    scrollEventThrottle={16}
-                                    // for typescript to stop complaining
-                                    {...{ tabIndex: -1 }}
-                                    style={horizontalScrollbarStyle}
-                                    contentContainerStyle={horizontalScrollbarHandleStyle}
-                                    onScroll={handleScrollLeft}
-                                    ref={horizontalScrollRef}
-                                />
-                            </>
-                        ) : null}
-                    </View>
+                        {selectionChildren}
+                    </InnerContainer>
+                    {showScrollbar ? (
+                        <>
+                            <ScrollView
+                                scrollEventThrottle={16}
+                                // for typescript to stop complaining
+                                {...{ tabIndex: -1 }}
+                                style={verticalScrollbarStyle}
+                                onScroll={handleScroll}
+                                contentContainerStyle={verticalScrollbarHandleStyle}
+                                ref={verticalScrollRef}
+                            />
+                            <ScrollView
+                                horizontal
+                                scrollEventThrottle={16}
+                                // for typescript to stop complaining
+                                {...{ tabIndex: -1 }}
+                                style={horizontalScrollbarStyle}
+                                contentContainerStyle={horizontalScrollbarHandleStyle}
+                                onScroll={handleScrollLeft}
+                                ref={horizontalScrollRef}
+                            />
+                        </>
+                    ) : null}
                 </View>
-            </GestureDetector>
+            </View>
         );
     }),
 );
-
-type RenderCellsByRangeArgs = {
-    columnStartIndex: number;
-    columnStopIndex: number;
-    rowStartIndex: number;
-    rowStopIndex: number;
-    rowCount: number;
-    columnCount: number;
-    frozenColumns: number;
-    isHiddenColumn?: GridProps['isHiddenColumn'];
-    isHiddenRow?: GridProps['isHiddenColumn'];
-    isActiveRow?: GridProps['isActiveRow'];
-    hoveredCell: HoveredCell | null;
-    getCellBounds: GridRef['getCellBounds'];
-    getRowOffset: GridRef['getRowOffset'];
-    getColumnOffset: GridRef['getColumnOffset'];
-    getColumnWidth: GridRef['getColumnWidth'];
-    getRowHeight: GridRef['getRowHeight'];
-    renderCell?: (props: RenderCellProps) => React.ReactNode;
-    withCellStates?: boolean;
-    isFloatingRow?: boolean;
-    isRowMoved?: boolean;
-    isRowFiltered?: boolean;
-    floatingRowId?: number | string;
-};
-
-const renderCellsByRange = ({
-    columnStartIndex,
-    columnStopIndex,
-    rowStartIndex,
-    rowStopIndex,
-    rowCount,
-    columnCount,
-    isHiddenColumn,
-    isActiveRow,
-    isHiddenRow,
-    hoveredCell,
-    frozenColumns,
-    getCellBounds,
-    getColumnOffset,
-    getColumnWidth,
-    getRowHeight,
-    getRowOffset,
-    renderCell,
-    withCellStates = true,
-    isFloatingRow = false,
-    isRowFiltered = false,
-    isRowMoved = false,
-    floatingRowId,
-}: RenderCellsByRangeArgs) => {
-    const cells: React.ReactNode[] = [];
-    const frozenCells: React.ReactNode[] = [];
-
-    for (let columnIndex = columnStartIndex; columnIndex <= columnStopIndex; columnIndex++) {
-        if (columnIndex > columnCount - 1) break;
-
-        if (isHiddenColumn?.(columnIndex)) {
-            continue;
-        }
-
-        // const isFirstColumn = columnIndex === 0;
-
-        for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
-            if (rowIndex > rowCount - 1) break;
-
-            if (isHiddenRow?.(rowIndex)) {
-                continue;
-            }
-
-            const bounds = getCellBounds({ rowIndex, columnIndex });
-            const { top, left, right, bottom } = bounds;
-            const actualBottom = Math.min(rowStopIndex, bottom);
-            const actualRight = Math.min(columnStopIndex, right);
-
-            const y = getRowOffset(top);
-            const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
-
-            const x = getColumnOffset(left);
-
-            const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-            const _cell = renderCell?.({
-                x,
-                y,
-                width,
-                height,
-                columnIndex,
-                rowIndex,
-                key: itemKey({ rowIndex, columnIndex }),
-                ...(withCellStates
-                    ? {
-                          isHoverRow:
-                              hoveredCell?.rowIndex === rowIndex &&
-                              isFloatingRow === !!hoveredCell?.isFloatingRow,
-                          isHoverColumn:
-                              hoveredCell?.columnIndex === columnIndex &&
-                              isFloatingRow === !!hoveredCell?.isFloatingRow,
-                          isActiveRow: !!isActiveRow?.({ rowIndex }),
-                      }
-                    : {}),
-                isFloatingRow,
-                isRowFiltered,
-                isRowMoved,
-                floatingRowId,
-            });
-
-            if (_cell) {
-                cells.push(_cell);
-            }
-        }
-    }
-
-    for (
-        let columnIndex = 0;
-        columnIndex < Math.min(columnStopIndex, frozenColumns);
-        columnIndex++
-    ) {
-        if (isHiddenColumn?.(columnIndex)) {
-            continue;
-        }
-
-        for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
-            if (rowIndex > rowCount - 1) break;
-
-            if (isHiddenRow?.(rowIndex)) {
-                continue;
-            }
-
-            const bounds = getCellBounds({ rowIndex, columnIndex });
-            const { top, left, right, bottom } = bounds;
-            const actualBottom = Math.min(rowStopIndex, bottom);
-            const actualRight = Math.min(columnStopIndex, right);
-
-            const y = getRowOffset(top);
-            const height = getRowOffset(actualBottom) - y + getRowHeight(actualBottom);
-
-            const x = getColumnOffset(left);
-
-            const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
-
-            const _cell = renderCell?.({
-                x,
-                y,
-                width,
-                height,
-                columnIndex,
-                rowIndex,
-                key: itemKey({ rowIndex, columnIndex }),
-                ...(withCellStates
-                    ? {
-                          isHoverRow: hoveredCell?.rowIndex === rowIndex,
-                          isHoverColumn: hoveredCell?.columnIndex === columnIndex,
-                          isActiveRow: !!isActiveRow?.({ rowIndex }),
-                      }
-                    : {}),
-                isFloatingRow,
-                isRowFiltered,
-                isRowMoved,
-                floatingRowId,
-            });
-
-            if (_cell) {
-                frozenCells.push(_cell);
-            }
-        }
-    }
-
-    return { cells, frozenCells };
-};
 
 const headerIsHiddenRow = () => false;
 
@@ -2416,6 +1718,6 @@ const headerIsHiddenRow = () => false;
 //     position: undefined,
 // } as ViewStyle;
 
-// type Writable<T> = { -readonly [K in keyof T]: T[K] };
+type Writable<T> = { -readonly [K in keyof T]: T[K] };
 
 export default Grid;

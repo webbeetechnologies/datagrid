@@ -217,12 +217,7 @@ export interface GridProps
     rowHeadColumnWidth?: number;
 
     groupingLevel?: number;
-    useRecords: (props: {
-        columnStartIndex: number;
-        columnStopIndex: number;
-        rowStartIndex: number;
-        rowStopIndex: number;
-    }) => IRecord[];
+    useRecords: UseRecord;
     useFields: (
         columnStartIndex: number,
         columnStopIndex: number,
@@ -353,16 +348,7 @@ export interface GridProps
         rowStopIndex: number;
     }) => void;
 
-    useFloatingRowProps?: () =>
-        | {
-              rowIndex: number;
-              isFiltered?: boolean;
-              isMoved?: boolean;
-              record: IRecord;
-              height: number;
-              shadowProps?: IShadowProps;
-          }
-        | undefined;
+    useFloatingRowProps?: () => FloatingRowPropsReturn;
 
     // for active state of the row (selected or highlighted)
     isActiveRow?: (arg: { rowIndex: number; recordId?: TDataTableRow }) => boolean;
@@ -383,6 +369,17 @@ export interface GridProps
         cellValue: any,
     ) => string | undefined;
 }
+
+export type FloatingRowPropsReturn =
+    | {
+          rowIndex: number;
+          isFiltered?: boolean;
+          isMoved?: boolean;
+          record: IRecord;
+          height: number;
+          shadowProps?: IShadowProps;
+      }
+    | undefined;
 
 export interface CellRangeArea extends CellInterface {
     toColumnIndex: number;
@@ -542,6 +539,7 @@ export type GridRef = Pick<GridProps, 'isActiveRow' | 'isActiveColumn'> & {
     getColumnOffset: (index: number) => number;
     getRowHeight: (index: number) => number;
     getColumnWidth: (index: number) => number;
+    getRecordIdByIndex: (index: number) => number;
     horizontalScrollRef: RefObject<ScrollView>;
     verticalScrollRef: RefObject<ScrollView>;
     stageRef: RefObject<Konva.Stage>;
@@ -603,3 +601,10 @@ export interface ScrollSnapRef {
 }
 
 export type HoveredCell = CellInterface & { isFloatingRow?: boolean };
+
+export type UseRecord = (props: {
+    columnStartIndex: number;
+    columnStopIndex: number;
+    rowStartIndex: number;
+    rowStopIndex: number;
+}) => IRecord[];

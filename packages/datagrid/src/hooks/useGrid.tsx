@@ -1,7 +1,7 @@
 import type { Context } from 'konva/lib/Context';
 import React, { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { makeRectPath, Shape } from '../canvas';
-import type { GridProps, GridRef } from '../components/Grid/types';
+import type { GridProps, GridRef, UseRecord } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
 import { recordRowLayout } from '../utils/record-row-layout';
 import { useLatest } from '@bambooapp/bamboo-molecules';
@@ -13,7 +13,6 @@ import { Platform } from 'react-native';
 
 export type UseGridProps = Pick<
     GridProps,
-    | 'useRecords'
     | 'useFields'
     | 'useProcessRenderProps'
     | 'themeColors'
@@ -37,6 +36,7 @@ export type UseGridProps = Pick<
     frozenColumns?: number;
     cellsDrawer: CellsDrawer;
     groupingLevel?: number;
+    records: ReturnType<UseRecord>;
 };
 
 const emptyObj = {};
@@ -58,6 +58,7 @@ const defaultShadowProps = {
 
 const useGrid = ({
     instance,
+    records,
     columnCount,
     columnStartIndex,
     columnStopIndex,
@@ -69,7 +70,6 @@ const useGrid = ({
     frozenColumns = 0,
     cellsDrawer,
     groupingLevel = 0,
-    useRecords,
     useFields,
     themeColors = emptyObj,
     useProcessRenderProps = useProcessRenderPropsDefault,
@@ -78,12 +78,6 @@ const useGrid = ({
     getRowStateById,
     useGridInit = useGridInitDefault,
 }: UseGridProps) => {
-    const records = useRecords({
-        columnStartIndex,
-        columnStopIndex,
-        rowStartIndex,
-        rowStopIndex,
-    });
     const { visibleFields: fields, fieldsMap } = useFields(columnStartIndex, columnStopIndex);
 
     const [_, forceRender] = useReducer(() => ({}), {});

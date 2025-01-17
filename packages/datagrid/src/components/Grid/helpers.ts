@@ -975,7 +975,7 @@ export const isCellWithinBounds = (cell: CellInterface, bounds: AreaProps) => {
  * @param rowIndex
  * @param direction
  */
-export type HiddenType = (i: number) => boolean;
+export type HiddenType = (i: number, recordId?: number) => boolean;
 export const clampIndex = (
     index: number,
     isHidden: HiddenType | undefined,

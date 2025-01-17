@@ -238,6 +238,7 @@ export class CellsDrawer extends CanvasDrawer {
         const { x, y, cellValue, columnWidth, recordId } = renderProps;
         // const renderX = textAlign === 'right' ? x + columnWidth - 4 : x + 4;
         const renderY = y + 10;
+        // console.log({ thisobj: this });
 
         const { text } = this.textEllipsis({
             text: cellValue ?? recordId,

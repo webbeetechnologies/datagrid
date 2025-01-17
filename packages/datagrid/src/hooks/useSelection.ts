@@ -368,11 +368,20 @@ const useSelection = ({
             return (
                 cell.rowIndex < selectionTopBound ||
                 cell.columnIndex < selectionLeftBound ||
-                isSelectionIgnoredRow(cell.rowIndex) ||
+                isSelectionIgnoredRow(
+                    cell.rowIndex,
+                    gridRef.current?.getRecordIdByIndex(cell.rowIndex),
+                ) ||
                 isSelectionIgnoredColumn(cell.columnIndex)
             );
         },
-        [selectionTopBound, selectionLeftBound, isSelectionIgnoredRow, isSelectionIgnoredColumn],
+        [
+            selectionTopBound,
+            selectionLeftBound,
+            isSelectionIgnoredRow,
+            gridRef,
+            isSelectionIgnoredColumn,
+        ],
     );
 
     const clearSelections = useCallback(() => {
