@@ -9,6 +9,7 @@ import React, {
     memo,
     useEffect,
     MutableRefObject,
+    Fragment,
 } from 'react';
 import {
     NativeScrollEvent,
@@ -1626,8 +1627,10 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             .enableTrackpadTwoFingerGesture(false)
             .runOnJS(true);
 
+        const Wrapper = Platform.OS === 'web' ? Fragment : GestureDetector;
+
         return (
-            <GestureDetector gesture={panGesture}>
+            <Wrapper {...((Platform.OS === 'web' ? {} : { gesture: panGesture }) as any)}>
                 <View
                     style={containerStyle}
                     // {...(Platform.OS !== 'web' ? panResponder.current?.panHandlers : {})}
@@ -1711,7 +1714,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                         ) : null}
                     </View>
                 </View>
-            </GestureDetector>
+            </Wrapper>
         );
     }),
 );

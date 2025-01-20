@@ -888,10 +888,10 @@ const useEditable = ({
             if (!activeCellRef.current) return;
             /* Check if the value has changed. Used to conditionally submit if editor is not in focus */
             isDirtyRef.current = newValue !== value;
-            setValueRef.current(newValue);
+            _setValue?.(newValue);
             onChange?.(newValue, activeCell);
         },
-        [onChange, setValueRef, value, activeCellRef],
+        [onChange, _setValue, value, activeCellRef],
     );
 
     const handleScroll = useCallback(
