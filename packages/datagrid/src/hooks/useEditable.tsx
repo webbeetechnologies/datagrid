@@ -875,7 +875,7 @@ const useEditable = ({
     );
 
     const handleChange = useCallback(
-        (newValue: string, activeCell: CellInterface) => {
+        (newValue: string) => {
             /**
              * Make sure we dont call onChange if initialValue is set
              * This is to accomodate for editor that fire onChange during initialvalue
@@ -885,13 +885,13 @@ const useEditable = ({
                 initialValueRef.current = void 0;
                 return;
             }
-            if (!activeCellRef.current) return;
+            if (!activeCell) return;
             /* Check if the value has changed. Used to conditionally submit if editor is not in focus */
             isDirtyRef.current = newValue !== value;
             _setValue?.(newValue);
             onChange?.(newValue, activeCell);
         },
-        [onChange, _setValue, value, activeCellRef],
+        [onChange, _setValue, value, activeCell],
     );
 
     const handleScroll = useCallback(
