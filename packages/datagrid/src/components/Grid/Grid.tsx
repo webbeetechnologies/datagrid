@@ -8,8 +8,8 @@ import React, {
     useReducer,
     memo,
     useEffect,
-    MutableRefObject,
     Fragment,
+    RefObject,
 } from 'react';
 import {
     NativeScrollEvent,
@@ -22,6 +22,8 @@ import {
     GestureResponderEvent,
     Pressable,
     StyleProp,
+    // PanResponderInstance,
+    // PanResponder,
 } from 'react-native';
 import type Konva from 'konva';
 import invariant from 'tiny-invariant';
@@ -75,8 +77,9 @@ import {
     SnapRowProps,
     ViewPortProps,
 } from './types';
-import { renderCellsByRange, RenderCellsByRangeArgs } from './renderCellsByRange';
+import { renderCellsByRange } from './renderCellsByRange';
 import { useSelectionBox } from './SelectionBoxInner';
+import { useWebMethods } from './useWebMethods';
 
 const DEFAULT_ESTIMATED_COLUMN_SIZE = 100;
 const DEFAULT_ESTIMATED_ROW_SIZE = 50;
@@ -1038,113 +1041,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             ],
         );
 
-        /**
-         * Fired when user tries to scroll the canvas
-         */
-        const handleWheel = useCallback(
-            (event: WheelEvent) => {
-                const _horizontalScrollRef =
-                    horizontalScrollRef as unknown as MutableRefObject<HTMLDivElement>;
-                const _verticalScrollRef =
-                    verticalScrollRef as unknown as MutableRefObject<HTMLDivElement>;
-
-                // event.preventDefault();
-                // event.stopImmediatePropagation();
-                if (event.ctrlKey) return;
-                /* If user presses shift key, scroll horizontally */
-                const isScrollingHorizontally = event.shiftKey;
-
-                const { deltaX, deltaY, deltaMode } = event;
-                const vScrollDirection = deltaY >= 0 ? 'bottom' : 'top';
-                // const hScrollDirection = deltaX >= 0 ? 'right' : 'left';
-
-                const dx = isScrollingHorizontally ? deltaY : deltaX;
-                let dy = deltaY;
-
-                /* Scroll only in one direction */
-                const isHorizontal = isScrollingHorizontally || Math.abs(dx) > Math.abs(dy);
-
-                if (isHorizontal) {
-                    event.preventDefault();
-                    event.stopImmediatePropagation();
-                }
-
-                // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
-                if (vScrollDirection === 'top') {
-                    if (_verticalScrollRef.current.scrollTop + deltaY >= 0) {
-                        event.preventDefault();
-                        event.stopImmediatePropagation();
-                    }
-                } else {
-                    if (
-                        _verticalScrollRef.current.scrollTop + deltaY <=
-                        _verticalScrollRef.current.scrollHeight -
-                            _verticalScrollRef.current.clientHeight
-                    ) {
-                        event.preventDefault();
-                        event.stopImmediatePropagation();
-                    }
-                }
-
-                // when the scroll cross the limit, we don't want to prevent other scrolls from taking over
-                // if (hScrollDirection === 'left') {
-                //     if (horizontalScrollRef.current.scrollLeft + deltaX >= 0) {
-                //         event.preventDefault();
-                //     }
-                // } else {
-                //     if (
-                //         horizontalScrollRef.current.scrollLeft + deltaX <=
-                //         horizontalScrollRef.current.scrollWidth -
-                //             (horizontalScrollRef.current as HTMLDivElement).clientWidth
-                //     ) {
-                //         event.preventDefault();
-                //     }
-                // }
-
-                /* Prevent browser back in Mac */
-                // event.preventDefault();
-                /* Scroll natively */
-                if (wheelingRef.current) return;
-
-                /* If snaps are active */
-                if (snap) {
-                    if (isHorizontal) {
-                        snapToColumnThrottler.current?.({
-                            deltaX,
-                        });
-                    } else {
-                        snapToRowThrottler.current?.({
-                            deltaY,
-                        });
-                    }
-                    return;
-                }
-
-                if (deltaMode === 1) {
-                    dy = dy * scrollbarSize;
-                }
-
-                if (!horizontalScrollRef.current || !verticalScrollRef.current) return;
-
-                const currentScroll = isHorizontal
-                    ? _horizontalScrollRef.current?.scrollLeft
-                    : _verticalScrollRef.current?.scrollTop;
-
-                wheelingRef.current = window.requestAnimationFrame(() => {
-                    wheelingRef.current = null;
-
-                    if (isHorizontal) {
-                        if (horizontalScrollRef.current)
-                            _horizontalScrollRef.current.scrollLeft = currentScroll + dx;
-                    } else {
-                        if (verticalScrollRef.current)
-                            _verticalScrollRef.current.scrollTop = currentScroll + dy;
-                    }
-                });
-            },
-            [scrollbarSize, snap],
-        );
-
         useEffect(() => {
             if (initialScrollPosition?.processing === true) return;
             if (horizontalScrollRef.current)
@@ -1155,23 +1051,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
             // eslint-disable-next-line
         }, [initialScrollPosition?.processing]);
-
-        /**
-         * Handle mouse wheeel
-         */
-        useEffect(() => {
-            if (Platform.OS !== 'web') return;
-            const scrollContainerEl = scrollContainerRef.current;
-
-            scrollContainerEl?.addEventListener('wheel', handleWheel, {
-                passive: false,
-            });
-            isMounted.current = true;
-
-            return () => {
-                scrollContainerEl?.removeEventListener('wheel', handleWheel);
-            };
-        }, [handleWheel]);
 
         /* Callback when visible rows or columns have changed */
         useEffect(() => {
@@ -1218,7 +1097,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             getColumnWidth,
             getRowHeight: () => headerHeight,
             getRowOffset: getRowOffset,
-            renderCell: headerCellRenderer as RenderCellsByRangeArgs['renderCell'],
+            renderCell: headerCellRenderer,
             isHiddenColumn,
             isHiddenRow: headerIsHiddenRow,
             frozenColumns,
@@ -1230,6 +1109,56 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             floatingRowId: floatingRowProps?.record?.id,
             getRecordIdByIndex: () => undefined,
         });
+
+        const { cells: dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
+            columnStartIndex,
+            columnStopIndex,
+            rowStartIndex,
+            rowStopIndex,
+            columnCount,
+            rowCount,
+            getCellBounds,
+            getColumnOffset,
+            getColumnWidth,
+            getRowHeight,
+            getRowOffset,
+            renderCell: renderDynamicCell,
+            hoveredCell: datagridStoreRef.current?.hoveredCell,
+            isHiddenColumn,
+            isActiveRow,
+            isHiddenRow,
+            frozenColumns,
+            isFloatingRow: false,
+            isRowFiltered: floatingRowProps?.isFiltered,
+            isRowMoved: floatingRowProps?.isMoved,
+            floatingRowId: floatingRowProps?.record?.id,
+            getRecordIdByIndex,
+        });
+        const { cells: dynamicReactCells, frozenCells: frozenDynamicReactCells } =
+            renderCellsByRange({
+                columnStartIndex,
+                columnStopIndex,
+                rowStartIndex,
+                rowStopIndex,
+                columnCount,
+                rowCount,
+                getCellBounds,
+                getColumnOffset,
+                getColumnWidth,
+                getRowHeight,
+                getRowOffset,
+                renderCell: renderDynamicReactCell,
+                hoveredCell: datagridStoreRef.current?.hoveredCell,
+                isHiddenColumn,
+                isActiveRow,
+                isHiddenRow,
+                frozenColumns,
+                isFloatingRow: false,
+                isRowFiltered: floatingRowProps?.isFiltered,
+                isRowMoved: floatingRowProps?.isMoved,
+                floatingRowId: floatingRowProps?.record?.id,
+                getRecordIdByIndex,
+            });
 
         const {
             activeCellComponent,
@@ -1258,7 +1187,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             isHiddenRow,
             renderActiveCell,
             rowCount,
-            rowStartIndex,
             rowStopIndex,
             renderDynamicCell,
             renderDynamicReactCell,
@@ -1275,7 +1203,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             getRowHeight,
             getRowOffset,
             showFillHandle,
-            getRecordIdByIndex,
+            dynamicReactCells,
+            frozenDynamicReactCells,
         });
 
         /* Spacing for frozen row/column clip */
@@ -1284,31 +1213,6 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
          * Prevents drawing hit region when scrolling
          */
         const listenToEvents = !isScrolling;
-
-        const { cells: dynamicCells, frozenCells: frozenDynamicCells } = renderCellsByRange({
-            columnStartIndex,
-            columnStopIndex,
-            rowStartIndex,
-            rowStopIndex,
-            columnCount,
-            rowCount,
-            getCellBounds,
-            getColumnOffset,
-            getColumnWidth,
-            getRowHeight,
-            getRowOffset,
-            renderCell: renderDynamicCell as RenderCellsByRangeArgs['renderCell'],
-            hoveredCell: datagridStoreRef.current?.hoveredCell,
-            isHiddenColumn,
-            isActiveRow,
-            isHiddenRow,
-            frozenColumns,
-            isFloatingRow: false,
-            isRowFiltered: floatingRowProps?.isFiltered,
-            isRowMoved: floatingRowProps?.isMoved,
-            floatingRowId: floatingRowProps?.record?.id,
-            getRecordIdByIndex,
-        });
 
         const { cells, frozenCells } = useGrid({
             instance: gridRef!,
@@ -1628,6 +1532,18 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             .runOnJS(true);
 
         const Wrapper = Platform.OS === 'web' ? Fragment : GestureDetector;
+
+        useWebMethods({
+            horizontalScrollRef: horizontalScrollRef as unknown as RefObject<HTMLDivElement>,
+            verticalScrollRef: verticalScrollRef as unknown as RefObject<HTMLDivElement>,
+            wheelingRef,
+            snap,
+            scrollbarSize,
+            scrollContainerRef,
+            snapToColumnThrottler,
+            snapToRowThrottler,
+            isMounted,
+        });
 
         return (
             <Wrapper {...((Platform.OS === 'web' ? {} : { gesture: panGesture }) as any)}>

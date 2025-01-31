@@ -130,7 +130,7 @@ export interface UseSelectionOptions {
         end: React.MutableRefObject<CellInterface | null>,
     ) => boolean | undefined;
     mouseMoveInterceptor?: (
-        e: globalThis.MouseEvent,
+        e: MouseEvent,
         coords: CellInterface,
         start: React.MutableRefObject<CellInterface | null>,
         end: React.MutableRefObject<CellInterface | null>,
@@ -563,7 +563,7 @@ const useSelection = ({
      * Mousemove handler
      */
     const handleMouseMove = useCallback(
-        (e: globalThis.MouseEvent) => {
+        (e: MouseEvent) => {
             /* Exit if user is not in selection mode */
             if (!isSelecting.current || !gridRef?.current) return;
 
@@ -1175,7 +1175,7 @@ const useSelection = ({
     );
 
     const handleFillHandleMouseMove = useCallback(
-        (e: globalThis.MouseEvent) => {
+        (e: MouseEvent) => {
             /* Exit if user is not in selection mode */
             if (!isFilling.current || !gridRef?.current || !activeCellRef.current) return;
 
@@ -1265,7 +1265,7 @@ const useSelection = ({
      * When user releases mouse on the fill handle
      */
     const handleFillHandleMouseUp = useCallback(
-        (_e: globalThis.MouseEvent) => {
+        (_e: MouseEvent) => {
             isFilling.current = false;
 
             if (Platform.OS === 'web') {
@@ -1348,7 +1348,7 @@ const useSelection = ({
      * Ond drag move
      */
     const handleSelectionMouseMove = useCallback(
-        (e: globalThis.MouseEvent) => {
+        (e: MouseEvent) => {
             if (!gridRef?.current) return;
             const coords = gridRef.current.getCellCoordsFromOffset(e.clientX, e.clientY);
             if (!coords) {

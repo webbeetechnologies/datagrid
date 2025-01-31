@@ -1,4 +1,12 @@
-import React, { forwardRef, memo, RefObject, useEffect, useImperativeHandle, useMemo } from 'react';
+import React, {
+    forwardRef,
+    memo,
+    RefObject,
+    useCallback,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+} from 'react';
 import {
     Path,
     Skia,
@@ -18,7 +26,13 @@ import {
     SkParagraph,
     useCanvasRef,
 } from '@shopify/react-native-skia';
-import { StyleProp, StyleSheet, useWindowDimensions, ViewStyle } from 'react-native';
+import {
+    GestureResponderEvent,
+    StyleProp,
+    StyleSheet,
+    useWindowDimensions,
+    ViewStyle,
+} from 'react-native';
 import { FontsContext, useFontsContext } from '../contexts/FontContext';
 import { createContextBridge } from '@bambooapp/bamboo-molecules/context-bridge';
 import { EventObject, gridEventEmitter } from '../utils/reversed-eventemitter';
@@ -32,7 +46,7 @@ interface StageProps {
     scrollPositionRef?: RefObject<{ scrollTop: number; scrollLeft: number }>;
 }
 export const _Stage = memo(
-    forwardRef(({ width, height, style, children }: StageProps, _ref: any) => {
+    forwardRef(({ width, height, style, children, scrollPositionRef }: StageProps, _ref: any) => {
         const { width: screenWidth, height: screenHeight } = useWindowDimensions();
         const ref = useCanvasRef();
 
@@ -48,22 +62,21 @@ export const _Stage = memo(
             [height, screenHeight, screenWidth, style, width],
         );
 
-        // const onTouchStart = useCallback(
-        //     (e: GestureResponderEvent) => {
-        //         const { locationX: x, locationY: y } = e.nativeEvent.touches[0];
-        //         console.log('touchstart');
-        //         emitter.emit('touch', {
-        //             x: x + (scrollPositionRef?.current?.scrollLeft ?? 0),
-        //             y: y + (scrollPositionRef?.current?.scrollTop ?? 0),
-        //         });
-        //     },
-        //     [scrollPositionRef],
-        // );
+        const onTouchStart = useCallback(
+            (e: GestureResponderEvent) => {
+                const { locationX: x, locationY: y } = e.nativeEvent.touches[0];
+                gridEventEmitter.emit('touch', {
+                    x: x + (scrollPositionRef?.current?.scrollLeft ?? 0),
+                    y: y + (scrollPositionRef?.current?.scrollTop ?? 0),
+                });
+            },
+            [scrollPositionRef],
+        );
 
         useImperativeHandle(_ref, () => ref.current);
 
         return (
-            <Canvas ref={ref} style={canvasStyle as StyleProp<any>}>
+            <Canvas ref={ref} style={canvasStyle as StyleProp<any>} onTouchStart={onTouchStart}>
                 <>{children}</>
             </Canvas>
         );

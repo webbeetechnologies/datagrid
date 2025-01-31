@@ -80,6 +80,7 @@ export interface ITextEllipsisProps {
     text: string;
     maxWidth?: number;
     fontSize?: number;
+    fontFamily?: string;
     fontWeight?: IFontWeight;
 }
 

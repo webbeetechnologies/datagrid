@@ -45,7 +45,6 @@ export type UseSelectionBoxProps = Pick<
     frozenColumnWidth: number;
     frozenRowHeight: number;
     columnStartIndex: number;
-    rowStartIndex: number;
     rowStopIndex: number;
     columnStopIndex: number;
     scrollLeft: number;
@@ -56,7 +55,8 @@ export type UseSelectionBoxProps = Pick<
     getRowOffset: (index: number) => number;
     getCellBounds: (args: CellInterface) => AreaProps;
     floatingRowProps: FloatingRowPropsReturn;
-    getRecordIdByIndex: (index: number) => number;
+    dynamicReactCells: ReactNode[];
+    frozenDynamicReactCells: ReactNode[];
 };
 
 const EMPTY_ARRAY: any = [];
@@ -94,13 +94,13 @@ export const useSelectionBox = ({
     renderActiveCell,
     activeCellStrokeWidth,
     columnStartIndex,
-    rowStartIndex,
     isHiddenColumn,
     isActiveRow,
     isHiddenRow,
     renderDynamicReactCell,
     renderDynamicCell,
-    getRecordIdByIndex,
+    dynamicReactCells,
+    frozenDynamicReactCells,
 }: UseSelectionBoxProps) => {
     const datagridStoreRef = useDataGridStateStoreRef().store;
 
@@ -460,31 +460,6 @@ export const useSelectionBox = ({
                 {...fillHandleProps}
             />
         ) : null;
-
-    const { cells: dynamicReactCells, frozenCells: frozenDynamicReactCells } = renderCellsByRange({
-        columnStartIndex,
-        columnStopIndex,
-        rowStartIndex,
-        rowStopIndex,
-        columnCount,
-        rowCount,
-        getCellBounds,
-        getColumnOffset,
-        getColumnWidth,
-        getRowHeight,
-        getRowOffset,
-        renderCell: renderDynamicReactCell as RenderCellsByRangeArgs['renderCell'],
-        hoveredCell: datagridStoreRef.current?.hoveredCell,
-        isHiddenColumn,
-        isActiveRow,
-        isHiddenRow,
-        frozenColumns,
-        isFloatingRow: false,
-        isRowFiltered: floatingRowProps?.isFiltered,
-        isRowMoved: floatingRowProps?.isMoved,
-        floatingRowId: floatingRowProps?.record?.id,
-        getRecordIdByIndex,
-    });
 
     let floatingRowAllDynamicCells = {
         cells: [] as ReactNode[],

@@ -26,6 +26,9 @@ export interface TouchResults {
     onTouchStart: (e: GestureStateChangeEvent<PanGestureHandlerEventPayload>) => boolean;
     onTouchMove: (e: GestureUpdateEvent<PanGestureHandlerEventPayload>) => void;
     onTouchEnd: (e: GestureStateChangeEvent<PanGestureHandlerEventPayload>) => void;
+    // onTouchStart: (e: GestureResponderEvent) => boolean;
+    // onTouchMove: (e: GestureResponderEvent) => void;
+    // onTouchEnd: (e: GestureResponderEvent) => void;
 }
 
 /**
@@ -198,5 +201,31 @@ const useTouch = ({ gridRef, initialScrollLeft, initialScrollTop }: TouchProps):
         onTouchEnd,
     };
 };
+
+// function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
+//     let lastFunc: ReturnType<typeof setTimeout> | null = null;
+//     let lastRan: number | null = null;
+
+//     return function (this: any, ...args: Parameters<T>): void {
+//         if (!lastRan) {
+//             // First call, execute immediately
+//             func.apply(this, args);
+//             lastRan = Date.now();
+//         } else {
+//             // Clear any existing timeout
+//             if (lastFunc) {
+//                 clearTimeout(lastFunc);
+//             }
+
+//             // Set a new timeout
+//             lastFunc = setTimeout(() => {
+//                 if (Date.now() - lastRan! >= limit) {
+//                     func.apply(this, args);
+//                     lastRan = Date.now();
+//                 }
+//             }, limit - (Date.now() - lastRan));
+//         }
+//     } as T;
+// }
 
 export default useTouch;
