@@ -8,8 +8,6 @@
     "lint": "eslint .",
     "prepare:husky": "husky install"
   },
-  "devDependencies": {
-  },
   "eslintIgnore": [
     "node_modules/",
     "lib/",

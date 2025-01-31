@@ -2,6 +2,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -23,18 +24,20 @@ export default function RootLayout() {
     }
 
     return (
-        <Stack screenOptions={{ gestureEnabled: false }}>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-            <Stack.Screen
-                name="modal"
-                options={{
-                    // presentation: 'modal',
-                    gestureEnabled: false,
-                    // sheetGrabberVisible: true,
-                    fullScreenGestureEnabled: false,
-                }}
-            />
-        </Stack>
+        <GestureHandlerRootView>
+            <Stack screenOptions={{ gestureEnabled: false }}>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" />
+                <Stack.Screen
+                    name="modal"
+                    options={{
+                        // presentation: 'modal',
+                        gestureEnabled: false,
+                        // sheetGrabberVisible: true,
+                        fullScreenGestureEnabled: false,
+                    }}
+                />
+            </Stack>
+        </GestureHandlerRootView>
     );
 }
