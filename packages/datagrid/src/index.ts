@@ -7,6 +7,7 @@ export {
     RowCountCell,
 } from './DataGrid';
 export * from './components/Grid';
+export * from './components/FontWrapper';
 export * from './contexts';
 export {
     useEditable,
