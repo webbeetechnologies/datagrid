@@ -107,6 +107,7 @@ export type Props = Pick<
         | 'useFloatingRowProps'
         | 'getRowStateById'
         | 'useGridInit'
+        | 'onDoubleClick'
     > &
     Omit<ViewProps, 'ref'> & {
         width?: number;
@@ -177,6 +178,7 @@ export type Props = Pick<
         isLastRow?: (rowIndex: number) => boolean;
         isLastColumn?: (columnIndex: number) => boolean;
         scale?: number;
+        onPressActiveCell?: UseSelectionOptions['onPressActiveCell'];
     };
 
 export type DataGridRef = Pick<
@@ -399,6 +401,8 @@ const DataGrid = (
         useFloatingRowProps = useFloatingRowPropsDefault,
         getRowStateById,
         useGridInit,
+        onDoubleClick: onDoubleClickProp,
+        onPressActiveCell,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -460,6 +464,7 @@ const DataGrid = (
         isFloatingRowMoved: floatingRowProps?.isMoved,
         isFloatingRowFiltered: floatingRowProps?.isFiltered,
         floatingRowHeight: floatingRowProps?.height,
+        onPressActiveCell,
     });
 
     const onAfterSubmit = useCallback(
@@ -510,6 +515,7 @@ const DataGrid = (
         isFloatingRowMoved: floatingRowProps?.isMoved,
         isFloatingRowFiltered: floatingRowProps?.isFiltered,
         floatingRowHeight: floatingRowProps?.height,
+        onDoubleClick: onDoubleClickProp,
     });
 
     const onScroll = useCallback(

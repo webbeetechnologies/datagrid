@@ -157,6 +157,7 @@ export interface UseEditableOptions {
     isFloatingRowMoved?: boolean;
     isFloatingRowFiltered?: boolean;
     floatingRowHeight?: number;
+    onDoubleClick?: (e: any) => void;
 }
 
 export interface EditableResults {
@@ -471,6 +472,7 @@ const useEditable = ({
     isFloatingRowFiltered,
     floatingRowIndex,
     isFloatingRowMoved,
+    onDoubleClick,
 }: UseEditableOptions): EditableResults => {
     const [isEditorShown, setShowEditor] = useState<boolean>(false);
     const [position, setPosition] = useState<CellPosition>({
@@ -629,6 +631,7 @@ const useEditable = ({
     /* Activate edit mode */
     const handleDoubleClick = useCallback(
         (e: React.MouseEvent<HTMLElement>) => {
+            onDoubleClick?.(e);
             if (!gridRef.current || !activeCellRef.current) return;
             if (!editorConfigRef.current?.showOnDoubleClicked) return;
 

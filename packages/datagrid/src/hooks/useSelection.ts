@@ -173,6 +173,7 @@ export interface UseSelectionOptions {
     isFloatingRowMoved?: boolean;
     isFloatingRowFiltered?: boolean;
     floatingRowHeight?: number;
+    onPressActiveCell?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export type NewSelectionMode = 'clear' | 'modify' | 'append';
@@ -307,6 +308,7 @@ const useSelection = ({
     isFloatingRowMoved,
     isFloatingRowFiltered,
     floatingRowHeight,
+    onPressActiveCell,
 }: UseSelectionOptions): SelectionResults => {
     const [activeCell, _setActiveCell] = useState<CellInterface | null>(initialActiveCell);
     const [selections, setSelections] = useState<SelectionArea[]>(initialSelections);
@@ -769,7 +771,10 @@ const useSelection = ({
              * If user is selecting the same same,
              * let not trigger another state change
              */
-            if (isSameAsActiveCell) return;
+            if (isSameAsActiveCell) {
+                onPressActiveCell?.(e);
+                return;
+            }
 
             /* Trigger new selection */
             newSelection(coords);
@@ -797,6 +802,7 @@ const useSelection = ({
             getPossibleActiveCellFromSelections,
             setActiveCell,
             clearSelections,
+            onPressActiveCell,
         ],
     );
 
