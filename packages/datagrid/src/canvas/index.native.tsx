@@ -154,6 +154,8 @@ type TextProps = {
     align?: 'left' | 'center' | 'right';
     verticalAlign?: 'top' | 'middle' | 'bottom';
     onClick?: OnClickEvent;
+    maxLines?: number;
+    ellipsis?: string;
 };
 
 // export const Text = memo(
@@ -218,6 +220,8 @@ export const Text = memo(
         fontWeight = 'normal',
         verticalAlign,
         onClick,
+        maxLines,
+        ellipsis = '...',
     }: TextProps) => {
         const fonts = useFontsContext();
 
@@ -235,6 +239,7 @@ export const Text = memo(
                             weight: fontWeightMap[fontWeight],
                         },
                     },
+                    ...(maxLines ? { maxLines, ellipsis } : {}),
                 },
                 fonts,
             )
@@ -244,7 +249,7 @@ export const Text = memo(
             _paragraph.layout(width || Number.MAX_SAFE_INTEGER);
 
             return _paragraph;
-        }, [fonts, align, fill, fontSize, fontFamily, fontWeight, text, width]);
+        }, [fonts, align, fill, fontSize, fontFamily, fontWeight, maxLines, ellipsis, text, width]);
 
         const adjustedX = useMemo(() => {
             if (!fonts || !paragraph) return x;

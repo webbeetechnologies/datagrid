@@ -676,9 +676,15 @@ const useSelection = ({
             const hasSelections = selections.length > 0;
             const isDeselecting = isMetaKey && allowDeselect;
 
-            if (Platform.OS === 'web' && !isContextMenuClick && selectionPolicy !== 'single') {
-                document.addEventListener('mouseup', handleMouseUp);
-                document.addEventListener('mousemove', handleMouseMove);
+            if (!isContextMenuClick && selectionPolicy !== 'single') {
+                // TODO - cleanup
+                if (Platform.OS === 'web') {
+                    document.addEventListener('mouseup', handleMouseUp);
+                    document.addEventListener('mousemove', handleMouseMove);
+                } else {
+                    // for mobile
+                    handleMouseUp();
+                }
             }
 
             /* Activate selection mode */

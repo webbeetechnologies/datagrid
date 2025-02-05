@@ -66,6 +66,7 @@ export type Props = Pick<
     | 'isSelectionIgnoredColumn'
     | 'onBeforeSelection'
     | 'onBeforeFill'
+    | 'alwaysScrollToActiveCell'
 > &
     Pick<
         UseEditableOptions,
@@ -278,14 +279,15 @@ export const HeaderCell = ({
             {children}
             <CanvasIcon x={x + 10} y={y + 5} text={'󰀪'} verticalAlign="middle" size={18} />
             <Text
-                x={x}
+                x={x + 30}
                 y={y}
                 height={height}
-                width={width}
+                width={width - 30}
                 text={text}
                 fontStyle={'bold'}
                 verticalAlign="middle"
                 align="center"
+                maxLines={1}
                 {...textProps}
             />
             <DraggableRect
@@ -403,6 +405,7 @@ const DataGrid = (
         useGridInit,
         onDoubleClick: onDoubleClickProp,
         onPressActiveCell,
+        alwaysScrollToActiveCell,
         ...rest
     }: Props,
     ref: ForwardedRef<DataGridRef>,
@@ -465,6 +468,7 @@ const DataGrid = (
         isFloatingRowFiltered: floatingRowProps?.isFiltered,
         floatingRowHeight: floatingRowProps?.height,
         onPressActiveCell,
+        alwaysScrollToActiveCell,
     });
 
     const onAfterSubmit = useCallback(
