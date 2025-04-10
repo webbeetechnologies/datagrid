@@ -33,10 +33,10 @@ import {
     useWindowDimensions,
     ViewStyle,
 } from 'react-native';
-import { FontsContext, useFontsContext } from '../contexts/FontContext';
-import { createContextBridge } from '@bambooapp/bamboo-molecules/context-bridge';
+import { useFontsContext } from '../contexts/FontContext';
 import { EventObject, gridEventEmitter } from '../utils/reversed-eventemitter';
 import { useLatest } from '@bambooapp/bamboo-molecules';
+import { createContextBridge } from './createContextBridge';
 
 interface StageProps {
     width?: number;
@@ -509,5 +509,3 @@ export function useTouchEvent(
         };
     }, [isPointInsideRef, onClick]);
 }
-
-registerCanvasContextBridge(FontsContext);

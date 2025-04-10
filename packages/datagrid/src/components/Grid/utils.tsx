@@ -1,7 +1,6 @@
 import React from 'react';
 import type { CellInterface, SelectionProps } from './types';
-import { View } from '@bambooapp/bamboo-atoms';
-import { ColorValue, Platform, type ViewStyle } from 'react-native';
+import { ColorValue, Platform, View, type ViewStyle } from 'react-native';
 import { CanvasDrawer } from '../../utils/drawer';
 import type { IRenderProps } from '../../utils/types';
 import type { Context } from 'konva/lib/Context';

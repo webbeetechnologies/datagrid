@@ -1,7 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import type { ShapeConfig } from 'konva/lib/Shape';
-import type { ViewStyle } from 'react-native';
-import { View } from '@bambooapp/bamboo-atoms';
+import { View, type ViewStyle } from 'react-native';
 
 /**
  * Fill handle component

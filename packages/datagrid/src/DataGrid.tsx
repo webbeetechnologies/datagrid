@@ -12,9 +12,8 @@ import React, {
     RefObject,
     useMemo,
 } from 'react';
-import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, StyleSheet, View, ViewProps } from 'react-native';
 import { Rect, Text, Group } from './canvas';
-import type { ViewProps } from '@bambooapp/bamboo-atoms';
 import { useLatest, useMergedRefs } from '@bambooapp/bamboo-molecules';
 import type { Vector2d } from 'konva/lib/types';
 import type { RectConfig } from 'konva/lib/shapes/Rect';

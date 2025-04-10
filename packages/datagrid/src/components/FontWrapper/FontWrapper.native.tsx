@@ -21,6 +21,6 @@ const FontProvider = memo(
     },
 );
 
-registerCanvasContextBridge([FontsContext]);
+registerCanvasContextBridge(FontsContext);
 
 export default FontProvider;
