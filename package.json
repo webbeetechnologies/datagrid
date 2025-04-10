@@ -1,6 +1,6 @@
 {
   "name": "datagrid",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "author": "Thet Aung <thetaung.dev@gmail.com>",
   "license": "MIT",
   "packageManager": "pnpm@9.3.0",
@@ -15,8 +15,6 @@
     "dist",
     "cache"
   ],
-  "dependencies": {
-  },
-  "peerDependencies": {
-  }
+  "dependencies": {},
+  "peerDependencies": {}
 }
