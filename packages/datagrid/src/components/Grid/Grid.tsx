@@ -27,7 +27,7 @@ import {
 } from 'react-native';
 import type Konva from 'konva';
 import invariant from 'tiny-invariant';
-import { useLatest } from '@bambooapp/bamboo-molecules';
+import { useLatest } from '@bambooapp/react-hooks';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
 import { Stage, Layer, Group } from '../../canvas';

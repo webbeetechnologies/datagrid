@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo, CSSProperties } from 'react';
-import { useLatest } from '@bambooapp/bamboo-molecules';
+import { useLatest } from '@bambooapp/react-hooks';
 
 import type {
     CellInterface,

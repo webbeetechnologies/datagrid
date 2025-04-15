@@ -14,7 +14,7 @@ import {
     getNextFocusableCellByDirection,
 } from '../components/Grid/helpers';
 import { KeyCodes, Direction, MouseButtonCodes, SelectionPolicy } from '../components/Grid/types';
-import { useLatest } from '@bambooapp/bamboo-molecules';
+import { useLatest } from '@bambooapp/react-hooks';
 import { resolveFloatingRowPosition } from '../utils/resolveFloatingRowPosition';
 import { Platform } from 'react-native';
 

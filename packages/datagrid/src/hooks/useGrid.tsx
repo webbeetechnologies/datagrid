@@ -4,7 +4,7 @@ import { makeRectPath, Shape } from '../canvas';
 import type { GridProps, GridRef, UseRecord } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
 import { recordRowLayout } from '../utils/record-row-layout';
-import { useLatest } from '@bambooapp/bamboo-molecules';
+import { useLatest } from '@bambooapp/react-hooks';
 import { useDataGridState } from '../DataGridStateContext';
 import { gridEventEmitter } from '../utils/grid-eventemitter';
 import type { Field, IRecord } from '../utils/types';

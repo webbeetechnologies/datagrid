@@ -14,7 +14,7 @@ import React, {
 } from 'react';
 import { LayoutChangeEvent, StyleSheet, View, ViewProps } from 'react-native';
 import { Rect, Text, Group } from './canvas';
-import { useLatest, useMergedRefs } from '@bambooapp/bamboo-molecules';
+import { useLatest, useMergedRefs } from '@bambooapp/react-hooks';
 import type { Vector2d } from 'konva/lib/types';
 import type { RectConfig } from 'konva/lib/shapes/Rect';
 import type { KonvaEventObject } from 'konva/lib/Node';

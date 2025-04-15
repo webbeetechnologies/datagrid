@@ -1,4 +1,4 @@
-import { createFastContext } from '@bambooapp/bamboo-molecules/fast-context';
+import { createFastContext } from './fast-context';
 import type { HoveredCell } from './components';
 
 export const {
