@@ -24,7 +24,7 @@ export type UseGridProps = Pick<
     | 'getRowStateById'
     | 'useGridInit'
 > & {
-    instance: React.RefObject<GridRef>;
+    instance: React.RefObject<GridRef | null>;
     rowStartIndex: number;
     rowStopIndex: number;
     columnStartIndex: number;

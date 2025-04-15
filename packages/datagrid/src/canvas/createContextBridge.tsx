@@ -1,4 +1,4 @@
-import type { ComponentType, Context as ContextType, PropsWithChildren } from 'react';
+import React, { ComponentType, Context as ContextType, PropsWithChildren } from 'react';
 import { Fragment, useContext, useId, useMemo, useRef, useState } from 'react';
 import { Repository } from '../utils/repository';
 import { typedMemo } from '@bambooapp/bamboo-molecules';

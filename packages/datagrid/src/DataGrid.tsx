@@ -420,7 +420,7 @@ const DataGrid = (
     const height = heightProp || layout.height;
 
     const gridRef = useRef<GridRef>(null);
-    const currentViewPort = useRef<ViewPortProps>();
+    const currentViewPort = useRef<ViewPortProps>(undefined);
     const infiniteLoaderRef = useRef(null);
     const wheelingRef = useRef<number | null>(null); // Storage timer to ensure smooth operation
     const floatingRowProps = useFloatingRowProps();

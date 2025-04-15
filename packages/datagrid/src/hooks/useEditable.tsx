@@ -483,7 +483,7 @@ const useEditable = ({
     });
 
     // const currentActiveCellRef = useRef<CellInterface | null>(null);
-    const initialActiveCell = useRef<CellInterface | null>();
+    const initialActiveCell = useRef<CellInterface | null | undefined>(null);
     const [scrollPosition, setScrollPosition] = useState<ScrollCoords>({
         scrollLeft: 0,
         scrollTop: 0,
@@ -494,8 +494,8 @@ const useEditable = ({
     const [autoFocus, setAutoFocus] = useState<boolean>(true);
     const isDirtyRef = useRef<boolean>(false);
     const currentValueRef = useLatest(value);
-    const initialValueRef = useRef<string>();
-    const maxEditorDimensionsRef = useRef<{ height: number; width: number }>();
+    const initialValueRef = useRef<string>(undefined);
+    const maxEditorDimensionsRef = useRef<{ height: number; width: number }>(undefined);
     const hasInitialValue = useRef(false);
     /* To prevent stale closures data */
     // const getValueRef = useRef(getValue);

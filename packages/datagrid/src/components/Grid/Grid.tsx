@@ -204,8 +204,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             recalcRowIndices: [],
         });
 
-        const snapToRowThrottler = useRef<({ deltaY }: SnapRowProps) => void>();
-        const snapToColumnThrottler = useRef<({ deltaX }: SnapColumnProps) => void>();
+        const snapToRowThrottler = useRef<({ deltaY }: SnapRowProps) => void>(undefined);
+        const snapToColumnThrottler = useRef<({ deltaX }: SnapColumnProps) => void>(undefined);
 
         const [_, _forceRender] = useReducer(() => ({}), {});
 
