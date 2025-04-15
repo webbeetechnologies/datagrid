@@ -1,4 +1,4 @@
-import { Rect, Text } from 'react-konva';
+// import { Rect, Text } from 'react-konva';
 import type {
     CellInterface,
     GridProps,
@@ -26,6 +26,7 @@ import { GridCell } from '@bambooapp/datagrid/src/components/Grid';
 import { cellsDrawer } from '@bambooapp/datagrid/src/components/Grid/utils';
 import type { Field } from '@bambooapp/datagrid/src/utils/types';
 import { FontWrapper } from '@bambooapp/datagrid/src/components/FontWrapper';
+import { Rect, Text } from '@bambooapp/datagrid/src/canvas';
 
 const renderCell = ({ key, rowIndex, columnIndex, x, y, width, height }: RendererProps) => {
     const text = `${rowIndex}x${columnIndex}`;
