@@ -35,7 +35,7 @@ import {
 } from 'react-native';
 import { useFontsContext } from '../contexts/FontContext';
 import { EventObject, gridEventEmitter } from '../utils/reversed-eventemitter';
-import { useLatest } from '@bambooapp/react-hooks';
+import { useLatest } from '@bambooapp/bamboo-molecules';
 import { createContextBridge } from './createContextBridge';
 
 interface StageProps {

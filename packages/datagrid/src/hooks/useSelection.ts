@@ -14,7 +14,7 @@ import {
     getNextFocusableCellByDirection,
 } from '../components/Grid/helpers';
 import { KeyCodes, Direction, MouseButtonCodes, SelectionPolicy } from '../components/Grid/types';
-import { useLatest } from '@bambooapp/react-hooks';
+import { useLatest } from '@bambooapp/bamboo-molecules';
 import { resolveFloatingRowPosition } from '../utils/resolveFloatingRowPosition';
 import { Platform } from 'react-native';
 
@@ -319,7 +319,7 @@ const useSelection = ({
     const isSelecting = useRef<boolean>(false);
     const isFilling = useRef<boolean>(false);
     const firstActiveCell = useRef<CellInterface | null>(null);
-    const fillSelectionRef = useRef<SelectionArea>(undefined);
+    const fillSelectionRef = useRef<SelectionArea>();
 
     const prevActiveCell = useRef<CellInterface | null>(null);
     const isFirstRender = useRef(true);
@@ -328,10 +328,10 @@ const useSelection = ({
     const [_, forceRender] = useReducer(s => s + 1, 0);
     const isDragging = useRef<boolean>(false);
     const hasUserMovedSelection = useRef<boolean>(false);
-    const initialDraggedSelection = useRef<SelectionArea>(undefined);
-    const initialDraggedCell = useRef<CellInterface>(undefined);
-    const draggedSelection = useRef<SelectionArea>(undefined);
-    const draggedSelectionIndex = useRef<number>(undefined);
+    const initialDraggedSelection = useRef<SelectionArea>();
+    const initialDraggedCell = useRef<CellInterface>();
+    const draggedSelection = useRef<SelectionArea>();
+    const draggedSelectionIndex = useRef<number>();
     /**
      * Need to store in ref because on mousemove and mouseup event that are
      * registered in document

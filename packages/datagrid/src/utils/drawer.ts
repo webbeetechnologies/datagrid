@@ -1,5 +1,5 @@
 import GraphemeSplitter from 'grapheme-splitter';
-import { resolveContrastColor } from './resolveContrastColor';
+import { resolveContrastColor } from '@bambooapp/bamboo-molecules';
 import type { Context } from 'konva/lib/Context';
 
 import { autoSizerCanvas } from '../utils/autoSizerCanvas';

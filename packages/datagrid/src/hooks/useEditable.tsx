@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo, CSSProperties } from 'react';
-import { useLatest } from '@bambooapp/react-hooks';
+import { useLatest } from '@bambooapp/bamboo-molecules';
 
 import type {
     CellInterface,
@@ -483,7 +483,7 @@ const useEditable = ({
     });
 
     // const currentActiveCellRef = useRef<CellInterface | null>(null);
-    const initialActiveCell = useRef<CellInterface | null | undefined>(null);
+    const initialActiveCell = useRef<CellInterface | null>();
     const [scrollPosition, setScrollPosition] = useState<ScrollCoords>({
         scrollLeft: 0,
         scrollTop: 0,
@@ -494,8 +494,8 @@ const useEditable = ({
     const [autoFocus, setAutoFocus] = useState<boolean>(true);
     const isDirtyRef = useRef<boolean>(false);
     const currentValueRef = useLatest(value);
-    const initialValueRef = useRef<string>(undefined);
-    const maxEditorDimensionsRef = useRef<{ height: number; width: number }>(undefined);
+    const initialValueRef = useRef<string>();
+    const maxEditorDimensionsRef = useRef<{ height: number; width: number }>();
     const hasInitialValue = useRef(false);
     /* To prevent stale closures data */
     // const getValueRef = useRef(getValue);

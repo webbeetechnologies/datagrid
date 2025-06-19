@@ -3,7 +3,7 @@
 import GraphemeSplitter from 'grapheme-splitter';
 import type { SkCanvas, SkRect, SkRRect } from '@shopify/react-native-skia';
 import { SkFont, Skia, PaintStyle, ClipOp, matchFont } from '@shopify/react-native-skia';
-import { resolveContrastColor } from './resolveContrastColor';
+import { resolveContrastColor } from '@bambooapp/bamboo-molecules';
 
 import { imageCache } from './image-cache';
 import type {

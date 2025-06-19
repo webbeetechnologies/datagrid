@@ -19,7 +19,7 @@ export const resolveFloatingRowPosition = ({
     height: number;
     clientY: number;
     onResolve: (cell: CellInterface) => void;
-    gridRef: RefObject<GridRef | null>;
+    gridRef: RefObject<GridRef>;
 }) => {
     if ((isFiltered || isMoved) && coords) {
         const floatingRowOffset = gridRef.current?.getCellOffsetFromCoords({

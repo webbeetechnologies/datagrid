@@ -27,7 +27,7 @@ import {
 } from 'react-native';
 import type Konva from 'konva';
 import invariant from 'tiny-invariant';
-import { useLatest } from '@bambooapp/react-hooks';
+import { useLatest } from '@bambooapp/bamboo-molecules';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
 import { Stage, Layer, Group } from '../../canvas';
@@ -204,8 +204,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             recalcRowIndices: [],
         });
 
-        const snapToRowThrottler = useRef<({ deltaY }: SnapRowProps) => void>(undefined);
-        const snapToColumnThrottler = useRef<({ deltaX }: SnapColumnProps) => void>(undefined);
+        const snapToRowThrottler = useRef<({ deltaY }: SnapRowProps) => void>();
+        const snapToColumnThrottler = useRef<({ deltaX }: SnapColumnProps) => void>();
 
         const [_, _forceRender] = useReducer(() => ({}), {});
 

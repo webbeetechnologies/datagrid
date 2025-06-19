@@ -14,7 +14,7 @@ import React, {
 } from 'react';
 import { LayoutChangeEvent, StyleSheet, View, ViewProps } from 'react-native';
 import { Rect, Text, Group } from './canvas';
-import { useLatest, useMergedRefs } from '@bambooapp/react-hooks';
+import { useLatest, useMergedRefs } from '@bambooapp/bamboo-molecules';
 import type { Vector2d } from 'konva/lib/types';
 import type { RectConfig } from 'konva/lib/shapes/Rect';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -420,7 +420,7 @@ const DataGrid = (
     const height = heightProp || layout.height;
 
     const gridRef = useRef<GridRef>(null);
-    const currentViewPort = useRef<ViewPortProps>(undefined);
+    const currentViewPort = useRef<ViewPortProps>();
     const infiniteLoaderRef = useRef(null);
     const wheelingRef = useRef<number | null>(null); // Storage timer to ensure smooth operation
     const floatingRowProps = useFloatingRowProps();

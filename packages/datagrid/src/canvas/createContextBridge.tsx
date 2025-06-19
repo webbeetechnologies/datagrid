@@ -1,7 +1,7 @@
 import React, { ComponentType, Context as ContextType, PropsWithChildren } from 'react';
 import { Fragment, useContext, useId, useMemo, useRef, useState } from 'react';
 import { Repository } from '../utils/repository';
-import typedMemo from '../hocs/typedMemo';
+import { typedMemo } from '@bambooapp/bamboo-molecules';
 
 // In development, React will warn about using contexts between renderers.
 // Hide the warning because its-fine fixes this issue

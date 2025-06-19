@@ -1,4 +1,4 @@
-import EventEmitter from 'eventemitter2';
+import EventEmitter from 'eventemitter3';
 
 export interface EventObject {
     stopped: boolean;
