@@ -122,6 +122,9 @@ importers:
       lodash.memoize:
         specifier: ^4.1.2
         version: 4.1.2
+      lodash.range:
+        specifier: ^3.2.0
+        version: 3.2.0
       lru-cache:
         specifier: ^11.0.2
         version: 11.1.0
@@ -162,6 +165,9 @@ importers:
       '@types/color':
         specifier: ^3.0.3
         version: 3.0.6
+      '@types/lodash':
+        specifier: ^4.17.18
+        version: 4.17.18
       '@types/lodash.debounce':
         specifier: ^4.0.7
         version: 4.0.9
@@ -189,6 +195,9 @@ importers:
       '@types/lodash.omitby':
         specifier: ^4.6.7
         version: 4.6.9
+      '@types/lodash.range':
+        specifier: ^3.2.9
+        version: 3.2.9
       '@types/react':
         specifier: ~19.0.14
         version: 19.0.14
@@ -1310,8 +1319,8 @@ packages:
   '@radix-ui/react-slot@1.2.0':
     resolution: {integrity: sha512-ujc+V6r0HNDviYqIK3rW4ffgYiZ8g5DEHrGJVk4x7kTlLXRDILnKX9vAUYeIsLOoDpDJ0ujpqMkjH4w2ofuo6w==}
     peerDependencies:
-      '@types/react': 19.0.10
-      react: 19.0.0
+      '@types/react': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -1451,9 +1460,9 @@ packages:
     resolution: {integrity: sha512-Ht62iLPqTd8ufctR85Jkvpb+KtVn+DGIdtzXOj+PsCY6NubxWtoOVINr2H2dzjroMFJ+WZyyJ6fEoyuHe0ObRg==}
     hasBin: true
     peerDependencies:
-      react: 19.0.0
-      react-native: 0.79.0
-      react-native-reanimated: ~3.17.2
+      react: '>=19.0'
+      react-native: '>=0.78'
+      react-native-reanimated: '>=3.0.0'
     peerDependenciesMeta:
       react-native:
         optional: true
@@ -1561,8 +1570,11 @@ packages:
   '@types/lodash.omitby@4.6.9':
     resolution: {integrity: sha512-QPHwcQeWP/bQVwKV1+goohDgBtSZlHgM2KA/+QhjMYV2/7RTHF72KxLPzybvu8mO7O46NdugTH/yPs3/Jcavxw==}
 
-  '@types/lodash@4.17.16':
-    resolution: {integrity: sha512-HX7Em5NYQAXKW+1T+FiuG27NGwzJfCX3s1GjOa7ujxZa52kjJLOr4FUxT+giF6Tgxv1e+/czV/iTtBw27WTU9g==}
+  '@types/lodash.range@3.2.9':
+    resolution: {integrity: sha512-JNStPShiaR3ROKIAgtzChBhouPBCJxMI/Fj7Xa1cG51A2EMRyosvtL4fiGXOFiQddaxjZmNVYkZGsDRt8fFKPg==}
+
+  '@types/lodash@4.17.18':
+    resolution: {integrity: sha512-KJ65INaxqxmU6EoCiJmRPZC9H9RVWCRd349tXM2M3O5NA7cY6YL7c0bHAHQ93NOfTObEQ004kd2QVHs/r0+m4g==}
 
   '@types/node@22.14.1':
     resolution: {integrity: sha512-u0HuPQwe/dHrItgHHpmw3N2fYCR6x4ivMNbPHRkBVP4CvN+kiRrKHWk3i8tXiO/joPwXLMYvF9TTF0eqgHIuOw==}
@@ -3682,6 +3694,9 @@ packages:
 
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
+
+  lodash.range@3.2.0:
+    resolution: {integrity: sha512-Fgkb7SinmuzqgIhNhAElo0BL/R1rHCnhwSZf78omqSwvWqD0kD2ssOAutQonDKH/ldS8BxA72ORYI09qAY9CYg==}
 
   lodash.throttle@4.1.1:
     resolution: {integrity: sha512-wIkUCfVKpVsWo3JSZlc+8MB5it+2AN5W8J7YVMST30UrvcQNZ1Okbj+rbVniijTWE6FGYy4XJq/rHkas8qJMLQ==}
@@ -7153,41 +7168,45 @@ snapshots:
 
   '@types/lodash.debounce@4.0.9':
     dependencies:
-      '@types/lodash': 4.17.16
+      '@types/lodash': 4.17.18
 
   '@types/lodash.get@4.4.9':
     dependencies:
-      '@types/lodash': 4.17.16
+      '@types/lodash': 4.17.18
 
   '@types/lodash.groupby@4.6.9':
     dependencies:
-      '@types/lodash': 4.17.16
+      '@types/lodash': 4.17.18
 
   '@types/lodash.isnil@4.0.9':
     dependencies:
-      '@types/lodash': 4.17.16
+      '@types/lodash': 4.17.18
 
   '@types/lodash.keyby@4.6.9':
     dependencies:
-      '@types/lodash': 4.17.16
+      '@types/lodash': 4.17.18
 
   '@types/lodash.memoize@4.1.9':
     dependencies:
-      '@types/lodash': 4.17.16
+      '@types/lodash': 4.17.18
 
   '@types/lodash.noop@3.0.9':
     dependencies:
-      '@types/lodash': 4.17.16
+      '@types/lodash': 4.17.18
 
   '@types/lodash.omit@4.5.9':
     dependencies:
-      '@types/lodash': 4.17.16
+      '@types/lodash': 4.17.18
 
   '@types/lodash.omitby@4.6.9':
     dependencies:
-      '@types/lodash': 4.17.16
+      '@types/lodash': 4.17.18
 
-  '@types/lodash@4.17.16': {}
+  '@types/lodash.range@3.2.9':
+    dependencies:
+      '@types/lodash': 4.17.18
+
+  '@types/lodash@4.17.18': {}
 
   '@types/node@22.14.1':
     dependencies:
@@ -9810,6 +9829,8 @@ snapshots:
   lodash.memoize@4.1.2: {}
 
   lodash.merge@4.6.2: {}
+
+  lodash.range@3.2.0: {}
 
   lodash.throttle@4.1.1: {}
 

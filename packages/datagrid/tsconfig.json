@@ -21,7 +21,14 @@
         "strict": true,
         "target": "esnext"
     },
-    "include": ["**/*.ts", "**/*.tsx", "**/*.mdx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+    "include": [
+        "**/*.ts",
+        "**/*.tsx",
+        "**/*.mdx",
+        ".expo/types/**/*.ts",
+        "expo-env.d.ts",
+        "src/types/global.d.ts"
+    ],
     "exclude": ["lib/**/*", "example", "test-cases", "dist/**/*"],
     "extends": "./tsconfig.base"
 }

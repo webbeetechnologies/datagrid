@@ -28,6 +28,7 @@ const FillHandle: React.FC<ShapeConfig> = ({
                 cursor: 'crosshair',
                 pointerEvents: 'auto',
                 borderRadius: 2,
+                zIndex: 2,
             } as unknown as ViewStyle),
         [borderColor, size, strokeWidth, x, y],
     );

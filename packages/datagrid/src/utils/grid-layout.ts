@@ -1,4 +1,4 @@
-import range from 'lodash/range';
+import range from 'lodash.range';
 import { ADD_FIELD_COL_WIDTH, DEFAULT_NESTED_GROUP_GAP } from './constants';
 import { CanvasDrawer } from './drawer';
 import type { Row } from './types';

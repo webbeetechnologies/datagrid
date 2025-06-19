@@ -34,6 +34,7 @@ export const createHTMLBox = ({
         borderWidth: 0,
         position: 'absolute',
         pointerEvents: 'none',
+        zIndex: 2,
     };
     /**
      * Border cover is so that there is enough
