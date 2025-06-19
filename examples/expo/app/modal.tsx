@@ -1,10 +1,12 @@
+import { Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { DataGridExample } from '@/components/Grid';
+// import { DataGridExample } from '@/components/Grid';
 
 const ModalScreen = () => {
     return (
         <SafeAreaView>
-            <DataGridExample />
+            <Text>Modal</Text>
+            {/* <DataGridExample /> */}
         </SafeAreaView>
     );
 };
