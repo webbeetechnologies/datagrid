@@ -55,7 +55,11 @@ export const renderCellsByRange = ({
     const cells: React.ReactNode[] = [];
     const frozenCells: React.ReactNode[] = [];
 
-    for (let columnIndex = columnStartIndex; columnIndex <= columnStopIndex; columnIndex++) {
+    for (
+        let columnIndex = Math.max(columnStartIndex, frozenColumns);
+        columnIndex <= columnStopIndex;
+        columnIndex++
+    ) {
         if (columnIndex > columnCount - 1) break;
 
         if (isHiddenColumn?.(columnIndex)) {
@@ -143,6 +147,7 @@ export const renderCellsByRange = ({
             const x = getColumnOffset(left);
 
             const width = getColumnOffset(actualRight) - x + getColumnWidth(actualRight);
+            const recordId = getRecordIdByIndex(rowIndex);
 
             const _cell = renderCell?.({
                 x,
@@ -151,12 +156,13 @@ export const renderCellsByRange = ({
                 height,
                 columnIndex,
                 rowIndex,
+                recordId,
                 key: itemKey({ rowIndex, columnIndex }),
                 ...(withCellStates
                     ? {
                           isHoverRow: hoveredCell?.rowIndex === rowIndex,
                           isHoverColumn: hoveredCell?.columnIndex === columnIndex,
-                          isActiveRow: !!isActiveRow?.({ rowIndex }),
+                          isActiveRow: !!isActiveRow?.({ rowIndex, recordId }),
                       }
                     : {}),
                 isFloatingRow,
