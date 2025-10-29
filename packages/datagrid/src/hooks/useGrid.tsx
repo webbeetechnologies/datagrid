@@ -1,6 +1,6 @@
 import type { Context } from 'konva/lib/Context';
 import React, { useCallback, useEffect, useMemo, useReducer } from 'react';
-import { makeRectPath, Shape } from '../canvas';
+import { Shape } from '../canvas';
 import type { GridProps, GridRef, UseRecord } from '../components/Grid/types';
 import type { CellsDrawer } from '../components/Grid/utils';
 import { recordRowLayout } from '../utils/record-row-layout';
@@ -9,7 +9,7 @@ import { useDataGridState } from '../DataGridStateContext';
 import { gridEventEmitter } from '../utils/grid-eventemitter';
 import type { Field, IRecord } from '../utils/types';
 import { useFontsContext } from '../contexts/FontContext';
-import { Platform } from 'react-native';
+// import { Platform } from 'react-native';
 
 export type UseGridProps = Pick<
     GridProps,
@@ -229,17 +229,17 @@ const useGrid = ({
                 };
 
                 if (isLastColumn && cellValue != null) {
-                    ctx.save();
-                    if (Platform.OS === 'web') {
-                        ctx.rect(x, y, width, height);
-                        ctx.clip();
-                    } else {
-                        const rectPath = makeRectPath();
-                        // @ts-ignore
-                        rectPath.addRect({ x, y, width, height });
-                        // @ts-ignore
-                        ctx.clipPath(rectPath, 1, true);
-                    }
+                    // ctx.save();
+                    // if (Platform.OS === 'web') {
+                    //     ctx.rect(x, y, width, height);
+                    //     ctx.clip();
+                    // } else {
+                    //     const rectPath = makeRectPath();
+                    //     // @ts-ignore
+                    //     rectPath.addRect({ x, y, width, height });
+                    //     // @ts-ignore
+                    //     ctx.clipPath(rectPath, 1, true);
+                    // }
 
                     cellsDrawer.renderCell(
                         processRenderPropsRef.current(renderProps, {
@@ -248,7 +248,7 @@ const useGrid = ({
                         }),
                         ctx,
                     );
-                    ctx.restore();
+                    // ctx.restore();
                 } else {
                     if (shouldDisplayEmptyCell) return;
 
