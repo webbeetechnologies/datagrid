@@ -1,6 +1,6 @@
 {
   "name": "@bambooapp/datagrid",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "author": "Thet Aung <thetaung.dev@gmail.com>",
   "license": "MIT",
   "packageManager": "pnpm@3.3.0",
