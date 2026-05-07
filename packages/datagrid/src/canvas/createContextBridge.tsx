@@ -1,7 +1,9 @@
-import React, { ComponentType, Context as ContextType, PropsWithChildren } from 'react';
-import { Fragment, useContext, useId, useMemo, useRef, useState } from 'react';
-import { Repository } from '../utils/repository';
-import { typedMemo } from '@bambooapp/bamboo-molecules';
+import React, { ComponentType, Context as ContextType, PropsWithChildren, ReactNode } from 'react';
+import { Fragment, memo, useContext, useId, useMemo, useRef, useState } from 'react';
+
+type ContextRegistry = Record<string, ContextType<any>[]>;
+
+const contextRegistry: ContextRegistry = {};
 
 // In development, React will warn about using contexts between renderers.
 // Hide the warning because its-fine fixes this issue
@@ -32,30 +34,25 @@ export const createContextBridge = <T extends object>(
     Wrapper: ComponentType<T>,
     contexts: ContextType<any>[] = [],
 ) => {
-    const respository = new Repository<ContextType<any>[]>({
-        name: bridgeName,
-        onRegister: (arg, name, registry) => {
-            return [registry[name] ?? [], arg].flat();
-        },
-    });
+    contextRegistry[bridgeName] ??= [];
 
     return {
         registerContextToBridge: (updatedContexts: ContextType<any> | ContextType<any>[]) => {
-            respository.register(
-                'contexts',
-                ([] as ContextType<any>[])
+            contextRegistry[bridgeName] = [
+                ...contextRegistry[bridgeName],
+                ...([] as ContextType<any>[])
                     .concat(updatedContexts)
                     .map(context => wrapContext(context)),
-            );
+            ];
         },
-        BridgedComponent: typedMemo((props: PropsWithChildren<T> & { name?: string }) => {
+        BridgedComponent: memo((props: PropsWithChildren<T> & { name?: string }) => {
             const { name, ...rest } = props;
             const contextValuesRef = useRef<any[]>([]);
 
             const id = useId();
 
             const [allContexts] = useState(() =>
-                Array.from(new Set([...contexts, ...Object.values(respository.getAll()).flat()])),
+                Array.from(new Set([...contexts, ...contextRegistry[bridgeName]])),
             );
 
             for (const i in allContexts) {
@@ -64,7 +61,7 @@ export const createContextBridge = <T extends object>(
             }
 
             const content = useMemo(() => {
-                return allContexts.reduce((acc, Context, currentIndex) => {
+                return allContexts.reduce<ReactNode>((acc, Context, currentIndex) => {
                     return (
                         <Context.Provider value={contextValuesRef.current[currentIndex]}>
                             {acc}

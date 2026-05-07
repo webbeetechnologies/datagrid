@@ -27,7 +27,7 @@ import {
 } from 'react-native';
 import type Konva from 'konva';
 import invariant from 'tiny-invariant';
-import { useLatest } from '@bambooapp/bamboo-molecules';
+import useLatest from '@react-native-molecules/utils/hooks/useLatest';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 
 import { Stage, Layer, Group } from '../../canvas';
@@ -1123,7 +1123,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
             getRowHeight,
             getRowOffset,
             renderCell: renderDynamicCell,
-            hoveredCell: datagridStoreRef.current?.hoveredCell,
+            hoveredCell: datagridStoreRef.current?.hoveredCell ?? null,
             isHiddenColumn,
             isActiveRow,
             isHiddenRow,
@@ -1148,7 +1148,7 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
                 getRowHeight,
                 getRowOffset,
                 renderCell: renderDynamicReactCell,
-                hoveredCell: datagridStoreRef.current?.hoveredCell,
+                hoveredCell: datagridStoreRef.current?.hoveredCell ?? null,
                 isHiddenColumn,
                 isActiveRow,
                 isHiddenRow,
