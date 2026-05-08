@@ -1,5 +1,5 @@
 import GraphemeSplitter from 'grapheme-splitter';
-import { resolveContrastColor } from '@react-native-molecules/utils/resolveContrastColor';
+import { resolveContrastColor } from '@react-native-molecules/utils/helpers/resolveContrastColor';
 import type { Context } from 'konva/lib/Context';
 
 import { autoSizerCanvas } from '../utils/autoSizerCanvas';

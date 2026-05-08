@@ -1,4 +1,4 @@
-import { isNil } from '@react-native-molecules/utils/lodash';
+import { isNil } from '@react-native-molecules/utils/helpers/lodash';
 import type { RefObject } from 'react';
 import type { CellInterface, GridRef } from '../components/Grid/types';
 
